@@ -33,7 +33,7 @@ jobs:
 
       - name: Generate new files
         run: |
-          bun run generate:all
+          bun run generate
 
       - name: Copy files
         run: |
