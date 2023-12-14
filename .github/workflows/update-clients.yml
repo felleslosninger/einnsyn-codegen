@@ -50,6 +50,7 @@ jobs:
       - name: Commit and push
         run: |
           cd ein-api-client-ts
+          git checkout -b "openapi-codegen-$(date +'%Y-%m-%d')"
           git config --local user.email "action@github.com"
           git config --local user.name "eInnsyn OpenAPI Codegen"
           git add .
