@@ -44,17 +44,12 @@ jobs:
         run: |
           cd ein-api-codegen
           bun install
-          pwd
-          ls -l ../
           bun run generate
-
-      - name: Copy files
-        run: |
           cp -r out/ts-client ein-api-client-ts/
 
       - name: Commit and push
         run: |
-          cd other-repo
+          cd ein-api-client-ts
           git config --local user.email "action@github.com"
           git config --local user.name "eInnsyn OpenAPI Codegen"
           git add .
@@ -65,7 +60,7 @@ jobs:
         uses: peter-evans/create-pull-request@v3
         with:
           token: ${{ steps.gh-api-token.outputs.token }}
-          path: 'ein-api-java-client'
+          path: 'ein-api-client-ts'
           commit-message: 'API version update'
           title: 'API version update'
           body: 'This PR is auto-generated to update files from ein-api-client-codegen.'
