@@ -45,7 +45,7 @@ jobs:
           cd ein-api-codegen
           bun install
           bun run generate
-          cp -r out/ts-client ../ein-api-client-ts/
+          cp -r out/ts-client/* ../ein-api-client-ts/
 
       - name: Commit and push
         run: |
