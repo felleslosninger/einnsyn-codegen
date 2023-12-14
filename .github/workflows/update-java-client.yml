@@ -1,0 +1,52 @@
+name: Update API clients
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches:
+      - main
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Install bun
+        uses: oven-sh/setup-bun@v1
+
+      - name: Checkout this repo
+        uses: actions/checkout@v2
+
+      - name: Checkout TypeScript client repo
+        uses: actions/checkout@v2
+        with:
+          repository: felleslosninger/ein-api-client-ts
+          token: ${{ secrets.GITHUB_TOKEN }}
+          path: 'ein-api-client-ts'
+
+      - name: Generate new files
+        run: |
+          bun run generate:all
+
+      - name: Copy files
+        run: |
+          cp -r out/ts-client ein-api-client-ts/
+
+      - name: Commit and push
+        run: |
+          cd other-repo
+          git config --local user.email "action@github.com"
+          git config --local user.name "eInnsyn OpenAPI Codegen"
+          git add .
+          git commit -m "Update files"
+          git push
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          path: 'ein-api-java-client'
+          commit-message: 'API version update'
+          title: 'API version update'
+          body: 'This PR is auto-generated to update files from ein-api-client-codegen.'
+          branch: 'update-branch' # Name of the branch for the PR

@@ -1,0 +1,52 @@
+// Auto-generated from our OpenAPI spec
+// https://github.com/felleslosninger/ein-openapi/
+
+package no.einnsyn.apiclient.param;
+
+{{#imports}}
+import {{.}};
+{{/imports}}
+import lombok.Setter;
+
+@Setter
+public class {{schemaName}}InsertParams implements ApiRequestParams {
+
+  {{#each properties}}
+  {{#unless readOnly}}
+  private {{{x-javadatatype}}} {{@key}};
+  {{/unless}}
+  {{/each}}
+
+
+  private {{schemaName}}InsertParams(Builder builder) {
+    {{#each properties}}
+    {{#unless readOnly}}
+    this.{{@key}} = builder.{{@key}};
+    {{/unless}}
+    {{/each}}
+  }
+
+
+  public static class Builder {
+    {{#each properties}}
+    {{#unless readOnly}}
+    private {{{x-javadatatype}}} {{@key}};
+    {{/unless}}
+    {{/each}}
+
+    {{#each properties}}
+    {{#unless readOnly}}
+    public Builder {{@key}}({{{x-javadatatype}}} {{@key}}) {
+      this.{{@key}} = {{@key}};
+      return this;
+    }
+
+    {{/unless}}
+    {{/each}}
+
+    public {{schemaName}}InsertParams build() {
+      return new {{schemaName}}InsertParams(this);
+    }
+  }
+
+}

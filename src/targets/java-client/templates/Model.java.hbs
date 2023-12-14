@@ -1,0 +1,35 @@
+// Auto-generated from our OpenAPI spec
+// https://github.com/felleslosninger/ein-openapi/
+
+package no.einnsyn.apiclient.model;
+
+{{#imports}}
+import {{.}};
+{{/imports}}
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
+public class {{schemaName}} implements EInnsynObject {
+
+{{#each properties}}
+  {{#if minLength}}
+  @Size(min = {{minLength}})
+  {{/if}}
+  {{#if maxLength}}
+  @Size(max = {{maxLength}})
+  {{/if}}
+  {{#if pattern}}
+  @Pattern(regexp = "{{pattern}}")
+  {{/if}}
+  {{#if x-required}}
+  @NotNull
+  {{/if}}
+  private {{#x-javastatic}}static {{/x-javastatic}}{{#x-javafinal}}final {{/x-javafinal}}{{{x-javadatatype}}} {{@key}}{{#x-javavalue}} = "{{.}}"{{/x-javavalue}};
+  {{#unless @last}}
+
+  {{/unless}}
+{{/each}}
+
+}

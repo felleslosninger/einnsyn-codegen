@@ -1,0 +1,25 @@
+{
+  "name": "ein-api-codegen",
+  "module": "index.ts",
+  "type": "module",
+  "scripts": {
+    "generate": "bun index.ts --all",
+    "generate:java": "bun index.ts --java",
+    "generate:ts": "bun index.ts --ts"
+  },
+  "devDependencies": {
+    "bun-types": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "@apidevtools/json-schema-ref-parser": "^11.1.0",
+    "@types/js-yaml": "^4.0.9",
+    "handlebars": "^4.7.8",
+    "js-yaml": "^4.1.0",
+    "minimist": "^1.2.8",
+    "openapi3-ts": "^4.1.2",
+    "prettier": "^3.1.0"
+  }
+}
