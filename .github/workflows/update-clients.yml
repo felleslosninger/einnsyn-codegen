@@ -21,10 +21,6 @@ jobs:
           app_id: ${{ secrets.DIGDIR_PLATFORM_CI_APP_ID }}
           private_key: ${{ secrets.DIGDIR_PLATFORM_CI_APP_PRIVATE_KEY }}
 
-      - name: Set timestamp for PRs
-        id: timestamp
-        run: echo "::set-output name=timestamp::$(date +'%Y%m%d-%H%M%S')"
-
       - name: Checkout this repo
         uses: actions/checkout@v2
         with:
@@ -58,4 +54,5 @@ jobs:
           path: 'ein-api-client-ts'
           commit-message: 'API codegen'
           title: 'API codegen'
-          body: 'This PR is auto-generated to update files from ein-api-client-codegen.'
+          body: 'This PR is auto-generated to update files from ein-api-codegen.'
+          branch: 'codegen'
