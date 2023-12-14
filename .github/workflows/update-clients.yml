@@ -40,6 +40,7 @@ jobs:
 
       - name: Generate new files
         run: |
+          cd ein-api-client-ts
           bun install
           pwd
           ls -l ../
