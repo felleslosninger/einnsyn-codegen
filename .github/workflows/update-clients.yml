@@ -23,6 +23,8 @@ jobs:
 
       - name: Checkout this repo
         uses: actions/checkout@v2
+        with:
+          path: 'ein-api-codegen'
 
       - name: Checkout OpenAPI repo
         uses: actions/checkout@v2
@@ -40,7 +42,7 @@ jobs:
 
       - name: Generate new files
         run: |
-          cd ein-api-client-ts
+          cd ein-api-codegen
           bun install
           pwd
           ls -l ../
