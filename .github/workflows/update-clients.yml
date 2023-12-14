@@ -41,6 +41,8 @@ jobs:
       - name: Generate new files
         run: |
           bun install
+          pwd
+          ls -l ../
           bun run generate
 
       - name: Copy files
