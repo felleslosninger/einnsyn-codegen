@@ -21,7 +21,7 @@ jobs:
         uses: actions/checkout@v2
         with:
           repository: felleslosninger/ein-api-client-ts
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GH_PACKAGES_READ_PAT }}
           path: 'ein-api-client-ts'
 
       - name: Generate new files
@@ -44,7 +44,7 @@ jobs:
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v3
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GH_PACKAGES_READ_PAT }}
           path: 'ein-api-java-client'
           commit-message: 'API version update'
           title: 'API version update'
