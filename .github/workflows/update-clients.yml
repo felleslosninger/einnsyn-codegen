@@ -52,6 +52,7 @@ jobs:
           export TIMESTAMP=$(date +'%Y%m%d-%H%M%S')
           cd ein-api-client-ts
           git checkout -b "openapi-codegen-$TIMESTAMP"
+          git config --local push.autoSetupRemote "true"
           git config --local user.email "action@github.com"
           git config --local user.name "eInnsyn OpenAPI Codegen"
           git add .
