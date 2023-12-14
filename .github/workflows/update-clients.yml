@@ -70,4 +70,5 @@ jobs:
           commit-message: 'API version update'
           title: 'API version update'
           body: 'This PR is auto-generated to update files from ein-api-client-codegen.'
+          base: 'main'
           branch: 'codegen-${{ steps.timestamp.outputs.timestamp }}'
