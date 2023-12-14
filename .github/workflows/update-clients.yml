@@ -45,7 +45,7 @@ jobs:
           cd ein-api-codegen
           bun install
           bun run generate
-          cp -r out/ts-client ein-api-client-ts/
+          cp -r out/ts-client ../ein-api-client-ts/
           echo "Generated new files"
           ls -la out/ts-client/src/model
           ls -la ein-api-client-ts/src/model
