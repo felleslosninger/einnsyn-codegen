@@ -5,12 +5,11 @@
 {{! Imports }}
 {{#each imports}}
   {{#ne . ../name}}
-    import {{.}} from './{{.}}';
-    import * as {{lc .}} from './{{.}}';
+    import {{.}}, * as {{lc .}} from './{{.}}';
   {{/ne}}
 {{/each}}
 
-import { expandListToObject, ExpandObject } from '../utils/expandObject';
+import { expandListToObject, ExpandObject } from '../utils/expandListToObject';
 
 {{! Type }}
 export type {{name}} = {
