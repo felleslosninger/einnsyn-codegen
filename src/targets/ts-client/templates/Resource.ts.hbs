@@ -27,7 +27,7 @@ export default class {{name}}Resource extends ApiResource {
     ): Promise<{{{ts-responsetype .}}}> {
 
       const path = {{{ts-generate-path .}}};
-      const responseData = await this.request({
+      const responseData = await this.client.request({
         path,
         method: '{{method}}',
         {{#if query}}

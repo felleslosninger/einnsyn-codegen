@@ -1,0 +1,14 @@
+// Auto-generated from our OpenAPI spec
+// https://github.com/felleslosninger/ein-openapi/
+
+import ApiClientBase from './ApiClientBase';
+
+{{#each entityList}}
+import {{.}}Resource from './resource/{{.}}Resource';
+{{/each}}
+
+export default class ApiClient extends ApiClientBase {
+{{#each entityList}}
+  public {{lc .}} = new {{.}}Resource(this);
+{{/each}}
+}

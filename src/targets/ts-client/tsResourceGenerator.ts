@@ -404,6 +404,18 @@ export const generateResources = async (spec: OpenAPIObject) => {
       entity,
     );
   }
+
+  // Generate client
+  const entitiesWithOperations = Object.keys(entityList).filter(
+    (entityName) => entityList[entityName].operationList.length > 0,
+  );
+  await render(
+    `${TS_TEMPLATE_PATH}/ApiClient.ts.hbs`,
+    `${TS_OUT_PATH}/ApiClient.ts`,
+    {
+      entityList: entitiesWithOperations,
+    },
+  );
 };
 
 /**
