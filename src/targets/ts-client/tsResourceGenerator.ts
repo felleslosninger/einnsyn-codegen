@@ -342,7 +342,10 @@ export const generateResources = async (spec: OpenAPIObject) => {
   for (const name in schemas) {
     const schema = schemas[name] as SchemaObject;
 
-    if (schema.properties?.id === undefined) {
+    if (
+      schema.properties?.id === undefined ||
+      schema['x-resourceId'] === undefined
+    ) {
       continue;
     }
 
