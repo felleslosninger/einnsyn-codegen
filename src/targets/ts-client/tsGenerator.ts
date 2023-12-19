@@ -1,6 +1,6 @@
 import { OpenAPIObject } from 'openapi3-ts/oas30';
-import { generateModel } from './tsModelGenerator';
+import { generateResources } from './tsResourceGenerator';
 
 export async function generate(spec: OpenAPIObject) {
-  await generateModel(spec);
+  await generateResources(spec);
 }

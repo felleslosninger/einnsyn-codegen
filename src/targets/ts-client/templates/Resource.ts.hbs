@@ -1,0 +1,51 @@
+// Auto-generated from our OpenAPI spec
+// https://github.com/felleslosninger/ein-openapi/
+
+
+import ApiResource from './ApiResource';
+{{#each (ts-required-controller-resources .)}}
+import {{capitalize .}}, * as {{deCapitalize .}} from '../model/{{capitalize .}}';
+{{/each}}
+
+
+export default class {{name}}Resource extends ApiResource {
+
+{{#each operationList}}
+  {{#if (ts-responsetype .)}}
+
+    // {{uc method}} {{path}}
+    public async {{ts-operation-name ../name .}}(
+      {{#each (ts-path-parameters operation)}}
+      param_{{name}}: {{datatype}},
+      {{/each}}
+      {{#if query}}
+      query: {{query}},
+      {{/if}}
+      {{#if (bodytype .)}}
+      body: {{bodytype .}},
+      {{/if}}
+    ): Promise<{{{ts-responsetype .}}}> {
+
+      const path = {{{ts-generate-path .}}};
+      const responseData = await this.request({
+        path,
+        method: '{{method}}',
+        {{#if query}}
+        query,
+        {{/if}}
+        {{#if (bodytype .)}}
+        body,
+        {{/if}}
+      });
+
+      if (!{{ts-responsevalidator .}}(responseData)) {
+        console.error('Unable to parse response data as `{{{ts-responsetype .}}}`', responseData);
+        return responseData as {{{ts-responsetype .}}};
+      }
+
+      return responseData;
+    }
+
+  {{/if}}
+{{/each}}
+}
