@@ -49,7 +49,7 @@ export const isValid = (
         {{#each (ts-resources-for-property .)}}
           {{! Call `resourceName`.isValid unless resource is the same as the current model }}
           {{#ne . ../../name}}
-            {{lc .}}.
+            {{deCapitalize .}}.
           {{/ne}}
           {{#eq ../type 'array'}}
             isValidList(obj.{{@../key}}, expand['{{@../key}}'])

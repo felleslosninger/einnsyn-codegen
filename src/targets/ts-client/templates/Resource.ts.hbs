@@ -18,11 +18,15 @@ export default class {{name}}Resource extends ApiResource {
       {{#each (ts-path-parameters operation)}}
       param_{{name}}: {{datatype}},
       {{/each}}
-      {{#if query}}
-      query: {{query}},
-      {{/if}}
       {{#if (bodytype .)}}
       body: {{bodytype .}},
+      {{/if}}
+      {{#if (ts-query-parameters operation)}}
+      query?: {
+        {{#each (ts-query-parameters operation)}}
+          {{name}}?: {{datatype}},
+        {{/each}}
+      },
       {{/if}}
     ): Promise<{{{ts-responsetype .}}}> {
 
@@ -30,11 +34,11 @@ export default class {{name}}Resource extends ApiResource {
       const responseData = await this.client.request({
         path,
         method: '{{method}}',
-        {{#if query}}
-        query,
-        {{/if}}
         {{#if (bodytype .)}}
         body,
+        {{/if}}
+        {{#if (ts-query-parameters operation)}}
+        query,
         {{/if}}
       });
 

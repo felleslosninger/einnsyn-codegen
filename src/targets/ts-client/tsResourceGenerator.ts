@@ -217,6 +217,28 @@ handlebars.registerHelper('ts-path-parameters', getPathParameters);
 
 /**
  *
+ * @param operation
+ * @returns
+ */
+const getQueryParameters = (operation: OperationObject) => {
+  const parameters = operation.parameters ?? [];
+  return parameters
+    .map((parameter) => {
+      const parameterObject = parameter as ParameterObject;
+      if (parameterObject.in !== 'query') {
+        return undefined;
+      }
+      return {
+        name: parameterObject.name,
+        datatype: getDataType(parameterObject),
+      };
+    })
+    .filter((x) => x !== undefined);
+};
+handlebars.registerHelper('ts-query-parameters', getQueryParameters);
+
+/**
+ *
  * @param entity
  * @param entityOperation
  * @returns
