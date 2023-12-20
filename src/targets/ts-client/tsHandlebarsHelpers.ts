@@ -51,7 +51,9 @@ export const getDataType = (
     }
   });
   if (Object.keys(resources).length > 0) {
-    return Object.keys(resources).join(' | ');
+    const resourceList = Object.keys(resources);
+    resourceList.push('string'); // Un-expanded ExpandableFields are IDs
+    return resourceList.join(' | ');
   }
 
   return 'any';
