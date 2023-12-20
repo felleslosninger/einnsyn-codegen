@@ -115,11 +115,14 @@ export const getResourceImports = (entity: Entity) => {
     if (responseType) {
       const regexMatch = RegExp(/ResultList<([^>]+)>$/).exec(responseType);
       if (regexMatch) {
-        const genericClass = regexMatch[1] ?? '';
-        responseType = genericClass;
+        const genericClasses = regexMatch[1] ?? '';
         resources.ResultList = true;
+        genericClasses.split(/\s*\|\s*/).forEach((genericClass) => {
+          resources[genericClass] = true;
+        });
+      } else {
+        resources[responseType] = true;
       }
-      resources[responseType] = true;
     }
 
     if (bodyType) {
@@ -166,6 +169,7 @@ export const getPathParameters = (operation: OperationObject) => {
       return {
         name: parameterObject.name,
         description: parameterObject.description,
+        required: parameterObject.required,
         datatype: getDataType(parameterObject),
       };
     })
@@ -188,6 +192,8 @@ export const getQueryParameters = (operation: OperationObject) => {
       }
       return {
         name: parameterObject.name,
+        description: parameterObject.description,
+        required: parameterObject.required,
         datatype: getDataType(parameterObject),
       };
     })
@@ -204,30 +210,32 @@ const getResponseType = (
   entityOperation: EntityOperation,
 ): string | undefined => {
   const operation = entityOperation.operation;
-  const successResponse =
-    operation.responses?.['200']?.content?.['application/json']?.schema;
+  const successResponse = operation.responses?.['200']?.content?.[
+    'application/json'
+  ]?.schema as SchemaObject;
 
   // If there is no application/json success response, skip (it might be a binary download)
   if (!successResponse) {
     return;
   }
 
+  // If the response is a single resource, return the resource type)
   let responsetype = successResponse['x-resourceId'];
-  if (!responsetype) {
-    // This should be a list of resources
-    responsetype =
-      successResponse.properties?.data?.items?.['x-resourceId'] + '[]';
-  }
 
-  if (!responsetype) {
-    console.error('Could not find response type for ' + entityOperation.path);
-    return;
-  }
-
-  if (responsetype === 'ResultList') {
-    const listType =
-      successResponse.properties?.data?.items?.['x-resourceId'] ?? 'unknown';
-    responsetype = 'ResultList<' + listType + '>';
+  // ResponseList is a special case, it is a generic list of resources
+  const data = successResponse.properties?.data as SchemaObject;
+  if (data?.type === 'array') {
+    const resourceIds = [];
+    const items = data.items as SchemaObject;
+    if (items?.['x-resourceId'] !== undefined) {
+      resourceIds.push(items?.['x-resourceId']);
+    }
+    items.anyOf?.forEach((anyOfProperty) => {
+      resourceIds.push((anyOfProperty as SchemaObject)['x-resourceId']);
+    });
+    if (resourceIds.length > 0) {
+      responsetype = 'ResultList<' + resourceIds.join(' | ') + '>';
+    }
   }
 
   return responsetype;
@@ -256,19 +264,31 @@ const getRequestBodyType = (
  * @param entityOperation
  * @returns
  */
-export const getResponseValidator = (entityOperation: EntityOperation) => {
+export const getResponseValidator = (
+  entityOperation: EntityOperation,
+  parameter: string,
+) => {
   let responseType = getResponseType(entityOperation);
   if (!responseType) {
     return '';
   }
   if (responseType.match(/\[\]$/)) {
-    return `${deCapitalize(responseType.slice(0, -2))}.isValidList`;
+    return `${deCapitalize(
+      responseType.slice(0, -2),
+    )}.isValidList(${parameter})`;
   }
   if (responseType.match(/ResultList<[^>]+>$/)) {
-    const genericClass = responseType.match(/<([^>]+)>$/)?.[1] ?? '';
-    return `${deCapitalize(genericClass)}.isValidResultList`;
+    const genericClassString = responseType.match(/<([^>]+)>$/)?.[1] ?? '';
+    const genericClasses = genericClassString.split(/\s*\|\s*/);
+    const resources = genericClasses
+      .map((genericClass) => capitalize(genericClass))
+      .join(' | ');
+    const resourceValidators = genericClasses
+      .map((genericClass) => deCapitalize(genericClass) + '.isValid')
+      .join(', ');
+    return `resultList.isValid<${resources}>(${parameter}, [${resourceValidators}])`;
   }
-  return `${deCapitalize(responseType)}.isValid`;
+  return `${deCapitalize(responseType)}.isValid(${parameter})`;
 };
 
 /**

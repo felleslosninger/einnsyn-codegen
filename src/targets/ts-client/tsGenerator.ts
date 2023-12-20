@@ -75,6 +75,7 @@ export const generate = async (
       };
       entityList[entityName] = entity;
     }
+    console.log('Found entity ' + entityName);
 
     // Add operations to entity
     const pathItem = spec.paths[path];
@@ -151,6 +152,7 @@ const render = async (
   try {
     output = await prettier.format(template(context), {
       parser: 'typescript',
+      proseWrap: 'always',
       singleQuote: true,
     });
   } catch (e) {

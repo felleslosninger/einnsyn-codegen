@@ -13,13 +13,10 @@ export default class {{name}}Resource extends ApiResource {
 {{#each operationList}}
   {{#if (ts-responsetype .)}}
 
-    /** 
-      * {{uc method}} {{path}}
-      * {{description}}
-      * {{#each (ts-path-parameters operation)}}
-      * @param {{name}} {{{description}}}
-      * {{/each}}
-      */
+  /** 
+    * {{uc method}} {{path}}
+    * {{#if operation.description}}{{operation.description}}{{/if}}
+    */
     public async {{ts-operation-name ../name .}}(
       {{#each (ts-path-parameters operation)}}
       {{name}}: {{datatype}},
@@ -30,7 +27,7 @@ export default class {{name}}Resource extends ApiResource {
       {{#if (ts-query-parameters operation)}}
       query?: {
         {{#each (ts-query-parameters operation)}}
-          {{name}}?: {{datatype}},
+          {{name}}{{#unless required}}?{{/unless}}: {{datatype}},
         {{/each}}
       },
       {{/if}}
@@ -48,7 +45,7 @@ export default class {{name}}Resource extends ApiResource {
         {{/if}}
       });
 
-      if (!{{ts-responsevalidator .}}(responseData)) {
+      if (!{{{ts-responsevalidator . 'responseData'}}}) {
         console.error('Unable to parse response data as `{{{ts-responsetype .}}}`', responseData);
         return responseData as {{{ts-responsetype .}}};
       }
