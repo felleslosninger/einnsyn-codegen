@@ -4,16 +4,18 @@ import fs from 'fs';
 import $RefParser from '@apidevtools/json-schema-ref-parser';
 import { JSONObject, deepMergeAllOf } from './utils/deepMergeAllOf';
 import { ParsedArgs } from 'minimist';
+import handlebars from 'handlebars';
 
 import * as java from './targets/java-client/javaGenerator';
 import * as ts from './targets/ts-client/tsGenerator';
+import { addHandlebarsHelpers } from './utils/handlebarsHelpers';
 
 const run = async (args: ParsedArgs) => {
   // Parse spec
   const file = await fs.promises.readFile(args.spec as string, 'utf8');
   const document = yaml.load(file) as OpenAPIObject;
   const dereferencedDocument = (await $RefParser.dereference(
-    document
+    document,
   )) as OpenAPIObject;
   const root = OpenApiBuilder.create(dereferencedDocument);
   let spec = root.getSpec();
@@ -46,7 +48,7 @@ const run = async (args: ParsedArgs) => {
   }
 
   if (args.ts || args.all) {
-    ts.generate(spec);
+    ts.generate(spec, handlebars);
   }
 
   // if (args.java || args.all) {

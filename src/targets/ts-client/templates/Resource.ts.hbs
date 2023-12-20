@@ -3,7 +3,7 @@
 
 
 import ApiResource from './ApiResource';
-{{#each (ts-required-controller-resources .)}}
+{{#each (ts-resource-imports .)}}
 import {{capitalize .}}, * as {{deCapitalize .}} from '../model/{{capitalize .}}';
 {{/each}}
 
@@ -13,13 +13,19 @@ export default class {{name}}Resource extends ApiResource {
 {{#each operationList}}
   {{#if (ts-responsetype .)}}
 
-    // {{uc method}} {{path}}
+    /** 
+      * {{uc method}} {{path}}
+      * {{description}}
+      * {{#each (ts-path-parameters operation)}}
+      * @param {{name}} {{{description}}}
+      * {{/each}}
+      */
     public async {{ts-operation-name ../name .}}(
       {{#each (ts-path-parameters operation)}}
-      param_{{name}}: {{datatype}},
+      {{name}}: {{datatype}},
       {{/each}}
-      {{#if (bodytype .)}}
-      body: {{bodytype .}},
+      {{#if (ts-requestbodytype .)}}
+      body: {{ts-requestbodytype .}},
       {{/if}}
       {{#if (ts-query-parameters operation)}}
       query?: {
@@ -34,7 +40,7 @@ export default class {{name}}Resource extends ApiResource {
       const responseData = await this.client.request({
         path,
         method: '{{method}}',
-        {{#if (bodytype .)}}
+        {{#if (ts-requestbodytype .)}}
         body,
         {{/if}}
         {{#if (ts-query-parameters operation)}}
