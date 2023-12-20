@@ -75,7 +75,6 @@ export const generate = async (
       };
       entityList[entityName] = entity;
     }
-    console.log('Found entity ' + entityName);
 
     // Add operations to entity
     const pathItem = spec.paths[path];
