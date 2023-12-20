@@ -56,3 +56,14 @@ export default class {{name}}Resource extends ApiResource {
   {{/if}}
 {{/each}}
 }
+
+
+{{#each operationList}}
+  {{#if (ts-query-parameters operation)}}
+  export type {{capitalize ../name}}{{capitalize (ts-operation-name ../name .)}}Query = {
+    {{#each (ts-query-parameters operation)}}
+      {{name}}{{#unless required}}?{{/unless}}: {{datatype}},
+    {{/each}}
+  };
+  {{/if}}
+{{/each}}
