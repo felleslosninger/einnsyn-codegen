@@ -90,13 +90,3 @@ export const isValidList = (originalObj: unknown, expand: string[] | ExpandObjec
   const obj = originalObj as {{name}}[];
   return Array.isArray(obj) && obj.every((o) => isValid(o, expand));
 }
-
-
-{{! Check valid list }}
-/**
-  * Check if an object is a valid response list of {{name}} objects
-  */
-export const isValidResultList = (originalObj: unknown, expand: string[] | ExpandObject = {}): originalObj is ResultList<{{name}}> => {
-  const obj = originalObj as ResultList<{{name}}>;
-  return resultList.isValid(obj) && obj.items.every((o: unknown) => isValid(o, expand));
-}
