@@ -318,9 +318,13 @@ const getOperationName = (
     return undefined;
   }
 
+  const method = entityOperation.method;
+  const methodAlias =
+    method === 'post' ? 'create' : method === 'put' ? 'update' : method;
+
   // GetSaksmappe, PostSaksmappe operations should be named "get", "post"
   if (operationId === capitalize(entityOperation.method) + entityName) {
-    return entityOperation.method;
+    return methodAlias;
   }
   // GetSaksmappeList should be named "list"
   else if (operationId === 'Get' + entityName + 'List') {
@@ -329,10 +333,10 @@ const getOperationName = (
   // PostSaksmappeJournalpost (add journalpost to Saksmappe) should be named postJournalpost
   else {
     const stripPrefixRE = new RegExp(
-      '^' + capitalize(entityOperation.method) + entityName,
+      '^' + capitalize(methodAlias) + entityName,
     );
     return deCapitalize(
-      operationId.replace(stripPrefixRE, capitalize(entityOperation.method)),
+      operationId.replace(stripPrefixRE, capitalize(methodAlias)),
     );
   }
 };
