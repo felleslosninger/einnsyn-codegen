@@ -98,15 +98,13 @@ export const generate = async (
   for (const name in entityList) {
     const entity = entityList[name];
 
-    if (entity.operationList.length > 0) {
-      console.log('Generate resource for ' + name);
-      await render(
-        hb,
-        `${TS_TEMPLATE_PATH}/Resource.ts.hbs`,
-        `${RESOURCE_PATH}/${name}Resource.ts`,
-        entity,
-      );
-    }
+    console.log('Generate resource for ' + name);
+    await render(
+      hb,
+      `${TS_TEMPLATE_PATH}/Resource.ts.hbs`,
+      `${RESOURCE_PATH}/${name}Resource.ts`,
+      entity,
+    );
 
     if (entity.schema) {
       console.log('Generate model for ' + name);
@@ -119,16 +117,25 @@ export const generate = async (
     }
   }
 
-  // Generate client
-  const entitiesWithOperations = Object.keys(entityList).filter(
-    (entityName) => entityList[entityName].operationList.length > 0,
+  // Generate indexes
+  console.log('Generate model index');
+  await render(
+    hb,
+    `${TS_TEMPLATE_PATH}/ModelIndex.ts.hbs`,
+    `${MODEL_PATH}/index.ts`,
+    {
+      entityList,
+    },
   );
+
+  // Generate client
+  console.log('Generate client');
   await render(
     hb,
     `${TS_TEMPLATE_PATH}/ApiClient.ts.hbs`,
     `${TS_OUT_PATH}/ApiClient.ts`,
     {
-      entityList: entitiesWithOperations,
+      entityList,
     },
   );
 };

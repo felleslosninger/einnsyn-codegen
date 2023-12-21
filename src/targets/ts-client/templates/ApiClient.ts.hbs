@@ -4,11 +4,12 @@
 import ApiClientBase from './ApiClientBase';
 
 {{#each entityList}}
-import {{.}}Resource from './resource/{{.}}Resource';
+  import {{capitalize name}}Resource from './resource/{{capitalize name
+  }}Resource';
 {{/each}}
 
 export default class ApiClient extends ApiClientBase {
 {{#each entityList}}
-  public {{lc .}} = new {{.}}Resource(this);
+  public {{deCapitalize name}} = new {{capitalize name}}Resource(this);
 {{/each}}
 }

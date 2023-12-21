@@ -1,0 +1,8 @@
+// Auto-generated from our OpenAPI spec
+// https://github.com/felleslosninger/ein-openapi/
+
+{{#each entityList}}
+  {{#if schema}}
+    export * as {{capitalize name}} from './{{capitalize name}}';
+  {{/if}}
+{{/each}}

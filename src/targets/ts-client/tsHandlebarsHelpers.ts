@@ -192,6 +192,7 @@ export const getQueryParameters = (operation: OperationObject) => {
       if (parameterObject.in !== 'query') {
         return undefined;
       }
+
       return {
         name: parameterObject.name,
         description: parameterObject.description,
@@ -286,9 +287,12 @@ export const getResponseValidator = (
       .map((genericClass) => capitalize(genericClass))
       .join(' | ');
     const resourceValidators = genericClasses
-      .map((genericClass) => deCapitalize(genericClass) + '.isValid')
+      .map(
+        (genericClass) =>
+          'this.client.' + deCapitalize(genericClass) + '.isValid',
+      )
       .join(', ');
-    return `resultList.isValid<${resources}>(${parameter}, [${resourceValidators}])`;
+    return `resultList.isValid<${resources}>(${parameter}, query?.expand ?? [], [${resourceValidators}])`;
   }
   return `${deCapitalize(responseType)}.isValid(${parameter})`;
 };

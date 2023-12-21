@@ -2,14 +2,16 @@
 // https://github.com/felleslosninger/ein-openapi/
 
 
+import { expandListToObject, ExpandObject } from '../utils/expandListToObject';
 import ApiResource from './ApiResource';
 {{#each (ts-resource-imports .)}}
-import {{capitalize .}}, * as {{deCapitalize .}} from '../model/{{capitalize .}}';
+import { {{capitalize .}} } from '../model/{{capitalize .}}';
 {{/each}}
 
 
-export default class {{name}}Resource extends ApiResource {
+export default class {{name}}Resource extends ApiResource<{{capitalize name}}> {
 
+{{! Generate methods for each operation (GET, POST, etc.) }}
 {{#each operationList}}
   {{#if (ts-responsetype .)}}
 
@@ -25,11 +27,7 @@ export default class {{name}}Resource extends ApiResource {
       body: {{ts-requestbodytype .}},
       {{/if}}
       {{#if (ts-query-parameters operation)}}
-      query?: {
-        {{#each (ts-query-parameters operation)}}
-          {{name}}{{#unless required}}?{{/unless}}: {{datatype}},
-        {{/each}}
-      },
+      query?: {{capitalize ../name}}{{capitalize (ts-operation-name ../name .)}}Query,
       {{/if}}
     ): Promise<{{{ts-responsetype .}}}> {
 
@@ -45,7 +43,7 @@ export default class {{name}}Resource extends ApiResource {
         {{/if}}
       });
 
-      if (!{{{ts-responsevalidator . 'responseData'}}}) {
+      if (!this.client.{{{ts-responsevalidator . 'responseData'}}}) {
         console.error('Unable to parse response data as `{{{ts-responsetype .}}}`', responseData);
         return responseData as {{{ts-responsetype .}}};
       }
@@ -55,6 +53,67 @@ export default class {{name}}Resource extends ApiResource {
 
   {{/if}}
 {{/each}}
+
+
+{{! Validator }}
+/**
+  * Check if an object is a valid {{name}} object
+  */
+public isValid(
+  originalObj: unknown,
+  expandList: string[] | ExpandObject = {}
+): originalObj is {{name}} {
+  const obj = originalObj as {{name}};
+  const expand = expandListToObject(expandList);
+
+  {{! Check for non-object input }}
+  return obj !== null && typeof obj === 'object' 
+
+  {{#each schema.properties}}
+    && (
+      {{! If not required, check for undefined first }}
+      {{#unless x-required}}
+      (obj.{{@key}} === undefined) ||
+      {{/unless}}
+
+      {{! Expandable fields }}
+      {{#if x-expandableField}}
+        {{! Unexpanded field}}
+        (!expand['{{@key}}'] && typeof(obj.{{@key}}) === 'string') ||
+
+        {{! Expanded field}}
+        (
+        {{#each (ts-resources-for-property .)}}
+          {{! Call `resourceName`.isValid unless resource is the same as the current model }}
+          this.client.{{deCapitalize .}}.
+          {{#eq ../type 'array'}}
+            isValidList(obj.{{@../key}}, expand['{{@../key}}'])
+          {{else}}
+            isValid(obj.{{@../key}}, expand['{{@../key}}'])
+          {{/eq}}
+          {{#unless @last}} || {{/unless}}
+        {{/each}}
+        )
+
+      {{! If not expandable, check against type}}
+      {{else}}
+        {{#eq (ts-datatype .) 'Date'}}
+          (obj.{{@key}} instanceof Date && !isNaN(obj.{{@key}}.valueOf()))
+
+        {{else}}
+          {{#if enum}}
+            ({{#each enum}}obj.{{@../key}} === '{{this}}'{{#unless @last}} || {{/unless}}{{/each}})
+
+          {{else}}
+            (typeof obj.{{@key}} === '{{ts-datatype .}}')
+
+          {{/if}}
+        {{/eq}}
+      {{/if}}
+
+    )
+  {{/each}}
+  }
 }
 
 
@@ -66,4 +125,5 @@ export default class {{name}}Resource extends ApiResource {
     {{/each}}
   };
   {{/if}}
+
 {{/each}}
