@@ -293,7 +293,7 @@ export const getResponseValidator = (
           'this.client.' + deCapitalize(genericClass) + '.isValid',
       )
       .join(', ');
-    return `resultList.isValid<${resources}>(${parameter}, query?.expand ?? [], [${resourceValidators}])`;
+    return `resultList.isValid<${resources}>(${parameter}, [${resourceValidators}], query?.expand ?? [])`;
   }
   return `${deCapitalize(responseType)}.isValid(${parameter})`;
 };
