@@ -109,6 +109,7 @@ export const getModelImports = (entity: Entity) => {
  */
 export const getResourceImports = (entity: Entity) => {
   const resources: Record<string, boolean> = {};
+  resources[entity.name] = true;
 
   for (const operation of entity.operationList) {
     let responseType = getResponseType(operation)?.replace(/\[\]$/, '');

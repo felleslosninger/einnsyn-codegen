@@ -9,7 +9,7 @@ import { {{capitalize .}} } from '../model/{{capitalize .}}';
 {{/each}}
 
 
-export default class {{name}}Resource extends ApiResource<{{capitalize name}}> {
+export class {{name}}Resource extends ApiResource<{{capitalize name}}> {
 
 {{! Generate methods for each operation (GET, POST, etc.) }}
 {{#each operationList}}

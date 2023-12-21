@@ -128,6 +128,16 @@ export const generate = async (
     },
   );
 
+  console.log('Generate resource index');
+  await render(
+    hb,
+    `${TS_TEMPLATE_PATH}/ResourceIndex.ts.hbs`,
+    `${RESOURCE_PATH}/index.ts`,
+    {
+      entityList,
+    },
+  );
+
   // Generate client
   console.log('Generate client');
   await render(
