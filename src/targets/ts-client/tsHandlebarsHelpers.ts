@@ -21,14 +21,7 @@ export const getDataType = (
 
   switch (schemaObject.type) {
     case 'string':
-      if (
-        schemaObject.format === 'date' ||
-        schemaObject.format === 'date-time'
-      ) {
-        return 'Date';
-      } else {
-        return 'string';
-      }
+      return 'string';
     case 'integer':
       return 'number';
     case 'boolean':
