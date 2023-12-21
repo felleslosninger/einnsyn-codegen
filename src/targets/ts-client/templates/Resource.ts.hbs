@@ -2,9 +2,12 @@
 // https://github.com/felleslosninger/ein-openapi/
 
 
+{{#if schema}}
 import { expandListToObject, ExpandObject } from '../utils/expandListToObject';
 import { ApiResource } from './ApiResource';
-{{#unless schema}}import { ApiClient } from '../ApiClient';{{/unless}}
+{{else}}
+import ApiClient from '../ApiClient';
+{{/if}}
 
 {{#each (ts-resource-imports .)}}
 import type { {{capitalize .}} } from '../model/{{capitalize .}}';
