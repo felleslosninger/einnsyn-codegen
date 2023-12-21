@@ -320,7 +320,7 @@ const getOperationName = (
 
   const method = entityOperation.method;
   const methodAlias =
-    method === 'post' ? 'create' : method === 'put' ? 'update' : method;
+    method === 'post' ? 'add' : method === 'put' ? 'update' : method;
 
   // GetSaksmappe, PostSaksmappe operations should be named "get", "post"
   if (operationId === capitalize(entityOperation.method) + entityName) {
