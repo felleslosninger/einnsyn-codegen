@@ -3,13 +3,20 @@
 
 
 import { expandListToObject, ExpandObject } from '../utils/expandListToObject';
-import ApiResource from './ApiResource';
+import { ApiResource } from './ApiResource';
+{{#unless schema}}import { ApiClient } from '../ApiClient';{{/unless}}
+
 {{#each (ts-resource-imports .)}}
 import type { {{capitalize .}} } from '../model/{{capitalize .}}';
 {{/each}}
 
 
-export class {{name}}Resource extends ApiResource{{#if schema}}<{{capitalize name}}>{{/if}} {
+export class {{name}}Resource {{#if schema}}extends ApiResource<{{capitalize name}}> {{/if}}{
+
+{{! Resources without a schema (Search) doesn't extend ApiResource, and needs a constructor }}
+{{#unless schema}}
+constructor(private client: ApiClient) {}
+{{/unless}}
 
 {{! Generate methods for each operation (GET, POST, etc.) }}
 {{#each operationList}}
