@@ -332,9 +332,7 @@ const getOperationName = (
   }
   // PostSaksmappeJournalpost (add journalpost to Saksmappe) should be named postJournalpost
   else {
-    const stripPrefixRE = new RegExp(
-      '^' + capitalize(methodAlias) + entityName,
-    );
+    const stripPrefixRE = new RegExp('^' + capitalize(method) + entityName);
     return deCapitalize(
       operationId.replace(stripPrefixRE, capitalize(methodAlias)),
     );
