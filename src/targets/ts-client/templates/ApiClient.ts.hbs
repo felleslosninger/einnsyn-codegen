@@ -10,6 +10,12 @@ import ApiClientBase from './ApiClientBase';
 
 export default class ApiClient extends ApiClientBase {
 {{#each entityList}}
-  public {{deCapitalize name}} = new {{capitalize name}}Resource(this);
+  {{#if schema}}
+    public {{deCapitalize name}} = new {{capitalize name}}Resource(
+    {{#if schema.properties.id}}
+      this
+    {{/if}}
+    );
+  {{/if}}
 {{/each}}
 }
