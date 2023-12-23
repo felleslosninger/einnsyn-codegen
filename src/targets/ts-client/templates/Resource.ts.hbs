@@ -93,7 +93,13 @@ constructor(private client: ApiClient) {}
         {{! Expandable fields }}
         {{#if x-expandableField}}
           {{! Unexpanded field}}
-          (!expand['{{@key}}'] && typeof(obj.{{@key}}) === 'string') ||
+          (!expand['{{@key}}'] &&
+            {{#eq type 'array'}}
+              Array.isArray(obj.{{@key}}) && obj.{{@key}}.every((item) => typeof(item) === 'string')
+            {{else}}
+              typeof(obj.{{@key}}) === 'string'
+            {{/eq}}
+          ) ||
 
           {{! Expanded field}}
           (
