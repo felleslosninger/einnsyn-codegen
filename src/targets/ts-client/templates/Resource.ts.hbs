@@ -70,18 +70,21 @@ constructor(private client: ApiClient) {}
   /**
     * Check if an object is a valid {{name}} object
     */
-  public isValid(
+  public validate(
     originalObj: unknown,
     expandList: string[] | ExpandObject = {}
-  ): originalObj is {{name}} {
+  ): string[] {
     const obj = originalObj as {{name}};
     const expand = expandListToObject(expandList);
+    const errors: string[] = [];
 
     {{! Check for non-object input }}
-    return obj !== null && typeof obj === 'object' 
+    if (obj === null || typeof obj !== 'object') {
+      return ['Non-object input'];
+    }
 
     {{#each schema.properties}}
-      && (
+      (
         {{! If not required, check for undefined first }}
         {{#unless x-required}}
         (obj.{{@key}} === undefined) ||
@@ -122,8 +125,10 @@ constructor(private client: ApiClient) {}
           {{/eq}}
         {{/if}}
 
-      )
+      ) || errors.push('{{@key}} is not a valid {{ts-datatype .}}');
     {{/each}}
+
+    return errors;
   }
 {{/if}}
 }
