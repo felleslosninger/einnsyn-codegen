@@ -42,4 +42,10 @@ export const addHandlebarsHelpers = (handlebars: typeof Handlebars) => {
   handlebars.registerHelper('eq', eq);
   handlebars.registerHelper('ne', ne);
   handlebars.registerHelper('log', (value: unknown) => console.log(value));
+  handlebars.registerHelper('and', function () {
+    return Array.prototype.every.call(arguments, Boolean);
+  });
+  handlebars.registerHelper('or', function () {
+    return Array.prototype.slice.call(arguments, 0, -1).some(Boolean);
+  });
 };

@@ -14,7 +14,7 @@ import type { {{capitalize .}} } from '../model/{{capitalize .}}';
 {{/each}}
 
 
-export class {{name}}Resource {{#if schema}}extends ApiResource<{{capitalize name}}> {{/if}}{
+export class {{name}}Resource {{#if (and schema schema.properties.id)}}extends ApiResource<{{capitalize name}}> {{/if}}{
 
 {{! Resources without a schema (Search) doesn't extend ApiResource, and needs a constructor }}
 {{#unless schema}}
