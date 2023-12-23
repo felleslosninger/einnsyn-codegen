@@ -1,14 +1,19 @@
-import { OpenAPIObject, OpenApiBuilder, SchemaObject } from 'openapi3-ts/oas30';
-import yaml from 'js-yaml';
-import fs from 'fs';
 import $RefParser from '@apidevtools/json-schema-ref-parser';
-import { JSONObject, deepMergeAllOf } from './utils/deepMergeAllOf';
-import { ParsedArgs } from 'minimist';
+import fs from 'fs';
 import handlebars from 'handlebars';
+import yaml from 'js-yaml';
+import { ParsedArgs } from 'minimist';
+import {
+  OpenAPIObject,
+  OpenApiBuilder,
+  OperationObject,
+  RequestBodyObject,
+  ResponseObject,
+  SchemaObject,
+} from 'openapi3-ts/oas30';
+import { JSONObject, deepMergeAllOf } from './utils/deepMergeAllOf';
 
-import * as java from './targets/java-client/javaGenerator';
 import * as ts from './targets/ts-client/tsGenerator';
-import { addHandlebarsHelpers } from './utils/handlebarsHelpers';
 
 const run = async (args: ParsedArgs) => {
   // Parse spec
@@ -45,6 +50,45 @@ const run = async (args: ParsedArgs) => {
         property['x-expandableField'] = expandableField;
       }
     });
+  }
+
+  // Create resource-ids for inline request/response bodies
+  const paths = spec.paths ?? {};
+  for (const path in paths) {
+    const pathItem = paths[path];
+
+    for (const methodUntyped in pathItem) {
+      const method = methodUntyped as keyof typeof pathItem;
+      const operation = pathItem[method] as OperationObject;
+      const requestBody = operation.requestBody as RequestBodyObject;
+      const responses = operation.responses;
+      const operationId = operation.operationId;
+
+      if (requestBody && operationId) {
+        const requestBodyContent = requestBody.content;
+        const content = requestBodyContent['application/json'];
+        const schema = content?.schema as SchemaObject;
+        if (schema && !schema['x-resourceId']) {
+          const resourceId = `${operationId}RequestBody`;
+          schema['x-resourceId'] = resourceId;
+          schemas[resourceId] = schema;
+        }
+      }
+
+      if (responses && operationId) {
+        for (const statusCode in responses) {
+          const response = responses[statusCode] as ResponseObject;
+          const responseContent = response.content;
+          const content = responseContent?.['application/json'];
+          const schema = content?.schema as SchemaObject;
+          if (schema && !schema['x-resourceId']) {
+            const resourceId = `${operationId}ResponseBody`;
+            schema['x-resourceId'] = resourceId;
+            schemas[resourceId] = schema;
+          }
+        }
+      }
+    }
   }
 
   if (args.ts || args.all) {

@@ -47,10 +47,8 @@ export const generate = async (
   for (const name in schemas) {
     const schema = schemas[name] as SchemaObject;
 
-    if (
-      schema.properties?.id === undefined ||
-      schema['x-resourceId'] === undefined
-    ) {
+    // Add an exception for ResultList, this is implemented manually
+    if (schema['x-resourceId'] === undefined || name === 'ResultList') {
       continue;
     }
 
