@@ -18,20 +18,38 @@ import * as ts from './targets/ts-client/tsGenerator';
 const run = async (args: ParsedArgs) => {
   // Parse spec
   const file = await fs.promises.readFile(args.spec as string, 'utf8');
-  const document = yaml.load(file) as OpenAPIObject;
-  const dereferencedDocument = (await $RefParser.dereference(
-    document,
-  )) as OpenAPIObject;
-  const root = OpenApiBuilder.create(dereferencedDocument);
-  let spec = root.getSpec();
+  let spec = yaml.load(file) as OpenAPIObject;
+
+  // Dereference spec
+  spec = (await $RefParser.dereference(spec)) as OpenAPIObject;
+
+  // Add x-extends, and remove extended properties for schemas that extend other schemas
+  let schemas = spec.components?.schemas ?? {};
+  for (const schemaName in schemas) {
+    const schema = schemas[schemaName] as SchemaObject;
+    console.log(
+      'Does ' +
+        schemaName +
+        ' have expandableFields? ' +
+        schema['x-expandableFields'],
+    );
+    const allOf = schema.allOf ?? [];
+    // The first allOf object should be the schema that is extended
+    const maybeSuper = allOf[0] as SchemaObject;
+    if (maybeSuper && maybeSuper['x-resourceId']) {
+      schema['x-extends'] = maybeSuper['x-resourceId'];
+      maybeSuper['x-isExtended'] = true;
+      allOf.shift();
+    }
+  }
 
   // Merge all allOf objects in spec
   spec = deepMergeAllOf({}, [
     spec as unknown as JSONObject,
   ]) as unknown as OpenAPIObject;
+  schemas = spec.components?.schemas ?? {};
 
   // Prepare additional helper properties in schemas
-  const schemas = spec.components?.schemas ?? {};
   for (const schemaName in schemas) {
     let schema = schemas[schemaName] as SchemaObject;
 
@@ -44,7 +62,13 @@ const run = async (args: ParsedArgs) => {
     });
 
     // Mark expandableField properties
+    // console.log(
+    //   'MARK EXPANDABLE FIELDS: ' + schemaName,
+    //   schema['x-expandableFields'],
+    //   schema,
+    // );
     schema['x-expandableFields']?.forEach(async (expandableField: string) => {
+      console.log('MARK EXPANDABLE FIELD: ' + expandableField);
       let property = schema.properties?.[expandableField] as SchemaObject;
       if (property) {
         property['x-expandableField'] = expandableField;

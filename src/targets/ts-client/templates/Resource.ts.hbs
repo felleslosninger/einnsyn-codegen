@@ -2,24 +2,47 @@
 // https://github.com/felleslosninger/ein-openapi/
 
 
-{{#if schema}}
-import { expandListToObject, ExpandObject } from '../utils/expandListToObject';
-import { ApiResource } from './ApiResource';
-{{else}}
-import ApiClient from '../ApiClient';
+{{! Import superclass if this schema has x-extends}}
+{{#if schema.x-extends}}
+import { {{capitalize schema.x-extends}}Resource } from './{{capitalize schema.x-extends}}Resource';
 {{/if}}
-
+{{! Import expandList-tools, used for any get/update/delete method }}
+{{#if schema}}
+import { expandListToObject, type ExpandObject } from '../utils/expandListToObject';
+{{/if}}
+{{! If this doesn't extend anything, import ApiClient since it's used in the constructor}}
+{{#unless schema.x-extends}}
+import ApiClient from '../ApiClient';
+{{/unless}}
+{{! Import all models used in this schema }}
 {{#each (ts-resource-imports .)}}
 import type { {{capitalize .}} } from '../model/{{capitalize .}}';
 {{/each}}
 
 
-export class {{name}}Resource {{#if (and schema schema.properties.id)}}extends ApiResource<{{capitalize name}}> {{/if}}{
+export {{#if schema.x-isExtended}}abstract {{/if}} class
+  {{name}}Resource{{#if schema.x-isExtended}}
+    <T extends {{name}} = {{name}}{{#unless schema.x-extends}}
+      , Q = any
+    {{/unless}}>
+  {{/if}} 
+  {{#if schema.x-extends}}extends {{capitalize schema.x-extends}}Resource<
+    {{#if schema.x-isExtended}}T
+    {{else}}{{name}}{{/if}}
+  >{{/if}}
+{
 
-{{! Resources without a schema (Search) doesn't extend ApiResource, and needs a constructor }}
-{{#unless schema}}
-constructor(private client: ApiClient) {}
+{{! Add constructor to "root" resources }}
+{{#unless schema.x-extends}}
+constructor(protected client: ApiClient) {}
 {{/unless}}
+
+{{! Add required abstract methods to Base (any object in the database)}}
+{{#eq schema.x-resourceId 'Base'}}
+  public abstract get(id: string, query?: Q): Promise<T>;
+  public abstract update(id: string, body: Partial<T>): Promise<T>;
+  public abstract delete(id: string): Promise<T>;
+{{/eq}}
 
 {{! Generate methods for each operation (GET, POST, etc.) }}
 {{#each operationList}}
@@ -83,6 +106,11 @@ constructor(private client: ApiClient) {}
       return ['Non-object input'];
     }
 
+    {{! Check super-class }}
+    {{#if schema.x-extends}}
+      errors.push(...super.validate(obj, expand));
+    {{/if}}
+
     {{#each schema.properties}}
       (
         {{! If not required, check for undefined first }}
@@ -136,10 +164,35 @@ constructor(private client: ApiClient) {}
 
     return errors;
   }
+
+  /**
+   * Use validate() to check if there are errors
+   */
+  public isValid(obj: unknown, expandList?: string[] | ExpandObject): obj is {{name}} {
+    const errors = this.validate(obj, expandList);
+    if (errors.length > 0) {
+      console.log('Failed to validate as `{{name}}`', errors);
+      return false;
+    }
+    return true;
+  }
+
+  /**
+   * Check if an object is a valid list of {{name}} objects
+   */
+  public isValidList(
+    obj: unknown,
+    expandList?: string[] | ExpandObject,
+  ): obj is {{name}}[] {
+    return (
+      Array.isArray(obj) && obj.every((item) => this.isValid(item, expandList))
+    );
+  }
 {{/if}}
 }
 
 
+{{! Generate query types for each operation }}
 {{#each operationList}}
   {{#if (ts-query-parameters operation)}}
   export type {{capitalize ../name}}{{capitalize (ts-operation-name ../name .)}}Query = {

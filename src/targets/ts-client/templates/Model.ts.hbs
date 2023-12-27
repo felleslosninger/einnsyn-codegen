@@ -3,12 +3,15 @@
 
 
 {{! Imports }}
+{{#if schema.x-extends}}
+import { {{capitalize schema.x-extends}} } from './{{capitalize schema.x-extends}}';
+{{/if}}
 {{#each (ts-model-imports .)}}
-import { {{capitalize .}} } from '../model/{{capitalize .}}';
+import { {{capitalize .}} } from './{{capitalize .}}';
 {{/each}}
 
 {{! Type }}
-export type {{name}} = {
+export type {{name}} = {{#if schema.x-extends}}{{schema.x-extends}} & {{/if}} {
   {{#each schema.properties}}
   {{@key}}{{#unless x-required}}?{{/unless}}: {{ts-datatype .}};
   {{/each}}
