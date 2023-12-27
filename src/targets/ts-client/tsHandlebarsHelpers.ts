@@ -284,7 +284,7 @@ export const getResponseValidator = (
       .map((genericClass) => capitalize(genericClass))
       .join(' | ');
     const resourceValidators = genericClasses
-      .map((genericClass) => 'this.client.' + deCapitalize(genericClass))
+      .map((genericClass) => deCapitalize(genericClass) + '.isValid')
       .join(', ');
     return `resultList.isValid<${resources}>(${parameter}, [${resourceValidators}], query?.expand ?? [])`;
   }

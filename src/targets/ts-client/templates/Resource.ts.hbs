@@ -6,10 +6,6 @@
 {{#if schema.x-extends}}
 import { {{capitalize schema.x-extends}}Resource } from './{{capitalize schema.x-extends}}Resource';
 {{/if}}
-{{! Import expandList-tools, used for any get/update/delete method }}
-{{#if schema}}
-import { expandListToObject, type ExpandObject } from '../utils/expandListToObject';
-{{/if}}
 {{! If this doesn't extend anything, import ApiClient since it's used in the constructor}}
 {{#unless schema.x-extends}}
 import ApiClient from '../ApiClient';
@@ -17,8 +13,8 @@ import ApiClient from '../ApiClient';
 {{! Import all models used in this schema }}
 {{#each (ts-resource-imports .)}}
 import type { {{capitalize .}} } from '../model/{{capitalize .}}';
+import * as {{deCapitalize .}} from '../model/{{capitalize .}}';
 {{/each}}
-
 
 export {{#if schema.x-isExtended}}abstract {{/if}} class
   {{name}}Resource{{#if schema.x-isExtended}}
@@ -76,7 +72,7 @@ constructor(protected client: ApiClient) {}
         {{/if}}
       });
 
-      if (!this.client.{{{ts-responsevalidator . 'responseData'}}}) {
+      if (!{{{ts-responsevalidator . 'responseData'}}}) {
         console.error('Unable to parse response data as `{{{ts-responsetype .}}}`', responseData);
         return responseData as {{{ts-responsetype .}}};
       }
@@ -86,109 +82,6 @@ constructor(protected client: ApiClient) {}
 
   {{/if}}
 {{/each}}
-
-
-{{#if schema}}
-  {{! Validator }}
-  /**
-    * Check if an object is a valid {{name}} object
-    */
-  public validate(
-    originalObj: unknown,
-    expandList: string[] | ExpandObject = {}
-  ): string[] {
-    const obj = originalObj as {{name}};
-    const expand = expandListToObject(expandList);
-    const errors: string[] = [];
-
-    {{! Check for non-object input }}
-    if (obj === null || typeof obj !== 'object') {
-      return ['Non-object input'];
-    }
-
-    {{! Check super-class }}
-    {{#if schema.x-extends}}
-      errors.push(...super.validate(obj, expand));
-    {{/if}}
-
-    {{#each schema.properties}}
-      (
-        {{! If not required, check for undefined first }}
-        {{#unless x-required}}
-        (obj.{{@key}} === undefined) ||
-        {{/unless}}
-
-        {{! Expandable fields }}
-        {{#if x-expandableField}}
-          {{! Unexpanded field}}
-          (!expand['{{@key}}'] &&
-            {{#eq type 'array'}}
-              Array.isArray(obj.{{@key}}) && obj.{{@key}}.every((item) => typeof(item) === 'string')
-            {{else}}
-              typeof(obj.{{@key}}) === 'string'
-            {{/eq}}
-          ) ||
-
-          {{! Expanded field}}
-          (
-          {{#each (ts-resources-for-property .)}}
-            {{! Call `resourceName`.isValid unless resource is the same as the current model }}
-            this.client.{{deCapitalize .}}.
-            {{#eq ../type 'array'}}
-              isValidList(obj.{{@../key}}, expand['{{@../key}}'])
-            {{else}}
-              isValid(obj.{{@../key}}, expand['{{@../key}}'])
-            {{/eq}}
-            {{#unless @last}} || {{/unless}}
-          {{/each}}
-          )
-
-        {{! If not expandable, check against type}}
-        {{else}}
-          {{#eq (ts-datatype .) 'Date'}}
-            (obj.{{@key}} instanceof Date && !isNaN(obj.{{@key}}.valueOf()))
-
-          {{else}}
-            {{#if enum}}
-              ({{#each enum}}obj.{{@../key}} === '{{this}}'{{#unless @last}} || {{/unless}}{{/each}})
-
-            {{else}}
-              (typeof obj.{{@key}} === '{{ts-datatype .}}')
-
-            {{/if}}
-          {{/eq}}
-        {{/if}}
-
-      ) || errors.push('{{@key}} is not a valid {{ts-datatype .}}');
-    {{/each}}
-
-    return errors;
-  }
-
-  /**
-   * Use validate() to check if there are errors
-   */
-  public isValid(obj: unknown, expandList?: string[] | ExpandObject): obj is {{name}} {
-    const errors = this.validate(obj, expandList);
-    if (errors.length > 0) {
-      console.log('Failed to validate as `{{name}}`', errors);
-      return false;
-    }
-    return true;
-  }
-
-  /**
-   * Check if an object is a valid list of {{name}} objects
-   */
-  public isValidList(
-    obj: unknown,
-    expandList?: string[] | ExpandObject,
-  ): obj is {{name}}[] {
-    return (
-      Array.isArray(obj) && obj.every((item) => this.isValid(item, expandList))
-    );
-  }
-{{/if}}
 }
 
 

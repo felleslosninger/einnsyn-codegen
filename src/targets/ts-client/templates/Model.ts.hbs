@@ -4,15 +4,119 @@
 
 {{! Imports }}
 {{#if schema.x-extends}}
-import { {{capitalize schema.x-extends}} } from './{{capitalize schema.x-extends}}';
+import type { {{capitalize schema.x-extends}} } from './{{capitalize schema.x-extends}}';
+import * as {{deCapitalize schema.x-extends}} from './{{capitalize schema.x-extends}}';
 {{/if}}
 {{#each (ts-model-imports .)}}
-import { {{capitalize .}} } from './{{capitalize .}}';
+import type { {{capitalize .}} } from './{{capitalize .}}';
+import * as {{deCapitalize .}} from './{{capitalize .}}';
 {{/each}}
+import { expandListToObject, type ExpandObject } from '../utils/expandListToObject';
 
 {{! Type }}
 export type {{name}} = {{#if schema.x-extends}}{{schema.x-extends}} & {{/if}} {
   {{#each schema.properties}}
   {{@key}}{{#unless x-required}}?{{/unless}}: {{ts-datatype .}};
   {{/each}}
+}
+
+
+{{! Validator }}
+/**
+  * Check if an object is a valid {{name}} object
+  */
+export const validate = (
+  originalObj: unknown,
+  expandList: string[] | ExpandObject = {}
+): string[] => {
+  const obj = originalObj as {{name}};
+  const expand = expandListToObject(expandList);
+  const errors: string[] = [];
+
+  {{! Check for non-object input }}
+  if (obj === null || typeof obj !== 'object') {
+    return ['Non-object input'];
+  }
+
+  {{! Check super-class }}
+  {{#if schema.x-extends}}
+    errors.push(...{{deCapitalize schema.x-extends}}.validate(obj, expand));
+  {{/if}}
+
+  {{#each schema.properties}}
+    (
+      {{! If not required, check for undefined first }}
+      {{#unless x-required}}
+      (obj.{{@key}} === undefined) ||
+      {{/unless}}
+
+      {{! Expandable fields }}
+      {{#if x-expandableField}}
+        {{! Unexpanded field}}
+        (!expand['{{@key}}'] &&
+          {{#eq type 'array'}}
+            Array.isArray(obj.{{@key}}) && obj.{{@key}}.every((item) => typeof(item) === 'string')
+          {{else}}
+            typeof(obj.{{@key}}) === 'string'
+          {{/eq}}
+        ) ||
+
+        {{! Expanded field}}
+        (
+        {{#each (ts-resources-for-property .)}}
+          {{! Call `resourceName`.isValid unless resource is the same as the current model }}
+          {{#ne ../../name (capitalize .)}}{{deCapitalize .}}.{{/ne}}
+          {{#eq ../type 'array'}}
+            isValidList(obj.{{@../key}}, expand['{{@../key}}'])
+          {{else}}
+            isValid(obj.{{@../key}}, expand['{{@../key}}'])
+          {{/eq}}
+          {{#unless @last}} || {{/unless}}
+        {{/each}}
+        )
+
+      {{! If not expandable, check against type}}
+      {{else}}
+        {{#eq (ts-datatype .) 'Date'}}
+          (obj.{{@key}} instanceof Date && !isNaN(obj.{{@key}}.valueOf()))
+
+        {{else}}
+          {{#if enum}}
+            ({{#each enum}}obj.{{@../key}} === '{{this}}'{{#unless @last}} || {{/unless}}{{/each}})
+
+          {{else}}
+            (typeof obj.{{@key}} === '{{ts-datatype .}}')
+
+          {{/if}}
+        {{/eq}}
+      {{/if}}
+
+    ) || errors.push('{{@key}} is not a valid {{ts-datatype .}}');
+  {{/each}}
+
+  return errors;
+}
+
+/**
+  * Use validate() to check if there are errors
+  */
+export const isValid = (obj: unknown, expandList?: string[] | ExpandObject): obj is {{name}} => {
+  const errors = validate(obj, expandList);
+  if (errors.length > 0) {
+    console.log('Failed to validate as `{{name}}`', errors);
+    return false;
+  }
+  return true;
+}
+
+/**
+  * Check if an object is a valid list of {{name}} objects
+  */
+export const isValidList = (
+  obj: unknown,
+  expandList?: string[] | ExpandObject,
+): obj is {{name}}[] => {
+  return (
+    Array.isArray(obj) && obj.every((item) => isValid(item, expandList))
+  );
 }

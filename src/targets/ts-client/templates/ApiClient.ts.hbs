@@ -4,17 +4,17 @@
 import ApiClientBase from './ApiClientBase';
 
 {{#each entityList}}
-  import { {{capitalize name}}Resource } from './resource/{{capitalize name
-  }}Resource';
+  {{#unless schema.x-isExtended}}
+    import { {{capitalize name}}Resource } from './resource/{{capitalize name
+    }}Resource';
+  {{/unless}}
 {{/each}}
 
 export default class ApiClient extends ApiClientBase {
 {{#each entityList}}
-  {{#if schema}}
-    {{! Extended schemas are abstract, and cannot be instantiated  }}
-    {{#unless schema.x-isExtended}}
-      public {{deCapitalize name}} = new {{capitalize name}}Resource(this);
-    {{/unless}}
-  {{/if}}
+  {{! Extended schemas are abstract, and cannot be instantiated  }}
+  {{#unless schema.x-isExtended}}
+    public {{deCapitalize name}} = new {{capitalize name}}Resource(this);
+  {{/unless}}
 {{/each}}
 }

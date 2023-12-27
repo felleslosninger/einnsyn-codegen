@@ -61,14 +61,7 @@ const run = async (args: ParsedArgs) => {
       }
     });
 
-    // Mark expandableField properties
-    // console.log(
-    //   'MARK EXPANDABLE FIELDS: ' + schemaName,
-    //   schema['x-expandableFields'],
-    //   schema,
-    // );
     schema['x-expandableFields']?.forEach(async (expandableField: string) => {
-      console.log('MARK EXPANDABLE FIELD: ' + expandableField);
       let property = schema.properties?.[expandableField] as SchemaObject;
       if (property) {
         property['x-expandableField'] = expandableField;
