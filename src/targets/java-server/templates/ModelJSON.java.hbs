@@ -1,0 +1,37 @@
+// Auto-generated from our OpenAPI spec
+// https://github.com/felleslosninger/ein-openapi/
+
+package no.einnsyn.ein-api-experimental.model;
+
+{{#each (model-imports .)}}
+import {{.}};
+{{/each}}
+
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
+
+public {{#if schema.x-isExtended}}abstract {{/if}} class {{name}}JSON {{#if schema.x-extends}}extends {{capitalize schema.x-extends}}JSON {
+
+{{#each schema.properties}}
+  {{#if minLength}}
+  @Size(min = {{minLength}})
+  {{/if}}
+  {{#if maxLength}}
+  @Size(max = {{maxLength}})
+  {{/if}}
+  {{#if pattern}}
+  @Pattern(regexp = "{{pattern}}")
+  {{/if}}
+  {{#if x-required}}
+  @NotNull
+  {{/if}}
+  private {{{javadatatype .}}} {{@key}}{{#x-javavalue}} = "{{.}}"{{/x-javavalue}};
+  {{#unless @last}}
+
+  {{/unless}}
+{{/each}}
+
+}
