@@ -66,7 +66,7 @@ export const generatePath = (entityOperation: EntityOperation) => {
       return "' + " + b + " + '";
     }) +
     "'";
-  return modifiedPath.replace(/\+ \'\'/g, '');
+  return modifiedPath.replace(/\+ ''/g, '');
 };
 
 /**
@@ -78,7 +78,6 @@ export const generatePath = (entityOperation: EntityOperation) => {
 export const getModelImports = (entity: Entity) => {
   const resources: Record<string, boolean> = {};
   const properties = entity.schema?.properties ?? {};
-  const entityResourceId = entity.schema?.['x-resourceId'];
 
   // Add required imports for each property
   for (const propertyName in properties) {
@@ -148,14 +147,14 @@ export const getImportsForProperty = (property: SchemaObject) => {
     }
   });
 
-  // Annotations
-  if (property.minimum) res['jakarta.validation.constraints.Min'] = true;
-  if (property.maximum) res['jakarta.validation.constraints.Max'] = true;
-  if (property.minLength || property.maxLength)
-    res['jakarta.validation.constraints.Size'] = true;
-  if (property.pattern) res['jakarta.validation.constraints.Pattern'] = true;
-  if (property['x-required'])
-    res['jakarta.validation.constraints.NotNull'] = true;
+  // Annotations for java:
+  // if (property.minimum) res['jakarta.validation.constraints.Min'] = true;
+  // if (property.maximum) res['jakarta.validation.constraints.Max'] = true;
+  // if (property.minLength || property.maxLength)
+  //   res['jakarta.validation.constraints.Size'] = true;
+  // if (property.pattern) res['jakarta.validation.constraints.Pattern'] = true;
+  // if (property['x-required'])
+  //   res['jakarta.validation.constraints.NotNull'] = true;
 
   return Object.keys(res);
 };
