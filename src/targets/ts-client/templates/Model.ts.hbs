@@ -8,8 +8,10 @@ import type { {{capitalize schema.x-extends}} } from './{{capitalize schema.x-ex
 import * as {{deCapitalize schema.x-extends}} from './{{capitalize schema.x-extends}}';
 {{/if}}
 {{#each (ts-model-imports .)}}
+{{#ne ../name (capitalize .)}}
 import type { {{capitalize .}} } from './{{capitalize .}}';
 import * as {{deCapitalize .}} from './{{capitalize .}}';
+{{/ne}}
 {{/each}}
 import { expandListToObject, type ExpandObject } from '../utils/expandListToObject';
 
