@@ -7,7 +7,7 @@
 import type { {{capitalize schema.x-extends}} } from './{{capitalize schema.x-extends}}';
 import * as {{deCapitalize schema.x-extends}} from './{{capitalize schema.x-extends}}';
 {{/if}}
-{{#each (ts-model-imports .)}}
+{{#each (model-imports .)}}
 import type { {{capitalize .}} } from './{{capitalize .}}';
 import * as {{deCapitalize .}} from './{{capitalize .}}';
 {{/each}}
@@ -63,7 +63,7 @@ export const validate = (
 
         {{! Expanded field}}
         (
-        {{#each (ts-resources-for-property .)}}
+        {{#each (resources-for-property .)}}
           {{! Call `resourceName`.isValid unless resource is the same as the current model }}
           {{#ne ../../name (capitalize .)}}{{deCapitalize .}}.{{/ne}}
           {{#eq ../type 'array'}}

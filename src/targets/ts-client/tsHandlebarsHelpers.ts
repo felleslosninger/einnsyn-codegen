@@ -23,6 +23,7 @@ export const getDataType = (
     case 'string':
       return 'string';
     case 'integer':
+    case 'number':
       return 'number';
     case 'boolean':
       return 'boolean';
@@ -79,16 +80,11 @@ export const getModelImports = (entity: Entity) => {
   const properties = entity.schema?.properties ?? {};
   const entityResourceId = entity.schema?.['x-resourceId'];
 
+  // Add required imports for each property
   for (const propertyName in properties) {
     const property = properties[propertyName] as SchemaObject;
-    const anyOf = property.anyOf ?? (property.items as SchemaObject)?.anyOf;
-    anyOf?.forEach((anyOfPropertyUntyped) => {
-      const anyOfProperty = anyOfPropertyUntyped as SchemaObject;
-      const resourceId = anyOfProperty['x-resourceId'];
-      if (resourceId !== undefined && resourceId !== entityResourceId) {
-        resources[resourceId] = true;
-      }
-    });
+    const propertyResources = getImportsForProperty(property);
+    propertyResources.forEach((resourceId) => (resources[resourceId] = true));
   }
 
   return Object.keys(resources);
@@ -138,17 +134,30 @@ export const getResourceImports = (entity: Entity) => {
  * @param property
  * @returns
  */
-export const getResourcesForProperty = (property: SchemaObject) => {
-  const resources: Record<string, boolean> = {};
+export const getImportsForProperty = (property: SchemaObject) => {
+  const res: Record<string, boolean> = {};
+
+  // If this property references a resource, it will have a resourceId
+  // ExpandableFields are always anyOf, since it's anyOf the resource or a string
   const anyOf = property.anyOf ?? (property.items as SchemaObject)?.anyOf;
   anyOf?.forEach((anyOfPropertyUntyped) => {
     const anyOfProperty = anyOfPropertyUntyped as SchemaObject;
     const resourceId = anyOfProperty['x-resourceId'];
     if (resourceId !== undefined) {
-      resources[resourceId] = true;
+      res[resourceId] = true;
     }
   });
-  return Object.keys(resources);
+
+  // Annotations
+  if (property.minimum) res['jakarta.validation.constraints.Min'] = true;
+  if (property.maximum) res['jakarta.validation.constraints.Max'] = true;
+  if (property.minLength || property.maxLength)
+    res['jakarta.validation.constraints.Size'] = true;
+  if (property.pattern) res['jakarta.validation.constraints.Pattern'] = true;
+  if (property['x-required'])
+    res['jakarta.validation.constraints.NotNull'] = true;
+
+  return Object.keys(res);
 };
 
 /**
@@ -334,10 +343,7 @@ export const addTSHandlebarsHelpers = (handlebars: typeof Handlebars) => {
   handlebars.registerHelper('ts-generate-path', generatePath);
   handlebars.registerHelper('ts-model-imports', getModelImports);
   handlebars.registerHelper('ts-resource-imports', getResourceImports);
-  handlebars.registerHelper(
-    'ts-resources-for-property',
-    getResourcesForProperty,
-  );
+  handlebars.registerHelper('ts-resources-for-property', getImportsForProperty);
   handlebars.registerHelper('ts-path-parameters', getPathParameters);
   handlebars.registerHelper('ts-query-parameters', getQueryParameters);
   handlebars.registerHelper('ts-responsevalidator', getResponseValidator);
