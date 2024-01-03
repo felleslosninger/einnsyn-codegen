@@ -30,6 +30,11 @@ export function ne(this: any, a: string, b: string, options: HelperOptions) {
   return a !== b ? options.fn(this) : options.inverse(this);
 }
 
+// Add a fallback-value helper
+export const fallback = (value: string, fallbackValue: string) => {
+  return value ?? fallbackValue;
+};
+
 /**
  * Handlebar helpers that can be used for all templates
  * @param handlebars
@@ -48,4 +53,5 @@ export const addHandlebarsHelpers = (handlebars: typeof Handlebars) => {
   handlebars.registerHelper('or', function () {
     return Array.prototype.slice.call(arguments, 0, -1).some(Boolean);
   });
+  handlebars.registerHelper('fallback', fallback);
 };

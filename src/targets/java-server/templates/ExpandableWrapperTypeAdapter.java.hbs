@@ -1,0 +1,76 @@
+// Auto-generated from our OpenAPI spec
+// https://github.com/felleslosninger/ein-openapi/
+
+package no.einnsyn.apiv3.entities.{{deCapitalize entityName}}.models;
+
+import java.lang.reflect.Type;
+import org.springframework.boot.autoconfigure.gson.GsonBuilderCustomizer;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import com.google.gson.JsonDeserializationContext;
+import com.google.gson.JsonDeserializer;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
+import com.google.gson.JsonPrimitive;
+import com.google.gson.JsonSerializationContext;
+import com.google.gson.JsonSerializer;
+
+{{#each resources}}
+import {{java-package-name . true}};
+{{/each}}
+
+@Configuration
+public class ExpandableWrapper{{capitalize propertyName}}TypeAdapter {
+
+  @Bean
+  GsonBuilderCustomizer registerTypeAdapter() {
+    return builder -> {
+      builder.registerTypeAdapter(ExpandableWrapper{{capitalize propertyName}}.class, new Serializer());
+      builder.registerTypeAdapter(ExpandableWrapper{{capitalize propertyName}}.class, new Deserializer());
+    };
+  }
+
+
+  class Serializer implements JsonSerializer<ExpandableWrapper{{capitalize propertyName}}> {
+    @Override
+    public JsonElement serialize(ExpandableWrapper{{capitalize propertyName}} src, Type typeOfSrc, JsonSerializationContext context) {
+      {{#each resources}}
+      if (src.get{{capitalize .}}() != null) {
+        return context.serialize(src.get{{capitalize .}}(), {{capitalize .}}JSON.class);
+      }
+      {{/each}}
+      return new JsonPrimitive(src.getId());
+    }
+  }
+
+
+  class Deserializer implements JsonDeserializer<ExpandableWrapper{{capitalize propertyName}}> {
+    @Override
+    public ExpandableWrapper{{capitalize propertyName}} deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
+      if (json.isJsonNull()) {
+        return null;
+      }
+
+      if (json.isJsonPrimitive()) {
+        JsonPrimitive jsonPrimitive = json.getAsJsonPrimitive();
+        if (jsonPrimitive.isString()) {
+          return new ExpandableWrapper{{capitalize propertyName}}(jsonPrimitive.getAsString());
+        }
+      }
+
+      if (json.isJsonObject()) {
+        JsonObject jsonObject = json.getAsJsonObject();
+        String entity = jsonObject.get("entity").getAsString();
+        switch (entity) {
+          {{#each resources}}
+            case "{{capitalize .}}":
+              return context.deserialize(json, {{capitalize .}}JSON.class);
+          {{/each}}
+        }
+      }
+
+      throw new JsonParseException("Could not deserialize ExpandableWrapperParent");
+    }
+  }
+}

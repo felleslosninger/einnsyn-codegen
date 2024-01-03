@@ -1,0 +1,28 @@
+// Auto-generated from our OpenAPI spec
+// https://github.com/felleslosninger/ein-openapi/
+
+package {{java-package-name entityName}};
+
+import jakarta.validation.Valid;
+import lombok.Getter;
+import lombok.Setter;
+
+{{#each resources}}
+import {{java-package-name . true}};
+{{/each}}
+
+@Getter
+@Setter
+public class ExpandableWrapper{{capitalize propertyName}} {
+
+  private String id;
+
+  {{#each resources}}
+    @Valid
+    private {{capitalize .}}JSON {{deCapitalize .}};
+  {{/each}}
+
+  public ExpandableWrapper{{capitalize propertyName}}(String id) {
+    this.id = id;
+  }
+}

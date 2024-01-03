@@ -1,9 +1,9 @@
 // Auto-generated from our OpenAPI spec
 // https://github.com/felleslosninger/ein-openapi/
 
-package no.einnsyn.ein-api-experimental.model;
+package no.einnsyn.apiv3.entities.{{deCapitalize name}}.models;
 
-{{#each (model-imports .)}}
+{{#each (java-model-imports .)}}
 import {{.}};
 {{/each}}
 
@@ -13,22 +13,47 @@ import lombok.Setter;
 @Getter
 @Setter
 
-public {{#if schema.x-isExtended}}abstract {{/if}} class {{name}}JSON {{#if schema.x-extends}}extends {{capitalize schema.x-extends}}JSON {
+public {{#if schema.x-isExtended}}abstract {{/if}} class {{name}}JSON {{#if schema.x-extends}}extends {{capitalize schema.x-extends}}JSON{{/if}} {
 
 {{#each schema.properties}}
-  {{#if minLength}}
-  @Size(min = {{minLength}})
-  {{/if}}
-  {{#if maxLength}}
-  @Size(max = {{maxLength}})
-  {{/if}}
+
+  {{#eq type 'string'}}
+    {{#if minLength}}
+      @Size(min = {{minLength}}, max = {{fallback maxLength 500}})
+    {{else}}
+      @Size(max = {{fallback maxLength 500}})
+    {{/if}}
+  {{/eq}}
+
   {{#if pattern}}
   @Pattern(regexp = "{{pattern}}")
   {{/if}}
-  {{#if x-required}}
-  @NotNull
+
+  {{#eq format 'email'}}
+  @Email
+  {{/eq}}
+
+  {{#eq format 'date-time'}}
+  @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+  {{/eq}}
+
+  {{#eq format 'date'}}
+  @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+  {{/eq}}
+
+  {{#if readOnly}}
+    @Null(groups = {Insert.class, Update.class})
+  {{else}}
+    {{#if x-required}}
+      @NotNull(groups = {Insert.class})
+    {{/if}}
   {{/if}}
-  private {{{javadatatype .}}} {{@key}}{{#x-javavalue}} = "{{.}}"{{/x-javavalue}};
+
+  {{#if x-expandableField}}
+  @Valid
+  {{/if}}
+
+  private {{{java-datatype .}}} {{@key}}{{#x-javavalue}} = "{{.}}"{{/x-javavalue}};
   {{#unless @last}}
 
   {{/unless}}

@@ -5,7 +5,6 @@ import yaml from 'js-yaml';
 import { ParsedArgs } from 'minimist';
 import {
   OpenAPIObject,
-  OpenApiBuilder,
   OperationObject,
   RequestBodyObject,
   ResponseObject,
@@ -14,6 +13,7 @@ import {
 import { JSONObject, deepMergeAllOf } from './utils/deepMergeAllOf';
 
 import * as ts from './targets/ts-client/tsGenerator';
+import * as javaServer from './targets/java-server/javaServerGenerator';
 
 const run = async (args: ParsedArgs) => {
   // Parse spec
@@ -27,16 +27,10 @@ const run = async (args: ParsedArgs) => {
   let schemas = spec.components?.schemas ?? {};
   for (const schemaName in schemas) {
     const schema = schemas[schemaName] as SchemaObject;
-    console.log(
-      'Does ' +
-        schemaName +
-        ' have expandableFields? ' +
-        schema['x-expandableFields'],
-    );
     const allOf = schema.allOf ?? [];
     // The first allOf object should be the schema that is extended
     const maybeSuper = allOf[0] as SchemaObject;
-    if (maybeSuper && maybeSuper['x-resourceId']) {
+    if (maybeSuper?.['x-resourceId']) {
       schema['x-extends'] = maybeSuper['x-resourceId'];
       maybeSuper['x-isExtended'] = true;
       allOf.shift();
@@ -54,7 +48,7 @@ const run = async (args: ParsedArgs) => {
     let schema = schemas[schemaName] as SchemaObject;
 
     // Mark properties as required
-    schema.required?.forEach(async (required) => {
+    schema.required?.forEach((required) => {
       let property = schema.properties?.[required] as SchemaObject;
       if (property) {
         property['x-required'] = true;
@@ -112,9 +106,9 @@ const run = async (args: ParsedArgs) => {
     ts.generate(spec, handlebars);
   }
 
-  // if (args.java || args.all) {
-  //   java.generate(spec);
-  // }
+  if (args['java-server'] || args.all) {
+    javaServer.generate(spec, handlebars);
+  }
 };
 
 export default run;

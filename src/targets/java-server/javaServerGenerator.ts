@@ -9,12 +9,13 @@ import * as prettier from 'prettier';
 import {
   addHandlebarsHelpers,
   capitalize,
+  deCapitalize,
 } from '../../utils/handlebarsHelpers';
 import { addJavaServerHandlebarsHelpers } from './javaServerHandlebarsHelpers';
 
+export const JAVA_PACKAGE = 'no.einnsyn.apiv3';
 const JAVA_SERVER_TEMPLATE_PATH = './src/targets/java-server/templates';
-const JAVA_SERVER_OUT_PATH = './out/java-server/src/';
-const MODEL_PATH = JAVA_SERVER_OUT_PATH + '/model';
+const JAVA_SERVER_OUT_PATH = './out/java-server/src/main/java/no/einnsyn/apiv3';
 
 export type Entity = {
   name: string;
@@ -94,21 +95,68 @@ export const generate = async (
   // Iterate all entities
   for (const name in entityList) {
     const entity = entityList[name];
+    const deCapName = deCapitalize(name);
+    const capName = capitalize(name);
 
-    console.log('Generate JSON model for ' + name);
+    // Render JSON model
     await render(
       hb,
-      `${TS_TEMPLATE_PATH}/Resource.ts.hbs`,
-      `${RESOURCE_PATH}/${name}Resource.ts`,
+      'ModelJSON.java.hbs',
+      `entities/${deCapName}/models/${capName}JSON.java`,
       entity,
     );
+
+    // Render ExpandableWrapper for ExpandableFields that can take multiple types
+    for (const propertyName in entity.schema?.properties ?? {}) {
+      const property = entity.schema?.properties?.[
+        propertyName
+      ] as SchemaObject;
+      const resources =
+        property.anyOf
+          ?.map((anyOfProperty) => {
+            return (anyOfProperty as SchemaObject)['x-resourceId'];
+          })
+          .filter((resourceId) => resourceId !== undefined) ?? [];
+
+      if (resources.length < 2) {
+        continue;
+      }
+
+      // Render ExpandableWrapper file
+      await render(
+        hb,
+        'ExpandableWrapper.java.hbs',
+        `entities/${deCapName}/models/ExpandableWrapper${capitalize(
+          propertyName,
+        )}.java`,
+        {
+          entityName: name,
+          propertyName,
+          resources,
+        },
+      );
+
+      // Render ExpandableWrapper type adapter
+      await render(
+        hb,
+        'ExpandableWrapperTypeAdapter.java.hbs',
+        `entities/${deCapName}/models/ExpandableWrapper${capitalize(
+          propertyName,
+        )}TypeAdapter.java`,
+        {
+          entityName: name,
+          propertyName,
+          resources,
+        },
+      );
+    }
 
     if (entity.schema) {
       console.log('Generate controller for ' + name);
       await render(
         hb,
-        `${TS_TEMPLATE_PATH}/Model.ts.hbs`,
-        `${MODEL_PATH}/${name}.ts`,
+        'Controller.java.hbs',
+        `entities/${deCapName}/${capName}Controller.java`,
         entity,
       );
     }
@@ -117,22 +165,27 @@ export const generate = async (
 
 /**
  *
- * @param templatePath
+ * @param templateFile
  * @param outputPath
  * @param context
  */
 const render = async (
   handlebars: typeof Handlebars,
-  templatePath: string,
-  outputPath: string,
+  templateFile: string,
+  outputFile: string,
   context: Record<string, unknown>,
 ) => {
-  const templateSource = fs.readFileSync(templatePath, 'utf8');
+  const outputPath = JAVA_SERVER_OUT_PATH + '/' + outputFile;
+  const templateSource = fs.readFileSync(
+    JAVA_SERVER_TEMPLATE_PATH + '/' + templateFile,
+    'utf8',
+  );
   const template = handlebars.compile(templateSource);
   let output = template(context);
   try {
     output = await prettier.format(template(context), {
-      parser: 'typescript',
+      plugins: [require('prettier-plugin-java')],
+      parser: 'java',
       proseWrap: 'always',
       singleQuote: true,
     });

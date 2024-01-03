@@ -75,14 +75,14 @@ export const generatePath = (entityOperation: EntityOperation) => {
  * @param property
  * @returns
  */
-export const getModelImports = (entity: Entity) => {
+export const getTsModelImports = (entity: Entity) => {
   const resources: Record<string, boolean> = {};
   const properties = entity.schema?.properties ?? {};
 
   // Add required imports for each property
   for (const propertyName in properties) {
     const property = properties[propertyName] as SchemaObject;
-    const propertyResources = getImportsForProperty(property);
+    const propertyResources = getTsImportsForProperty(property);
     propertyResources.forEach((resourceId) => (resources[resourceId] = true));
   }
 
@@ -95,7 +95,7 @@ export const getModelImports = (entity: Entity) => {
  * @param entity
  * @returns
  */
-export const getResourceImports = (entity: Entity) => {
+export const getTsResourceImports = (entity: Entity) => {
   const resources: Record<string, boolean> = {};
 
   if (entity.schema?.['x-resourceId'] !== undefined) {
@@ -133,7 +133,7 @@ export const getResourceImports = (entity: Entity) => {
  * @param property
  * @returns
  */
-export const getImportsForProperty = (property: SchemaObject) => {
+export const getTsImportsForProperty = (property: SchemaObject) => {
   const res: Record<string, boolean> = {};
 
   // If this property references a resource, it will have a resourceId
@@ -146,15 +146,6 @@ export const getImportsForProperty = (property: SchemaObject) => {
       res[resourceId] = true;
     }
   });
-
-  // Annotations for java:
-  // if (property.minimum) res['jakarta.validation.constraints.Min'] = true;
-  // if (property.maximum) res['jakarta.validation.constraints.Max'] = true;
-  // if (property.minLength || property.maxLength)
-  //   res['jakarta.validation.constraints.Size'] = true;
-  // if (property.pattern) res['jakarta.validation.constraints.Pattern'] = true;
-  // if (property['x-required'])
-  //   res['jakarta.validation.constraints.NotNull'] = true;
 
   return Object.keys(res);
 };
@@ -340,9 +331,12 @@ const getOperationName = (
 export const addTSHandlebarsHelpers = (handlebars: typeof Handlebars) => {
   handlebars.registerHelper('ts-datatype', getDataType);
   handlebars.registerHelper('ts-generate-path', generatePath);
-  handlebars.registerHelper('ts-model-imports', getModelImports);
-  handlebars.registerHelper('ts-resource-imports', getResourceImports);
-  handlebars.registerHelper('ts-resources-for-property', getImportsForProperty);
+  handlebars.registerHelper('ts-model-imports', getTsModelImports);
+  handlebars.registerHelper('ts-resource-imports', getTsResourceImports);
+  handlebars.registerHelper(
+    'ts-resources-for-property',
+    getTsImportsForProperty,
+  );
   handlebars.registerHelper('ts-path-parameters', getPathParameters);
   handlebars.registerHelper('ts-query-parameters', getQueryParameters);
   handlebars.registerHelper('ts-responsevalidator', getResponseValidator);
