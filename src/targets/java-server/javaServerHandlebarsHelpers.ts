@@ -50,6 +50,9 @@ export const getJavaImportsForProperty = (property: SchemaObject) => {
     }
   });
 
+  if (property.type === 'string')
+    res['jakarta.validation.constraints.Size'] = true;
+
   if (property.minimum) res['jakarta.validation.constraints.Min'] = true;
   if (property.maximum) res['jakarta.validation.constraints.Max'] = true;
   if (property.minLength || property.maxLength)
