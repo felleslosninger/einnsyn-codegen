@@ -50,6 +50,8 @@ export const getJavaImportsForProperty = (property: SchemaObject) => {
     }
   });
 
+  if (property.type === 'array') res['java.util.List'] = true;
+
   if (property.type === 'string')
     res['jakarta.validation.constraints.Size'] = true;
 
