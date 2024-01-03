@@ -63,7 +63,6 @@ export const getJavaImportsForProperty = (property: SchemaObject) => {
   } else if (property['x-required']) {
     res['jakarta.validation.constraints.NotNull'] = true;
     res['no.einnsyn.apiv3.features.validation.validationGroups.Insert'] = true;
-    res['no.einnsyn.apiv3.features.validation.validationGroups.Update'] = true;
   }
 
   switch (property.format) {
@@ -75,6 +74,8 @@ export const getJavaImportsForProperty = (property: SchemaObject) => {
       res['jakarta.validation.constraints.Email'] = true;
       break;
   }
+
+  if (property['x-expandableField']) res['jakrata.validation.Valid'] = true;
 
   return Object.keys(res);
 };
