@@ -78,7 +78,7 @@ export const getJavaImportsForProperty = (property: SchemaObject) => {
       break;
   }
 
-  if (property['x-expandableField']) res['jakrata.validation.Valid'] = true;
+  if (property['x-expandableField']) res['jakarta.validation.Valid'] = true;
 
   return Object.keys(res);
 };
