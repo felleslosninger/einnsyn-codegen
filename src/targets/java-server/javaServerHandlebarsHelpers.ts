@@ -21,13 +21,7 @@ export const getJavaModelImports = (entity: Entity) => {
   // If this entity extends another entity, we need to import that entity
   const extendsResource = entity.schema?.['x-extends'];
   if (extendsResource) {
-    const resourcePath =
-      JAVA_PACKAGE +
-      '.entities.' +
-      deCapitalize(extendsResource) +
-      '.model.' +
-      capitalize(extendsResource) +
-      'JSON';
+    const resourcePath = getJavaPackageName(extendsResource, true);
     resources[resourcePath] = true;
   }
 
@@ -50,14 +44,7 @@ export const getJavaImportsForProperty = (property: SchemaObject) => {
     const anyOfProperty = anyOfPropertyUntyped as SchemaObject;
     const resourceId = anyOfProperty['x-resourceId'];
     if (resourceId !== undefined) {
-      const resourcePath =
-        JAVA_PACKAGE +
-        '.entities.' +
-        deCapitalize(resourceId) +
-        '.model.' +
-        capitalize(resourceId) +
-        'JSON';
-
+      const resourcePath = getJavaPackageName(resourceId, true);
       res[resourcePath] = true;
       res[JAVA_PACKAGE + '.entities.expandablefield.ExpandableField'] = true;
     }
