@@ -96,15 +96,16 @@ export const generate = async (
   // Iterate all entities
   for (const name in entityList) {
     const entity = entityList[name];
-    const deCapName = deCapitalize(name);
     const capName = capitalize(name);
     const lcName = lc(name);
+    const entityPathName = `entities/${lcName}`;
+    const modelPathName = `${entityPathName}/models`;
 
     // Render JSON model
     await render(
       hb,
       'ModelJSON.java.hbs',
-      `entities/${lcName}/models/${capName}JSON.java`,
+      `${modelPathName}/${capName}JSON.java`,
       entity,
     );
 
@@ -128,8 +129,8 @@ export const generate = async (
       const capPropName = capitalize(propertyName);
       await render(
         hb,
-        'ModelExpandableUnion.java.hbs',
-        `entities/${lcName}/models/${capName}${capPropName}.java`,
+        'ModelUnionProperty.java.hbs',
+        `${modelPathName}/${capName}${capPropName}.java`,
         {
           entityName: name,
           propertyName,
@@ -140,8 +141,8 @@ export const generate = async (
       // Render ExpandableWrapper type adapter
       await render(
         hb,
-        'ModelExpandableUnionTypeAdapter.java.hbs',
-        `entities/${lcName}/models/${capName}${capPropName}TypeAdapter.java`,
+        'ModelUnionPropertyTypeAdapter.java.hbs',
+        `${modelPathName}/${capName}${capPropName}TypeAdapter.java`,
         {
           entityName: name,
           propertyName,
@@ -152,12 +153,14 @@ export const generate = async (
 
     if (entity.schema) {
       console.log('Generate controller for ' + name);
-      await render(
-        hb,
-        'Controller.java.hbs',
-        `entities/${lcName}/${capName}Controller.java`,
-        entity,
-      );
+      if (entity.operationList.length > 0) {
+        await render(
+          hb,
+          'Controller.java.hbs',
+          `${entityPathName}/${capName}Controller.java`,
+          entity,
+        );
+      }
     }
   }
 };
