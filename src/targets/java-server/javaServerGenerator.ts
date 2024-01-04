@@ -10,6 +10,7 @@ import {
   addHandlebarsHelpers,
   capitalize,
   deCapitalize,
+  lc,
 } from '../../utils/handlebarsHelpers';
 import { addJavaServerHandlebarsHelpers } from './javaServerHandlebarsHelpers';
 
@@ -97,12 +98,13 @@ export const generate = async (
     const entity = entityList[name];
     const deCapName = deCapitalize(name);
     const capName = capitalize(name);
+    const lcName = lc(name);
 
     // Render JSON model
     await render(
       hb,
       'ModelJSON.java.hbs',
-      `entities/${deCapName}/models/${capName}JSON.java`,
+      `entities/${lcName}/models/${capName}JSON.java`,
       entity,
     );
 
@@ -123,12 +125,11 @@ export const generate = async (
       }
 
       // Render ExpandableWrapper file
+      const capPropName = capitalize(propertyName);
       await render(
         hb,
-        'ExpandableWrapper.java.hbs',
-        `entities/${deCapName}/models/ExpandableWrapper${capitalize(
-          propertyName,
-        )}.java`,
+        'ModelExpandableUnion.java.hbs',
+        `entities/${lcName}/models/${capName}${capPropName}.java`,
         {
           entityName: name,
           propertyName,
@@ -139,10 +140,8 @@ export const generate = async (
       // Render ExpandableWrapper type adapter
       await render(
         hb,
-        'ExpandableWrapperTypeAdapter.java.hbs',
-        `entities/${deCapName}/models/ExpandableWrapper${capitalize(
-          propertyName,
-        )}TypeAdapter.java`,
+        'ModelExpandableUnionTypeAdapter.java.hbs',
+        `entities/${lcName}/models/${capName}${capPropName}TypeAdapter.java`,
         {
           entityName: name,
           propertyName,
@@ -156,7 +155,7 @@ export const generate = async (
       await render(
         hb,
         'Controller.java.hbs',
-        `entities/${deCapName}/${capName}Controller.java`,
+        `entities/${lcName}/${capName}Controller.java`,
         entity,
       );
     }

@@ -1,6 +1,6 @@
 import { ParameterObject, SchemaObject } from 'openapi3-ts/oas30';
+import { capitalize, lc } from '../../utils/handlebarsHelpers';
 import { Entity, JAVA_PACKAGE } from './javaServerGenerator';
-import { capitalize, deCapitalize } from '../../utils/handlebarsHelpers';
 
 /**
  * Get a list of resources that needs to be imported for a entity's model class
@@ -150,7 +150,7 @@ export const getDataType = (
 };
 
 export const getJavaPackageName = (name: string, withClass: boolean) => {
-  const base = JAVA_PACKAGE + '.entities.' + deCapitalize(name) + '.models';
+  const base = JAVA_PACKAGE + '.entities.' + lc(name) + '.models';
   if (withClass === true) {
     return base + '.' + capitalize(name) + 'JSON';
   }
