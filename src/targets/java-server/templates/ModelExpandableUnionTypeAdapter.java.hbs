@@ -1,7 +1,7 @@
 // Auto-generated from our OpenAPI spec
 // https://github.com/felleslosninger/ein-openapi/
 
-package no.einnsyn.apiv3.entities.{{deCapitalize entityName}}.models;
+package {{java-package-name entityName}};
 
 import java.lang.reflect.Type;
 import org.springframework.boot.autoconfigure.gson.GsonBuilderCustomizer;
@@ -21,7 +21,7 @@ import {{java-package-name . true}};
 {{/each}}
 
 @Configuration
-public class ExpandableWrapper{{capitalize propertyName}}TypeAdapter {
+public class {{capitalize entityName}}{{capitalize propertyName}}TypeAdapter {
 
   @Bean
   GsonBuilderCustomizer registerTypeAdapter() {
@@ -37,7 +37,7 @@ public class ExpandableWrapper{{capitalize propertyName}}TypeAdapter {
     public JsonElement serialize(ExpandableWrapper{{capitalize propertyName}} src, Type typeOfSrc, JsonSerializationContext context) {
       {{#each resources}}
       if (src.get{{capitalize .}}() != null) {
-        return context.serialize(src.get{{capitalize .}}(), {{capitalize .}}JSON.class);
+        return context.serialize(src.get{{capitalize .}}Object(), {{capitalize .}}JSON.class);
       }
       {{/each}}
       return new JsonPrimitive(src.getId());

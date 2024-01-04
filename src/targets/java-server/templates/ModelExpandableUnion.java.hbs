@@ -13,13 +13,13 @@ import {{java-package-name . true}};
 
 @Getter
 @Setter
-public class ExpandableWrapper{{capitalize propertyName}} {
+public class {{capitalize entityName}}{{capitalize propertyName}} {
 
   private String id;
 
   {{#each resources}}
     @Valid
-    private {{capitalize .}}JSON {{deCapitalize .}};
+    private {{capitalize .}}JSON {{deCapitalize .}}Object;
   {{/each}}
 
   public ExpandableWrapper{{capitalize propertyName}}(String id) {
