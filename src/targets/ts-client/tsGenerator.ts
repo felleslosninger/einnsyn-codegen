@@ -24,6 +24,7 @@ export type Entity = {
 };
 
 export type EntityOperation = {
+  entityName: string;
   path: string;
   method: string;
   operation: OperationObject;
@@ -85,6 +86,7 @@ export const generate = async (
       }
 
       entity.operationList.push({
+        entityName,
         path,
         method,
         operation,

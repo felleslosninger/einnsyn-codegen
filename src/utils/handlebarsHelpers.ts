@@ -1,4 +1,9 @@
 import { HelperOptions } from 'handlebars';
+import {
+  OperationObject,
+  RequestBodyObject,
+  SchemaObject,
+} from 'openapi3-ts/oas30';
 
 // Capitalize first letter
 export const capitalize = (s = '') => {
@@ -20,19 +25,84 @@ export const uc = (s = '') => {
   return s.toUpperCase();
 };
 
+export const length = (s = '') => {
+  return s.length;
+};
+
 // Add equality "eq" helper
 export function eq(this: any, a: string, b: string, options: HelperOptions) {
-  return a === b ? options.fn(this) : options.inverse(this);
+  if (!!options.inverse && !!options.fn) {
+    return a === b ? options.fn(this) : options.inverse(this);
+  } else {
+    return a === b;
+  }
 }
 
 // Add equality "ne" helper
 export function ne(this: any, a: string, b: string, options: HelperOptions) {
-  return a !== b ? options.fn(this) : options.inverse(this);
+  if (!!options.inverse && !!options.fn) {
+    return a !== b ? options.fn(this) : options.inverse(this);
+  } else {
+    return a !== b;
+  }
 }
 
 // Add a fallback-value helper
 export const fallback = (value: string, fallbackValue: string) => {
   return value ?? fallbackValue;
+};
+
+/**
+ * Generate the name for a resource's operation
+ *
+ * @param entity
+ * @param entityOperation
+ * @returns
+ */
+export const getOperationName = (
+  entityName: string,
+  method: string,
+  operation: OperationObject,
+) => {
+  let operationId = operation.operationId;
+  if (!operationId) {
+    return undefined;
+  }
+
+  const methodAlias =
+    method === 'post' ? 'add' : method === 'put' ? 'update' : method;
+
+  // GetSaksmappe, PostSaksmappe operations should be named "get", "post"
+  if (operationId === capitalize(method) + entityName) {
+    return methodAlias;
+  }
+  // GetSaksmappeList should be named "list"
+  else if (operationId === 'Get' + entityName + 'List') {
+    return 'list';
+  }
+  // PostSaksmappeJournalpost (add journalpost to Saksmappe) should be named postJournalpost
+  else {
+    const stripPrefixRE = new RegExp('^' + capitalize(method) + entityName);
+    return deCapitalize(
+      operationId.replace(stripPrefixRE, capitalize(methodAlias)),
+    );
+  }
+};
+
+/**
+ * Get the request body type for an operation
+ *
+ * @param entityOperation
+ * @returns
+ */
+export const getRequestBodyType = (
+  operation: OperationObject,
+): string | undefined => {
+  const requestBody = operation.requestBody as RequestBodyObject;
+  const content = requestBody?.content;
+  const schema = content?.['application/json']?.schema as SchemaObject;
+  const bodyType = schema?.['x-resourceId'];
+  return bodyType;
 };
 
 /**
@@ -44,6 +114,7 @@ export const addHandlebarsHelpers = (handlebars: typeof Handlebars) => {
   handlebars.registerHelper('deCapitalize', deCapitalize);
   handlebars.registerHelper('lc', lc);
   handlebars.registerHelper('uc', uc);
+  handlebars.registerHelper('length', length);
   handlebars.registerHelper('eq', eq);
   handlebars.registerHelper('ne', ne);
   handlebars.registerHelper('log', (value: unknown) => console.log(value));
@@ -54,4 +125,6 @@ export const addHandlebarsHelpers = (handlebars: typeof Handlebars) => {
     return Array.prototype.slice.call(arguments, 0, -1).some(Boolean);
   });
   handlebars.registerHelper('fallback', fallback);
+  handlebars.registerHelper('operation-name', getOperationName);
+  handlebars.registerHelper('request-body-type', getRequestBodyType);
 };

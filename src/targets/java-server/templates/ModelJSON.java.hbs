@@ -1,7 +1,7 @@
 // Auto-generated from our OpenAPI spec
 // https://github.com/felleslosninger/ein-openapi/
 
-package {{java-package-name name}};
+package {{java-package-name name 'models'}};
 
 {{#each (java-model-imports .)}}
 import {{.}};
@@ -18,27 +18,36 @@ public {{#if schema.x-isExtended}}abstract {{/if}} class {{name}}JSON {{#if sche
 {{#each schema.properties}}
 
   {{#eq type 'string'}}
+    {{! Strings should have a max length of 500 unless otherwise specified }}
     {{#if minLength}}
       @Size(min = {{minLength}}, max = {{fallback maxLength 500}})
     {{else}}
       @Size(max = {{fallback maxLength 500}})
     {{/if}}
-  {{/eq}}
 
-  {{#if pattern}}
-  @Pattern(regexp = "{{pattern}}")
-  {{/if}}
+    {{#if pattern}}
+    @Pattern(regexp = "{{pattern}}")
+    {{/if}}
 
-  {{#eq format 'email'}}
-  @Email
-  {{/eq}}
+    {{#if (eq format 'email')}}
+    @Email
 
-  {{#eq format 'date-time'}}
-  @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-  {{/eq}}
+    {{else if (eq format 'date-time')}}
+    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
 
-  {{#eq format 'date'}}
-  @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+    {{else if (eq format 'date')}}
+    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+
+    {{else if (eq format 'url')}}
+    @URL
+
+    {{else if enum}}
+    {{! Currently noop }}
+
+    {{else}}
+    @NoSSN
+
+    {{/if}}
   {{/eq}}
 
   {{#if readOnly}}
@@ -53,10 +62,41 @@ public {{#if schema.x-isExtended}}abstract {{/if}} class {{name}}JSON {{#if sche
   @Valid
   {{/if}}
 
-  private {{{java-datatype .}}} {{@key}}{{#x-javavalue}} = "{{.}}"{{/x-javavalue}};
-  {{#unless @last}}
+  private 
 
-  {{/unless}}
+    {{! Enums with length 1 should be final }}
+    {{#if (and enum (eq (length enum) 1))}}
+      final
+    {{/if}}
+
+    {{! transient values won't be serialized }}
+    {{#if writeOnly}}transient {{/if}}
+
+    {{! Data type. Enum will use a generated enum class. }}
+    {{#if (and enum (ne (length enum) 1) (ne (length enum) 0))}}
+      {{capitalize @key}}Enum
+    {{else}}
+      {{{java-datatype .}}}
+    {{/if}}
+
+    {{! Field name }}
+    {{@key}}
+
+    {{! Set default value if specified }}
+    {{#default}} = "{{.}}"{{/default}};
+
+{{/each}}
+
+{{! Add enum classes for enum values }}
+{{#each schema.properties}}
+  {{! For enum values, create a enum class }}
+  {{#if (and enum (ne (length enum) 1) (ne (length enum) 0))}}
+  public enum {{capitalize @key}}Enum {
+    {{#each enum}}
+    {{this}}{{#unless @last}},{{/unless}}
+    {{/each}}
+  }
+  {{/if}}
 {{/each}}
 
 }

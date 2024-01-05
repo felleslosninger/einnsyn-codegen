@@ -1,14 +1,14 @@
 // Auto-generated from our OpenAPI spec
 // https://github.com/felleslosninger/ein-openapi/
 
-package {{java-package-name entityName}};
+package {{java-package-name entityName 'models'}};
 
 import jakarta.validation.Valid;
 import lombok.Getter;
 import lombok.Setter;
 
 {{#each resources}}
-import {{java-package-name . true}};
+import {{java-package-name . true 'models'}};
 {{/each}}
 
 @Getter
@@ -19,7 +19,7 @@ public class {{capitalize entityName}}{{capitalize propertyName}} {
 
   {{#each resources}}
     @Valid
-    private {{capitalize .}}JSON {{deCapitalize .}}Object;
+    private {{capitalize .}}JSON {{deCapitalize .}};
   {{/each}}
 
   public ExpandableWrapper{{capitalize propertyName}}(String id) {

@@ -24,6 +24,7 @@ const run = async (args: ParsedArgs) => {
   spec = (await $RefParser.dereference(spec)) as OpenAPIObject;
 
   // Add x-extends, and remove extended properties for schemas that extend other schemas
+  // (subclassing)
   let schemas = spec.components?.schemas ?? {};
   for (const schemaName in schemas) {
     const schema = schemas[schemaName] as SchemaObject;
@@ -47,6 +48,14 @@ const run = async (args: ParsedArgs) => {
   for (const schemaName in schemas) {
     let schema = schemas[schemaName] as SchemaObject;
 
+    // Set "default" for properties with one enum value
+    for (const propertyName in schema.properties ?? {}) {
+      const property = schema.properties?.[propertyName] as SchemaObject;
+      if (property.default === undefined && property.enum?.length === 1) {
+        property.default = property.enum[0];
+      }
+    }
+
     // Mark properties as required
     schema.required?.forEach((required) => {
       let property = schema.properties?.[required] as SchemaObject;
@@ -55,6 +64,7 @@ const run = async (args: ParsedArgs) => {
       }
     });
 
+    // Mark properties as expandable fields for quick lookup
     schema['x-expandableFields']?.forEach(async (expandableField: string) => {
       let property = schema.properties?.[expandableField] as SchemaObject;
       if (property) {

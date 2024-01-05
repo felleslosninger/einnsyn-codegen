@@ -48,15 +48,15 @@ constructor(protected client: ApiClient) {}
     * {{uc method}} {{path}}
     * {{#if operation.description}}{{operation.description}}{{/if}}
     */
-    public async {{ts-operation-name ../name .}}(
+    public async {{operation-name ../name method operation}}(
       {{#each (ts-path-parameters operation)}}
       {{name}}: {{datatype}},
       {{/each}}
-      {{#if (ts-requestbodytype .)}}
-      body: {{ts-requestbodytype .}},
+      {{#if (request-body-type .)}}
+      body: {{request-body-type .}},
       {{/if}}
       {{#if (ts-query-parameters operation)}}
-      query?: {{capitalize ../name}}{{capitalize (ts-operation-name ../name .)}}Query,
+      query?: {{capitalize ../name}}{{capitalize (operation-name ../name method operation)}}Query,
       {{/if}}
     ): Promise<{{{ts-responsetype .}}}> {
 
@@ -64,7 +64,7 @@ constructor(protected client: ApiClient) {}
       const responseData = await this.client.request({
         path,
         method: '{{method}}',
-        {{#if (ts-requestbodytype .)}}
+        {{#if (request-body-type .)}}
         body,
         {{/if}}
         {{#if (ts-query-parameters operation)}}
@@ -88,7 +88,7 @@ constructor(protected client: ApiClient) {}
 {{! Generate query types for each operation }}
 {{#each operationList}}
   {{#if (ts-query-parameters operation)}}
-  export type {{capitalize ../name}}{{capitalize (ts-operation-name ../name .)}}Query = {
+  export type {{capitalize ../name}}{{capitalize (operation-name ../name method operation)}}Query = {
     {{#each (ts-query-parameters operation)}}
       {{name}}{{#unless required}}?{{/unless}}: {{datatype}},
     {{/each}}

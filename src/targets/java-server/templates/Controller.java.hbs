@@ -1,0 +1,60 @@
+// Auto-generated from our OpenAPI spec
+// https://github.com/felleslosninger/ein-openapi/
+
+package {{java-package-name name}};
+
+import org.springframework.http.ResponseEntity;
+
+{{#each (java-controller-imports .)}}
+import {{.}};
+{{/each}}
+
+@RestController
+public class {{name}}Controller {
+
+  private final {{name}}Service service;
+
+  public {{name}}Controller({{name}}Service service) {
+    this.service = service;
+  }
+
+  {{#each operationList}}
+    {{#eq (uc method) 'GET'}}@GetMapping("{{path}}"){{/eq}}
+    {{#eq (uc method) 'POST'}}@PostMapping("{{path}}"){{/eq}}
+    {{#eq (uc method) 'PUT'}}@PutMapping("{{path}}"){{/eq}}
+    {{#eq (uc method) 'DELETE'}}@DeleteMapping("{{path}}"){{/eq}}
+    public ResponseEntity<{{{java-response-type .}}}> {{operation-name entityName method operation}}(
+      {{#each (java-path-parameters operation)}}
+        @Valid
+        @PathVariable
+          {{{java-path-param-validator name ..}}}
+          {{{datatype}}}
+          {{name}}
+          {{#unless @last}},{{/unless}}
+      {{/each}}
+    ) {
+
+      var responseBody = service.{{java-service-name entityName method operation}}(
+        {{#if (request-body-type .)}}
+          body,
+        {{/if}}
+        {{#if (java-query-parameters .)}}
+          query,
+        {{/if}}
+        {{#each (java-path-parameters operation)}}
+          {{name}}{{#unless @last}},{{/unless}}
+        {{/each}}
+      );
+
+      {{! POST operations should return 201 Created, with a Location header }}
+      {{#eq (uc method) 'POST'}}
+      var location = URI.create("/{{lc (java-response-resourceId .)}}/" + responseBody.getId());
+      return ResponseEntity
+        .created(location)
+        .body(responseBody);
+      {{/eq}}
+
+      {{! List operations should return next / prev / first / last headers }}
+    }
+  {{/each}}
+}

@@ -1,0 +1,23 @@
+// Auto-generated from our OpenAPI spec
+// https://github.com/felleslosninger/ein-openapi/
+
+package {{java-package-name
+  entityName
+  'models'
+}};
+
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
+public class {{capitalize
+  name
+}}{{capitalize (operation-name entityName method operation)}}QueryParams {
+{{#each (java-query-parameters operation)}}
+  {{#if required}}
+    @NotNull
+  {{/if}}
+  private {{{datatype}}} {{name}};
+{{/each}}
+}

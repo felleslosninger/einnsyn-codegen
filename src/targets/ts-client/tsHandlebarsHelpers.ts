@@ -5,7 +5,11 @@ import {
   SchemaObject,
 } from 'openapi3-ts/oas30';
 import { Entity, EntityOperation } from './tsGenerator';
-import { capitalize, deCapitalize } from '../../utils/handlebarsHelpers';
+import {
+  capitalize,
+  deCapitalize,
+  getRequestBodyType,
+} from '../../utils/handlebarsHelpers';
 
 /**
  * Get TypeScript datatype for a property or parameter object
@@ -104,7 +108,10 @@ export const getTsResourceImports = (entity: Entity) => {
 
   for (const operation of entity.operationList) {
     let responseType = getResponseType(operation)?.replace(/\[\]$/, '');
-    let bodyType = getRequestBodyType(operation)?.replace(/\[\]$/, '');
+    let bodyType = getRequestBodyType(operation.operation)?.replace(
+      /\[\]$/,
+      '',
+    );
 
     if (responseType) {
       const regexMatch = RegExp(/ResultList<([^>]+)>$/).exec(responseType);
@@ -241,23 +248,6 @@ const getResponseType = (
 };
 
 /**
- * Get the request body type for an operation
- *
- * @param entityOperation
- * @returns
- */
-const getRequestBodyType = (
-  entityOperation: EntityOperation,
-): string | undefined => {
-  const operation = entityOperation.operation;
-  const requestBody = operation.requestBody as RequestBodyObject;
-  const content = requestBody?.content;
-  const schema = content?.['application/json']?.schema as SchemaObject;
-  const bodyType = schema?.['x-resourceId'];
-  return bodyType;
-};
-
-/**
  * Get the validator function for a response type
  *
  * @param entityOperation
@@ -290,44 +280,6 @@ export const getResponseValidator = (
   return `${deCapitalize(responseType)}.isValid(${parameter})`;
 };
 
-/**
- * Generate the name for a resource's operation
- *
- * @param entity
- * @param entityOperation
- * @returns
- */
-const getOperationName = (
-  entityName: string,
-  entityOperation: EntityOperation,
-) => {
-  const operation = entityOperation.operation;
-  let operationId = operation.operationId;
-  if (!operationId) {
-    return undefined;
-  }
-
-  const method = entityOperation.method;
-  const methodAlias =
-    method === 'post' ? 'add' : method === 'put' ? 'update' : method;
-
-  // GetSaksmappe, PostSaksmappe operations should be named "get", "post"
-  if (operationId === capitalize(entityOperation.method) + entityName) {
-    return methodAlias;
-  }
-  // GetSaksmappeList should be named "list"
-  else if (operationId === 'Get' + entityName + 'List') {
-    return 'list';
-  }
-  // PostSaksmappeJournalpost (add journalpost to Saksmappe) should be named postJournalpost
-  else {
-    const stripPrefixRE = new RegExp('^' + capitalize(method) + entityName);
-    return deCapitalize(
-      operationId.replace(stripPrefixRE, capitalize(methodAlias)),
-    );
-  }
-};
-
 export const addTSHandlebarsHelpers = (handlebars: typeof Handlebars) => {
   handlebars.registerHelper('ts-datatype', getDataType);
   handlebars.registerHelper('ts-generate-path', generatePath);
@@ -341,6 +293,4 @@ export const addTSHandlebarsHelpers = (handlebars: typeof Handlebars) => {
   handlebars.registerHelper('ts-query-parameters', getQueryParameters);
   handlebars.registerHelper('ts-responsevalidator', getResponseValidator);
   handlebars.registerHelper('ts-responsetype', getResponseType);
-  handlebars.registerHelper('ts-requestbodytype', getRequestBodyType);
-  handlebars.registerHelper('ts-operation-name', getOperationName);
 };

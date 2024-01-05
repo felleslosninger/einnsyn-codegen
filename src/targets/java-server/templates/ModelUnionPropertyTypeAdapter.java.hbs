@@ -1,7 +1,7 @@
 // Auto-generated from our OpenAPI spec
 // https://github.com/felleslosninger/ein-openapi/
 
-package {{java-package-name entityName}};
+package {{java-package-name entityName 'models'}};
 
 import java.lang.reflect.Type;
 import org.springframework.boot.autoconfigure.gson.GsonBuilderCustomizer;
@@ -17,7 +17,7 @@ import com.google.gson.JsonSerializationContext;
 import com.google.gson.JsonSerializer;
 
 {{#each resources}}
-import {{java-package-name . true}};
+import {{java-package-name . true 'models'}};
 {{/each}}
 
 @Configuration
@@ -37,7 +37,7 @@ public class {{capitalize entityName}}{{capitalize propertyName}}TypeAdapter {
     public JsonElement serialize(ExpandableWrapper{{capitalize propertyName}} src, Type typeOfSrc, JsonSerializationContext context) {
       {{#each resources}}
       if (src.get{{capitalize .}}() != null) {
-        return context.serialize(src.get{{capitalize .}}Object(), {{capitalize .}}JSON.class);
+        return context.serialize(src.get{{capitalize .}}(), {{capitalize .}}JSON.class);
       }
       {{/each}}
       return new JsonPrimitive(src.getId());

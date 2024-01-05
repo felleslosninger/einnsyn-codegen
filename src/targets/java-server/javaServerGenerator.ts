@@ -9,12 +9,11 @@ import * as prettier from 'prettier';
 import {
   addHandlebarsHelpers,
   capitalize,
-  deCapitalize,
   lc,
 } from '../../utils/handlebarsHelpers';
 import { addJavaServerHandlebarsHelpers } from './javaServerHandlebarsHelpers';
 
-export const JAVA_PACKAGE = 'no.einnsyn.apiv3';
+export const JAVA_SERVER_PACKAGE = 'no.einnsyn.apiv3';
 const JAVA_SERVER_TEMPLATE_PATH = './src/targets/java-server/templates';
 const JAVA_SERVER_OUT_PATH = './out/java-server/src/main/java/no/einnsyn/apiv3';
 
@@ -25,7 +24,10 @@ export type Entity = {
 };
 
 export type EntityOperation = {
+  entity: Entity;
+  entityName: string;
   path: string;
+  pathParts: string[];
   method: string;
   operation: OperationObject;
 };
@@ -85,8 +87,15 @@ export const generate = async (
         continue;
       }
 
+      // Trim path, split on / and remove empty strings
+      const trimmedPath = path.replace(/(^\/|\/$)/g, '');
+      const pathParts = trimmedPath.split('/').filter((s) => s.length > 0);
+
       entity.operationList.push({
+        entity,
+        entityName,
         path,
+        pathParts,
         method,
         operation,
       });
@@ -154,12 +163,23 @@ export const generate = async (
     if (entity.schema) {
       console.log('Generate controller for ' + name);
       if (entity.operationList.length > 0) {
+        // Render controller
         await render(
           hb,
           'Controller.java.hbs',
           `${entityPathName}/${capName}Controller.java`,
           entity,
         );
+
+        // Render QueryParams
+        for (const operation of entity.operationList) {
+          await render(
+            hb,
+            'QueryParams.java.hbs',
+            `${modelPathName}/${capName}${operation.operation.operationId}QueryParams.java`,
+            operation,
+          );
+        }
       }
     }
   }
