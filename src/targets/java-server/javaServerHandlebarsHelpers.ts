@@ -324,7 +324,7 @@ const getResponseType = (
 
   // If there is no application/json success response, skip (it might be a binary download)
   if (!successResponse) {
-    return;
+    return 'byte[]';
   }
 
   // If the response is a single resource, return the resource type)
