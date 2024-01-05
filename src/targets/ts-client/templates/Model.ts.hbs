@@ -87,8 +87,13 @@ export const validate = (
             ({{#each enum}}obj.{{@../key}} === '{{this}}'{{#unless @last}} || {{/unless}}{{/each}})
 
           {{else}}
-            (typeof obj.{{@key}} === '{{ts-datatype .}}')
+            {{#if (eq type 'array')}}
+              (Array.isArray(obj.{{@key}}) && obj.{{@key}}.every((item) => typeof(item) === '{{ts-datatype .}}'))
 
+            {{else}}
+              (typeof obj.{{@key}} === '{{ts-datatype .}}')
+
+            {{/if}}
           {{/if}}
         {{/eq}}
       {{/if}}
