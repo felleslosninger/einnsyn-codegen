@@ -13,7 +13,6 @@ import {
   EntityOperation,
   JAVA_SERVER_PACKAGE,
 } from './javaServerGenerator';
-import { HelperOptions } from 'handlebars';
 
 /**
  * Get a list of resources that needs to be imported for a entity's model class
@@ -86,6 +85,33 @@ export const getJavaControllerImports = (entity: Entity) => {
         break;
     }
   }
+  return Object.keys(resources);
+};
+
+export const getJavaImports = (
+  object: SchemaObject | Entity | ParameterObject,
+  { model = false, controller = false },
+): string[] => {
+  const resources: Record<string, boolean> = {};
+
+  // This is an Entity or ParameterObject
+  if ((object as Entity).schema) {
+    return getJavaImports((object as Entity).schema!, { model, controller });
+  }
+
+  // Recursively add imports for properties
+  if ((object as SchemaObject).properties) {
+    const properties = (object as SchemaObject).properties ?? {};
+    for (const propertyName in properties) {
+      const property = properties[propertyName] as SchemaObject;
+      const propertyResources = getJavaImports(property, { model, controller });
+      propertyResources.forEach((resourceId) => (resources[resourceId] = true));
+    }
+  }
+
+  if (model) {
+  }
+
   return Object.keys(resources);
 };
 
@@ -167,15 +193,15 @@ export const getDataType = (
       return 'String';
     case 'integer':
       if (schemaObject.format === 'int32') {
-        return 'int';
+        return 'Integer';
       } else {
-        return 'long';
+        return 'Long';
       }
     case 'number':
       if (schemaObject.format === 'float') {
-        return 'float';
+        return 'Float';
       } else {
-        return 'double';
+        return 'Double';
       }
     case 'boolean':
       return 'Boolean';
@@ -398,6 +424,51 @@ export const getQueryParameters = (operation: OperationObject) => {
     .filter((x) => x !== undefined);
 };
 
+/**
+ * If the operation has non-standard query parameters, we need to create a
+ * class for them. If not, use the standard classes.
+ * @param operation
+ */
+export const getQueryParametersClassName = (
+  operationWrapper: EntityOperation,
+) => {
+  const { operation, entityName, method } = operationWrapper;
+
+  // Check if return type is a list
+  const response = getResponse(operationWrapper);
+  const data = response?.properties?.data as SchemaObject;
+  const isList = data?.type === 'array';
+  const suffix = isList ? 'ListQueryParameters' : 'QueryParameters';
+
+  // Check if operation has non-standard query parameters
+  if (needsQueryParametersClassName(operationWrapper)) {
+    return capitalize(getOperationName(entityName, method, operation)) + suffix;
+  }
+
+  // Return default query parameters class
+  return suffix;
+};
+
+/**
+ * Check if this operation needs a custom query parameters class
+ *
+ * @param operationWrapper
+ * @returns
+ */
+export const needsQueryParametersClassName = (
+  operationWrapper: EntityOperation,
+) => {
+  const queryParameters = getQueryParameters(operationWrapper.operation);
+  return queryParameters.length > 0;
+};
+
+/**
+ *
+ * @param entityName
+ * @param method
+ * @param operation
+ * @returns
+ */
 export const getJavaServiceName = (
   entityName: string,
   method: string,
@@ -429,4 +500,8 @@ export const addJavaServerHandlebarsHelpers = (
     getJavaImportsForProperty,
   );
   handlebars.registerHelper('java-service-name', getJavaServiceName);
+  handlebars.registerHelper(
+    'java-query-parameters-class-name',
+    getQueryParametersClassName,
+  );
 };

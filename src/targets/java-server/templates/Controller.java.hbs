@@ -3,12 +3,15 @@
 
 package {{java-package-name name}};
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpStatus;
 
 {{#each (java-controller-imports .)}}
 import {{.}};
 {{/each}}
 
+@Slf4j
 @RestController
 public class {{name}}Controller {
 
@@ -24,35 +27,60 @@ public class {{name}}Controller {
     {{#eq (uc method) 'PUT'}}@PutMapping("{{path}}"){{/eq}}
     {{#eq (uc method) 'DELETE'}}@DeleteMapping("{{path}}"){{/eq}}
     public ResponseEntity<{{{java-response-type .}}}> {{operation-name entityName method operation}}(
+      {{! Catch path parameters }}
       {{#each (java-path-parameters operation)}}
         @Valid
         @PathVariable
-          {{{java-path-param-validator name ..}}}
-          {{{datatype}}}
-          {{name}}
-          {{#unless @last}},{{/unless}}
+        {{{java-path-param-validator name ..}}}
+        {{{datatype}}}
+        {{name}},
       {{/each}}
+      {{! Catch request body }}
+      {{#if (request-body-type operation)}}
+        @Valid
+        @RequestBody
+        {{{request-body-type operation}}}
+        body,
+      {{/if}}
+      {{! Catch query parameters }}
+      @Valid
+      {{java-query-parameters-class-name .}}
+      query
     ) {
 
-      var responseBody = service.{{java-service-name entityName method operation}}(
-        {{#if (request-body-type .)}}
-          body,
-        {{/if}}
-        {{#if (java-query-parameters .)}}
-          query,
-        {{/if}}
-        {{#each (java-path-parameters operation)}}
-          {{name}}{{#unless @last}},{{/unless}}
-        {{/each}}
-      );
+      {{{java-response-type .}}} responseBody;
+      try {
+        responseBody = service.{{java-service-name entityName method operation}}(
+          {{! Send path parameters }}
+          {{#each (java-path-parameters operation)}}
+            {{name}},
+          {{/each}}
+          {{! Send request body }}
+          {{#if (request-body-type operation)}}
+            body,
+          {{/if}}
+          {{! Send query parameters }}
+          query
+        );
+      } catch (Exception e) {
+        log.error("Error executing {{../name}}Service.{{java-service-name entityName method operation}}", e);
+        return ResponseEntity
+          .status(HttpStatus.INTERNAL_SERVER_ERROR)
+          .body(null);
+      }
 
       {{! POST operations should return 201 Created, with a Location header }}
-      {{#eq (uc method) 'POST'}}
-      var location = URI.create("/{{lc (java-response-resourceId .)}}/" + responseBody.getId());
+      {{#if (eq (uc method) 'POST')}}
+      var location = URI.create("/{{lc (request-body-type operation)}}/" + responseBody.getId());
       return ResponseEntity
         .created(location)
         .body(responseBody);
-      {{/eq}}
+      {{else}}
+
+      return ResponseEntity
+        .ok()
+        .body(responseBody);
+      {{/if}}
 
       {{! List operations should return next / prev / first / last headers }}
     }
