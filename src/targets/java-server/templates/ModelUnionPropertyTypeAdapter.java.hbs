@@ -37,7 +37,7 @@ public class {{capitalize entityName}}{{capitalize propertyName}}TypeAdapter {
     public JsonElement serialize(ExpandableWrapper{{capitalize propertyName}} src, Type typeOfSrc, JsonSerializationContext context) {
       {{#each resources}}
       if (src.get{{capitalize .}}() != null) {
-        return context.serialize(src.get{{capitalize .}}(), {{capitalize .}}JSON.class);
+        return context.serialize(src.get{{capitalize .}}(), {{capitalize .}}DTO.class);
       }
       {{/each}}
       return new JsonPrimitive(src.getId());
@@ -65,7 +65,7 @@ public class {{capitalize entityName}}{{capitalize propertyName}}TypeAdapter {
         switch (entity) {
           {{#each resources}}
             case "{{capitalize .}}":
-              return context.deserialize(json, {{capitalize .}}JSON.class);
+              return context.deserialize(json, {{capitalize .}}DTO.class);
           {{/each}}
         }
       }

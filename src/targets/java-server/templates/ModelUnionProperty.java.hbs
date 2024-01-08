@@ -19,7 +19,7 @@ public class {{capitalize entityName}}{{capitalize propertyName}} {
 
   {{#each resources}}
     @Valid
-    private {{capitalize .}}JSON {{deCapitalize .}};
+    private {{capitalize .}}DTO {{deCapitalize .}};
   {{/each}}
 
   public ExpandableWrapper{{capitalize propertyName}}(String id) {

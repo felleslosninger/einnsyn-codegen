@@ -1,19 +1,6 @@
-// Auto-generated from our OpenAPI spec
-// https://github.com/felleslosninger/ein-openapi/
-
-package {{java-package-name name 'models'}};
-
-{{#each (java-model-imports .)}}
-import {{.}};
-{{/each}}
-
-import lombok.Getter;
-import lombok.Setter;
-
 @Getter
 @Setter
-
-public {{#if schema.x-isExtended}}abstract {{/if}} class {{name}}JSON {{#if schema.x-extends}}extends {{capitalize schema.x-extends}}JSON{{/if}} {
+public {{#if schema.x-isExtended}}abstract {{/if}} class {{name}}DTO {{#if schema.x-extends}}extends {{capitalize schema.x-extends}}DTO{{/if}} {
 
 {{#each schema.properties}}
 
@@ -75,6 +62,8 @@ public {{#if schema.x-isExtended}}abstract {{/if}} class {{name}}JSON {{#if sche
     {{! Data type. Enum will use a generated enum class. }}
     {{#if (and enum (ne (length enum) 1) (ne (length enum) 0))}}
       {{capitalize @key}}Enum
+    {{else if (eq type 'object')}}
+      {{capitalize @key}}DTO
     {{else}}
       {{{java-datatype .}}}
     {{/if}}
@@ -96,6 +85,13 @@ public {{#if schema.x-isExtended}}abstract {{/if}} class {{name}}JSON {{#if sche
     {{this}}{{#unless @last}},{{/unless}}
     {{/each}}
   }
+  {{/if}}
+{{/each}}
+
+{{! Add objects for object properties }}
+{{#each schema.properties}}
+  {{#if (eq type 'object')}}
+    {{> modelPartial schema=. name=(capitalize @key)}}
   {{/if}}
 {{/each}}
 

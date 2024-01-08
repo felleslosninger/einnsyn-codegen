@@ -227,7 +227,7 @@ export const getDataType = (
 
   // Expandable field with one possible type
   if (Object.keys(resources).length === 1) {
-    return 'ExpandableField<' + Object.keys(resources).join() + 'JSON>';
+    return 'ExpandableField<' + Object.keys(resources).join() + 'DTO>';
   }
 
   console.log('Unknown datatype', property);
@@ -319,7 +319,7 @@ export function getJavaPackageName(
     packageName += '.' + prefix;
   }
   if (withClass === true) {
-    packageName += '.' + capitalize(name) + 'JSON';
+    packageName += '.' + capitalize(name) + 'DTO';
   }
   return packageName;
 }
@@ -354,7 +354,7 @@ const getResponseType = (
   }
 
   // If the response is a single resource, return the resource type)
-  let responsetype = successResponse['x-resourceId'] + 'JSON';
+  let responsetype = successResponse['x-resourceId'] + 'DTO';
 
   // ResponseList is a special case, it is a generic list of resources
   const data = successResponse.properties?.data as SchemaObject;
@@ -367,7 +367,7 @@ const getResponseType = (
     if (resourceIds.length === 1) {
       responsetype =
         'ResultList<' +
-        resourceIds.map((resourceId) => resourceId + 'JSON').join() +
+        resourceIds.map((resourceId) => resourceId + 'DTO').join() +
         '>';
     }
   }
@@ -414,12 +414,7 @@ export const getQueryParameters = (operation: OperationObject) => {
         return undefined;
       }
 
-      return {
-        name: parameterObject.name,
-        description: parameterObject.description,
-        required: parameterObject.required,
-        datatype: getDataType(parameterObject),
-      };
+      return parameterObject;
     })
     .filter((x) => x !== undefined);
 };

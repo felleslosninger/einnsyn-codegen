@@ -9,9 +9,13 @@ import * as prettier from 'prettier';
 import {
   addHandlebarsHelpers,
   capitalize,
+  getOperationName,
   lc,
 } from '../../utils/handlebarsHelpers';
-import { addJavaServerHandlebarsHelpers } from './javaServerHandlebarsHelpers';
+import {
+  addJavaServerHandlebarsHelpers,
+  getQueryParameters,
+} from './javaServerHandlebarsHelpers';
 
 export const JAVA_SERVER_PACKAGE = 'no.einnsyn.apiv3';
 const JAVA_SERVER_TEMPLATE_PATH = './src/targets/java-server/templates';
@@ -40,6 +44,13 @@ export const generate = async (
   const hb = handlebars.create();
   addHandlebarsHelpers(hb);
   addJavaServerHandlebarsHelpers(hb);
+
+  // Register partials
+  const modelPartialTemplate = await fs.promises.readFile(
+    JAVA_SERVER_TEMPLATE_PATH + '/ModelPartial.java.hbs',
+    'utf8',
+  );
+  hb.registerPartial('modelPartial', modelPartialTemplate);
 
   const entityList: {
     [key: string]: Entity;
@@ -113,12 +124,12 @@ export const generate = async (
     // Render JSON model
     await render(
       hb,
-      'ModelJSON.java.hbs',
-      `${modelPathName}/${capName}JSON.java`,
+      'Model.java.hbs',
+      `${modelPathName}/${capName}DTO.java`,
       entity,
     );
 
-    // Render ExpandableWrapper for ExpandableFields that can take multiple types
+    // Render Uninon wrappers for ExpandableFields that can take multiple types
     for (const propertyName in entity.schema?.properties ?? {}) {
       const property = entity.schema?.properties?.[
         propertyName
@@ -134,7 +145,7 @@ export const generate = async (
         continue;
       }
 
-      // Render ExpandableWrapper file
+      // Render ModelUnion file
       const capPropName = capitalize(propertyName);
       await render(
         hb,
@@ -147,7 +158,7 @@ export const generate = async (
         },
       );
 
-      // Render ExpandableWrapper type adapter
+      // Render ModelUnion type adapter
       await render(
         hb,
         'ModelUnionPropertyTypeAdapter.java.hbs',
@@ -173,11 +184,31 @@ export const generate = async (
 
         // Render QueryParams
         for (const operation of entity.operationList) {
+          const propertyArray = getQueryParameters(operation.operation);
+          const properties = propertyArray.reduce(
+            (acc, property) => {
+              property && property?.name && (acc[property.name] = property);
+              return acc;
+            },
+            {} as Record<string, unknown>,
+          );
+          const context = {
+            schema: {
+              properties,
+            },
+            name: capitalize(
+              getOperationName(
+                operation.entityName,
+                operation.method,
+                operation.operation,
+              ),
+            ),
+          };
           await render(
             hb,
-            'QueryParams.java.hbs',
-            `${modelPathName}/${capName}${operation.operation.operationId}QueryParams.java`,
-            operation,
+            'Model.java.hbs',
+            `${modelPathName}/${capName}${operation.operation.operationId}DTO.java`,
+            context,
           );
         }
       }
@@ -198,7 +229,7 @@ const render = async (
   context: Record<string, unknown>,
 ) => {
   const outputPath = JAVA_SERVER_OUT_PATH + '/' + outputFile;
-  const templateSource = fs.readFileSync(
+  const templateSource = await fs.promises.readFile(
     JAVA_SERVER_TEMPLATE_PATH + '/' + templateFile,
     'utf8',
   );
