@@ -48,9 +48,8 @@ public class {{name}}Controller {
       query
     ) {
 
-      {{{java-response-type .}}} responseBody;
       try {
-        responseBody = service.{{java-service-name entityName method operation}}(
+        var responseBody = service.{{java-service-name entityName method operation}}(
           {{! Send path parameters }}
           {{#each (java-path-parameters operation)}}
             {{name}},
@@ -62,27 +61,27 @@ public class {{name}}Controller {
           {{! Send query parameters }}
           query
         );
+
+        {{! POST operations should return 201 Created, with a Location header }}
+        {{#if (eq (uc method) 'POST')}}
+        var location = URI.create("/{{lc (request-body-type operation)}}/" + responseBody.getId());
+        return ResponseEntity
+          .created(location)
+          .body(responseBody);
+        {{else}}
+
+        {{! TODO: List operations should return next / prev / first / last headers }}
+        return ResponseEntity
+          .ok()
+          .body(responseBody);
+        {{/if}}
+
       } catch (Exception e) {
         log.error("Error executing {{../name}}Service.{{java-service-name entityName method operation}}", e);
         return ResponseEntity
           .status(HttpStatus.INTERNAL_SERVER_ERROR)
           .body(null);
       }
-
-      {{! POST operations should return 201 Created, with a Location header }}
-      {{#if (eq (uc method) 'POST')}}
-      var location = URI.create("/{{lc (request-body-type operation)}}/" + responseBody.getId());
-      return ResponseEntity
-        .created(location)
-        .body(responseBody);
-      {{else}}
-
-      return ResponseEntity
-        .ok()
-        .body(responseBody);
-      {{/if}}
-
-      {{! List operations should return next / prev / first / last headers }}
     }
   {{/each}}
 }
