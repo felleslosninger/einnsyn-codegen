@@ -168,7 +168,7 @@ export const getJavaImportsForProperty = (property: SchemaObject) => {
         res['jakarta.validation.constraints.URL'] = true;
         break;
       default:
-        res['no.einnsyn.apiv3.features.validation.NoSSN'] = true;
+        res['no.einnsyn.apiv3.features.validation.nossn.NoSSN'] = true;
         break;
     }
   }
