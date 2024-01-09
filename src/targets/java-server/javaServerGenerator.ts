@@ -150,7 +150,7 @@ export const generate = async (
       await render(
         hb,
         'ModelUnionProperty.java.hbs',
-        `${modelPathName}/${capName}${capPropName}.java`,
+        `${modelPathName}/UnionProperty${capPropName}.java`,
         {
           entityName: name,
           propertyName,
@@ -163,7 +163,7 @@ export const generate = async (
       await render(
         hb,
         'ModelUnionPropertyTypeAdapter.java.hbs',
-        `${modelPathName}/${capName}${capPropName}TypeAdapter.java`,
+        `${modelPathName}/UnionProperty${capPropName}TypeAdapter.java`,
         {
           entityName: name,
           propertyName,

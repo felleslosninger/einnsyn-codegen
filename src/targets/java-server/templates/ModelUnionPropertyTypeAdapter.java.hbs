@@ -26,15 +26,15 @@ public class {{capitalize entityName}}{{capitalize propertyName}}TypeAdapter {
   @Bean
   GsonBuilderCustomizer registerTypeAdapter() {
     return builder -> {
-      builder.registerTypeAdapter(ExpandableWrapper{{capitalize propertyName}}.class, new Serializer());
-      builder.registerTypeAdapter(ExpandableWrapper{{capitalize propertyName}}.class, new Deserializer());
+      builder.registerTypeAdapter(UnionProperty{{capitalize propertyName}}.class, new Serializer());
+      builder.registerTypeAdapter(UnionProperty{{capitalize propertyName}}.class, new Deserializer());
     };
   }
 
 
-  class Serializer implements JsonSerializer<ExpandableWrapper{{capitalize propertyName}}> {
+  class Serializer implements JsonSerializer<UnionProperty{{capitalize propertyName}}> {
     @Override
-    public JsonElement serialize(ExpandableWrapper{{capitalize propertyName}} src, Type typeOfSrc, JsonSerializationContext context) {
+    public JsonElement serialize(UnionProperty{{capitalize propertyName}} src, Type typeOfSrc, JsonSerializationContext context) {
       {{#each resources}}
       if (src.get{{capitalize .}}() != null) {
         return context.serialize(src.get{{capitalize .}}(), {{capitalize .}}DTO.class);
@@ -45,9 +45,9 @@ public class {{capitalize entityName}}{{capitalize propertyName}}TypeAdapter {
   }
 
 
-  class Deserializer implements JsonDeserializer<ExpandableWrapper{{capitalize propertyName}}> {
+  class Deserializer implements JsonDeserializer<UnionProperty{{capitalize propertyName}}> {
     @Override
-    public ExpandableWrapper{{capitalize propertyName}} deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
+    public UnionProperty{{capitalize propertyName}} deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
       if (json.isJsonNull()) {
         return null;
       }
@@ -55,7 +55,7 @@ public class {{capitalize entityName}}{{capitalize propertyName}}TypeAdapter {
       if (json.isJsonPrimitive()) {
         JsonPrimitive jsonPrimitive = json.getAsJsonPrimitive();
         if (jsonPrimitive.isString()) {
-          return new ExpandableWrapper{{capitalize propertyName}}(jsonPrimitive.getAsString());
+          return new UnionProperty{{capitalize propertyName}}(jsonPrimitive.getAsString());
         }
       }
 
@@ -70,7 +70,7 @@ public class {{capitalize entityName}}{{capitalize propertyName}}TypeAdapter {
         }
       }
 
-      throw new JsonParseException("Could not deserialize ExpandableWrapperParent");
+      throw new JsonParseException("Could not deserialize UnionPropertyParent");
     }
   }
 }

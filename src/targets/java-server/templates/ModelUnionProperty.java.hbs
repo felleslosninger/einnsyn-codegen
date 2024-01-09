@@ -13,7 +13,7 @@ import {{java-package-name . true 'models'}};
 
 @Getter
 @Setter
-public class {{capitalize entityName}}{{capitalize propertyName}} {
+public class UnionProperty{{capitalize propertyName}} {
 
   private String id;
 
@@ -22,7 +22,7 @@ public class {{capitalize entityName}}{{capitalize propertyName}} {
     private {{capitalize .}}DTO {{deCapitalize .}};
   {{/each}}
 
-  public ExpandableWrapper{{capitalize propertyName}}(String id) {
+  public UnionProperty{{capitalize propertyName}}(String id) {
     this.id = id;
   }
 }

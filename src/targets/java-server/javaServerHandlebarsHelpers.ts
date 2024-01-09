@@ -144,13 +144,13 @@ export const getJavaImportsForProperty = (property: SchemaObject) => {
 
   if (property['readOnly']) {
     res['jakarta.validation.constraints.Null'] = true;
-    res[JAVA_SERVER_PACKAGE + '.features.validation.validationGroups.Insert'] =
+    res[JAVA_SERVER_PACKAGE + '.features.validation.validationgroups.Insert'] =
       true;
-    res[JAVA_SERVER_PACKAGE + '.features.validation.validationGroups.Update'] =
+    res[JAVA_SERVER_PACKAGE + '.features.validation.validationgroups.Update'] =
       true;
   } else if (property['x-required']) {
     res['jakarta.validation.constraints.NotNull'] = true;
-    res[JAVA_SERVER_PACKAGE + '.features.validation.validationGroups.Insert'] =
+    res[JAVA_SERVER_PACKAGE + '.features.validation.validationgroups.Insert'] =
       true;
   }
 
@@ -222,8 +222,7 @@ export const getDataType = (
   // Expandable field with multiple possible types
   if (Object.keys(resources).length > 1) {
     const wrapperClass =
-      'ExpandableWrapper' +
-      capitalize(property['x-expandableField'] ?? 'unnamed');
+      'UnionProperty' + capitalize(property['x-expandableField'] ?? 'unnamed');
     return 'ExpandableField<' + wrapperClass + '>';
   }
 
