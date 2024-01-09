@@ -9,12 +9,11 @@ import * as prettier from 'prettier';
 import {
   addHandlebarsHelpers,
   capitalize,
-  getOperationName,
   lc,
 } from '../../utils/handlebarsHelpers';
 import {
   addJavaServerHandlebarsHelpers,
-  getQueryParameters,
+  getQueryParametersClass,
 } from './javaServerHandlebarsHelpers';
 
 export const JAVA_SERVER_PACKAGE = 'no.einnsyn.apiv3';
@@ -127,6 +126,7 @@ export const generate = async (
       'Model.java.hbs',
       `${modelPathName}/${capName}DTO.java`,
       entity,
+      spec,
     );
 
     // Render Uninon wrappers for ExpandableFields that can take multiple types
@@ -156,6 +156,7 @@ export const generate = async (
           propertyName,
           resources,
         },
+        spec,
       );
 
       // Render ModelUnion type adapter
@@ -168,6 +169,7 @@ export const generate = async (
           propertyName,
           resources,
         },
+        spec,
       );
     }
 
@@ -180,35 +182,33 @@ export const generate = async (
           'Controller.java.hbs',
           `${entityPathName}/${capName}Controller.java`,
           entity,
+          spec,
         );
 
         // Render QueryParams
         for (const operation of entity.operationList) {
-          const propertyArray = getQueryParameters(operation.operation);
-          const properties = propertyArray.reduce(
-            (acc, property) => {
-              property && property?.name && (acc[property.name] = property);
-              return acc;
-            },
-            {} as Record<string, unknown>,
+          const queryParametersClass = getQueryParametersClass(
+            operation.operation,
+            spec,
           );
+          if (
+            Object.keys(queryParametersClass?.properties || {}).length === 0
+          ) {
+            continue;
+          }
           const context = {
             schema: {
-              properties,
+              properties: queryParametersClass.properties,
+              'x-extends': queryParametersClass.extends,
             },
-            name: capitalize(
-              getOperationName(
-                operation.entityName,
-                operation.method,
-                operation.operation,
-              ),
-            ),
+            name: queryParametersClass.className,
           };
           await render(
             hb,
             'Model.java.hbs',
             `${modelPathName}/${capName}${operation.operation.operationId}DTO.java`,
             context,
+            spec,
           );
         }
       }
@@ -227,6 +227,7 @@ const render = async (
   templateFile: string,
   outputFile: string,
   context: Record<string, unknown>,
+  spec: OpenAPIObject,
 ) => {
   const outputPath = JAVA_SERVER_OUT_PATH + '/' + outputFile;
   const templateSource = await fs.promises.readFile(
@@ -234,9 +235,9 @@ const render = async (
     'utf8',
   );
   const template = handlebars.compile(templateSource);
-  let output = template(context);
+  let output = template(context, { data: { spec } });
   try {
-    output = await prettier.format(template(context), {
+    output = await prettier.format(output, {
       plugins: [require('prettier-plugin-java')],
       parser: 'java',
       proseWrap: 'always',

@@ -43,9 +43,16 @@ public class {{name}}Controller {
         body,
       {{/if}}
       {{! Catch query parameters }}
-      @Valid
-      {{java-query-parameters-class-name .}}
-      query
+      {{#with (java-query-parameters-class operation @spec)}}
+        {{#if className}}
+          @Valid
+          {{className}}DTO
+          query
+        {{else}}
+          @Valid EmptyQueryDTO query
+        {{/if}}
+      {{/with}}
+
     ) {
 
       try {
@@ -61,19 +68,15 @@ public class {{name}}Controller {
           {{! Send query parameters }}
           query
         );
-
+        {{! TODO: Log request, response, and duration }}
         {{! POST operations should return 201 Created, with a Location header }}
         {{#if (eq (uc method) 'POST')}}
-        var location = URI.create("/{{lc (request-body-type operation)}}/" + responseBody.getId());
-        return ResponseEntity
-          .created(location)
-          .body(responseBody);
+          var location = URI.create("/{{lc (request-body-type operation)}}/" + responseBody.getId());
+          return ResponseEntity
+            .created(location)
+            .body(responseBody);
         {{else}}
-
-        {{! TODO: List operations should return next / prev / first / last headers }}
-        return ResponseEntity
-          .ok()
-          .body(responseBody);
+          return ResponseEntity.ok().body(responseBody);
         {{/if}}
 
       } catch (Exception e) {

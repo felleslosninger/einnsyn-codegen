@@ -1,4 +1,5 @@
 import {
+  OpenAPIObject,
   OperationObject,
   ParameterObject,
   SchemaObject,
@@ -13,6 +14,7 @@ import {
   EntityOperation,
   JAVA_SERVER_PACKAGE,
 } from './javaServerGenerator';
+import { Schema } from 'js-yaml';
 
 /**
  * Get a list of resources that needs to be imported for a entity's model class
@@ -303,12 +305,6 @@ export function getPathParamValidator(
 
 export function getJavaPackageName(
   name: string,
-  withClass?: boolean,
-  prefix?: string,
-): string;
-export function getJavaPackageName(name: string, prefix?: string): string;
-export function getJavaPackageName(
-  name: string,
   a?: boolean | string,
   b?: string,
 ) {
@@ -419,42 +415,95 @@ export const getQueryParameters = (operation: OperationObject) => {
     .filter((x) => x !== undefined);
 };
 
-/**
- * If the operation has non-standard query parameters, we need to create a
- * class for them. If not, use the standard classes.
- * @param operation
- */
-export const getQueryParametersClassName = (
-  operationWrapper: EntityOperation,
+export const getQueryParametersClass = (
+  operation: OperationObject,
+  spec: OpenAPIObject,
 ) => {
-  const { operation, entityName, method } = operationWrapper;
+  const queryParameters = getQueryParameters(operation);
+  const response =
+    operation.responses?.['200']?.content?.['application/json']?.schema;
+  const isList = response?.properties?.data?.type === 'array';
+  const baseClassName = isList ? 'ListQueryParameters' : 'QueryParameters';
+  const baseClass = spec.components?.schemas?.[baseClassName] as SchemaObject;
+  const className =
+    capitalize(getOperationName('', '', operation)) + baseClassName;
 
-  // Check if return type is a list
-  const response = getResponse(operationWrapper);
-  const data = response?.properties?.data as SchemaObject;
-  const isList = data?.type === 'array';
-  const suffix = isList ? 'ListQueryParameters' : 'QueryParameters';
-
-  // Check if operation has non-standard query parameters
-  if (needsQueryParametersClassName(operationWrapper)) {
-    return capitalize(getOperationName(entityName, method, operation)) + suffix;
+  if (queryParameters.length === 0) {
+    return {};
   }
 
-  // Return default query parameters class
-  return suffix;
+  // Create property object from query parameters
+  const properties: Record<string, SchemaObject> = {};
+  queryParameters.forEach((queryParameter) => {
+    const name = queryParameter?.name as keyof SchemaObject;
+    const schema = queryParameter?.schema as SchemaObject;
+    // Add required parameter?
+    if (name) properties[name] = schema;
+  });
+
+  // Check differences between query parameters and base class
+  let missingProperties = false;
+  const baseClassProperties = baseClass.properties ?? {};
+  for (const propertyName in baseClassProperties) {
+    const baseProperty = baseClassProperties[propertyName] as SchemaObject;
+    if (isDifferent(baseProperty, properties[propertyName])) {
+      missingProperties = true;
+      break;
+    }
+  }
+
+  // If there are missing properties, create a new class that doesn't extend the base class
+  if (missingProperties) {
+    return {
+      className,
+      properties,
+    };
+  }
+
+  // Check if we have additional properties
+  else {
+    let hasAdditionalProperties = false;
+    hasAdditionalProperties = isDifferent(properties, baseClassProperties);
+
+    // There are additional properties, create a new class that extends the base class
+    if (hasAdditionalProperties) {
+      // Remove properties that are already in the base class
+      for (const propertyName in baseClassProperties) {
+        delete properties[propertyName];
+      }
+      return {
+        className,
+        extends: baseClassName,
+        properties,
+      };
+    }
+    // There are no additional properties, use the base class
+    else {
+      return {
+        className: baseClassName,
+      };
+    }
+  }
 };
 
-/**
- * Check if this operation needs a custom query parameters class
- *
- * @param operationWrapper
- * @returns
- */
-export const needsQueryParametersClassName = (
-  operationWrapper: EntityOperation,
-) => {
-  const queryParameters = getQueryParameters(operationWrapper.operation);
-  return queryParameters.length > 0;
+const isDifferent = (propA?: any, propB?: any): boolean => {
+  if (Array.isArray(propA) && Array.isArray(propB)) {
+    if (propA.length !== propB.length) return true;
+    for (let i = 0; i < propA.length; i++) {
+      if (isDifferent(propA[i], propB[i])) return true;
+    }
+  } else if (typeof propA === 'object' && typeof propB === 'object') {
+    for (const p in propA) {
+      const valA = propA[p];
+      const valB = propB[p];
+      if (isDifferent(valA, valB)) {
+        return true;
+      }
+    }
+  } else {
+    return propA !== propB;
+  }
+  return false;
 };
 
 /**
@@ -496,7 +545,7 @@ export const addJavaServerHandlebarsHelpers = (
   );
   handlebars.registerHelper('java-service-name', getJavaServiceName);
   handlebars.registerHelper(
-    'java-query-parameters-class-name',
-    getQueryParametersClassName,
+    'java-query-parameters-class',
+    getQueryParametersClass,
   );
 };
