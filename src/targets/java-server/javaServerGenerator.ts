@@ -13,7 +13,7 @@ import {
 } from '../../utils/handlebarsHelpers';
 import {
   addJavaServerHandlebarsHelpers,
-  getQueryParametersClass,
+  getQueryParameters,
 } from './javaServerHandlebarsHelpers';
 
 export const JAVA_SERVER_PACKAGE = 'no.einnsyn.apiv3';
@@ -129,6 +129,28 @@ export const generate = async (
       spec,
     );
 
+    // Render enums
+    for (const propertyName in entity.schema?.properties ?? {}) {
+      const property = entity.schema?.properties?.[
+        propertyName
+      ] as SchemaObject;
+      const enumValues = property.enum;
+      if (enumValues === undefined || enumValues.length <= 1) {
+        continue;
+      }
+      await render(
+        hb,
+        'Enum.java.hbs',
+        `${modelPathName}/${capitalize(propertyName)}Enum.java`,
+        {
+          entityName: name,
+          name: capitalize(propertyName) + 'Enum',
+          values: enumValues,
+        },
+        spec,
+      );
+    }
+
     // Render Uninon wrappers for ExpandableFields that can take multiple types
     for (const propertyName in entity.schema?.properties ?? {}) {
       const property = entity.schema?.properties?.[
@@ -187,10 +209,8 @@ export const generate = async (
 
         // Render QueryParams
         for (const operation of entity.operationList) {
-          const queryParametersClass = getQueryParametersClass(
-            operation.operation,
-            spec,
-          );
+          const queryParametersClass = getQueryParameters(operation, spec);
+
           if (
             Object.keys(queryParametersClass?.properties || {}).length === 0
           ) {
@@ -201,11 +221,12 @@ export const generate = async (
               properties: queryParametersClass.properties,
               'x-extends': queryParametersClass.extends,
             },
-            name: queryParametersClass.className,
+            entityName: name,
+            name: capName + operation.operation.operationId,
           };
           await render(
             hb,
-            'Model.java.hbs',
+            'QueryParameters.java.hbs',
             `${modelPathName}/${capName}${operation.operation.operationId}DTO.java`,
             context,
             spec,

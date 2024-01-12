@@ -25,6 +25,10 @@ export const uc = (s = '') => {
   return s.toUpperCase();
 };
 
+export const constVarName = (s = '') => {
+  return s.toUpperCase().replace(/[^a-zA-Z0-9]/g, '_');
+};
+
 export const length = (s = '') => {
   return s.length;
 };
@@ -101,7 +105,7 @@ export const getRequestBodyType = (
   const requestBody = operation.requestBody as RequestBodyObject;
   const content = requestBody?.content;
   const schema = content?.['application/json']?.schema as SchemaObject;
-  const bodyType = schema?.['x-resourceId'];
+  const bodyType = schema?.['x-resourceId'] ?? operation.operationId;
   return bodyType;
 };
 
@@ -127,4 +131,5 @@ export const addHandlebarsHelpers = (handlebars: typeof Handlebars) => {
   handlebars.registerHelper('fallback', fallback);
   handlebars.registerHelper('operation-name', getOperationName);
   handlebars.registerHelper('request-body-type', getRequestBodyType);
+  handlebars.registerHelper('const-var-name', constVarName);
 };

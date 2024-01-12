@@ -1,25 +1,28 @@
 // Auto-generated from our OpenAPI spec
 // https://github.com/felleslosninger/ein-openapi/
 
-package {{java-package-name entityName 'models'}};
+package {{java-package-name}}.entities.{{lc entityName}}.models;
 
 import jakarta.validation.Valid;
 import lombok.Getter;
 import lombok.Setter;
 
 {{#each resources}}
-import {{java-package-name . true 'models'}};
+  {{#if (ne . ../entityName)}}
+    import {{java-package-name}}.entities.{{lc .}}.models.{{capitalize .}}DTO;
+  {{/if}}
 {{/each}}
+import {{java-package-name}}.entities.HasId;
 
 @Getter
 @Setter
-public class UnionProperty{{capitalize propertyName}} {
+public class UnionProperty{{capitalize propertyName}} implements HasId {
 
-  private String id;
+  String id;
 
   {{#each resources}}
     @Valid
-    private {{capitalize .}}DTO {{deCapitalize .}};
+    {{capitalize .}}DTO {{deCapitalize .}};
   {{/each}}
 
   public UnionProperty{{capitalize propertyName}}(String id) {

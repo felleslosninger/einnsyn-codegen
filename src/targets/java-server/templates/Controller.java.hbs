@@ -1,13 +1,13 @@
 // Auto-generated from our OpenAPI spec
 // https://github.com/felleslosninger/ein-openapi/
 
-package {{java-package-name name}};
+package {{java-package-name}}.entities.{{lc name}};
 
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.RestController;
 
-{{#each (java-controller-imports .)}}
+{{#each (java-controller-imports . @spec)}}
 import {{.}};
 {{/each}}
 
@@ -27,48 +27,21 @@ public class {{name}}Controller {
     {{#eq (uc method) 'PUT'}}@PutMapping("{{path}}"){{/eq}}
     {{#eq (uc method) 'DELETE'}}@DeleteMapping("{{path}}"){{/eq}}
     public ResponseEntity<{{{java-response-type .}}}> {{operation-name entityName method operation}}(
-      {{! Catch path parameters }}
-      {{#each (java-path-parameters operation)}}
-        @Valid
-        @PathVariable
-        {{{java-path-param-validator name ..}}}
+      {{#each (java-operation-parameters . @spec)}}
+        {{#each annotations}}{{{.}}} {{/each}}
         {{{datatype}}}
-        {{name}},
+        {{name}}
+        {{#unless @last}},{{/unless}}
       {{/each}}
-      {{! Catch request body }}
-      {{#if (request-body-type operation)}}
-        @Valid
-        @RequestBody
-        {{{request-body-type operation}}}
-        body,
-      {{/if}}
-      {{! Catch query parameters }}
-      {{#with (java-query-parameters-class operation @spec)}}
-        {{#if className}}
-          @Valid
-          {{className}}DTO
-          query
-        {{else}}
-          @Valid EmptyQueryDTO query
-        {{/if}}
-      {{/with}}
-
     ) {
 
       try {
         var responseBody = service.{{java-service-name entityName method operation}}(
-          {{! Send path parameters }}
-          {{#each (java-path-parameters operation)}}
-            {{name}},
-          {{/each}}
-          {{! Send request body }}
-          {{#if (request-body-type operation)}}
-            body,
-          {{/if}}
-          {{! Send query parameters }}
-          query
+        {{#each (java-operation-parameters . @spec)}}
+          {{name}}
+          {{#unless @last}},{{/unless}}
+        {{/each}}
         );
-        {{! TODO: Log request, response, and duration }}
         {{! POST operations should return 201 Created, with a Location header }}
         {{#if (eq (uc method) 'POST')}}
           var location = URI.create("/{{lc (request-body-type operation)}}/" + responseBody.getId());
@@ -86,5 +59,15 @@ public class {{name}}Controller {
           .body(null);
       }
     }
+  {{/each}}
+
+
+  {{! Request bodies without a resource ID should be added inline }}
+  {{#each operationList}}
+    {{#with (java-request-body operation)}}
+      {{#unless x-resourceId}}
+        {{> modelPartial schema=. name=../operation.operationId}}
+      {{/unless}}
+    {{/with}}
   {{/each}}
 }

@@ -2,11 +2,13 @@ import {
   OpenAPIObject,
   OperationObject,
   ParameterObject,
+  RequestBodyObject,
   SchemaObject,
 } from 'openapi3-ts/oas30';
 import {
   capitalize,
   getOperationName,
+  getRequestBodyType,
   lc,
 } from '../../utils/handlebarsHelpers';
 import {
@@ -14,7 +16,6 @@ import {
   EntityOperation,
   JAVA_SERVER_PACKAGE,
 } from './javaServerGenerator';
-import { Schema } from 'js-yaml';
 
 /**
  * Get a list of resources that needs to be imported for a entity's model class
@@ -22,9 +23,11 @@ import { Schema } from 'js-yaml';
  * @param property
  * @returns
  */
-export const getJavaModelImports = (entity: Entity) => {
+export const getJavaModelImports = (entityOrSchema: Entity | SchemaObject) => {
   const resources: Record<string, boolean> = {};
-  const properties = entity.schema?.properties ?? {};
+  const schema =
+    (entityOrSchema as Entity).schema ?? (entityOrSchema as SchemaObject);
+  const properties = schema?.properties ?? {};
 
   for (const propertyName in properties) {
     const property = properties[propertyName] as SchemaObject;
@@ -33,11 +36,26 @@ export const getJavaModelImports = (entity: Entity) => {
   }
 
   // If this entity extends another entity, we need to import that entity
-  const extendsResource = entity.schema?.['x-extends'];
+  const extendsResource = schema?.['x-extends'];
   if (extendsResource) {
-    const resourcePath = getJavaPackageName(extendsResource, true, 'models');
+    const resourcePath =
+      JAVA_SERVER_PACKAGE +
+      '.entities.' +
+      lc(extendsResource) +
+      '.models.' +
+      capitalize(extendsResource) +
+      'DTO';
     resources[resourcePath] = true;
   }
+
+  // Import HasId if this doesn't extend anything and has an ID property
+  if (!extendsResource && properties.id) {
+    resources[JAVA_SERVER_PACKAGE + '.entities.HasId'] = true;
+  }
+
+  // All models needs Getter and Setter
+  resources['lombok.Getter'] = true;
+  resources['lombok.Setter'] = true;
 
   return Object.keys(resources);
 };
@@ -47,23 +65,95 @@ export const getJavaModelImports = (entity: Entity) => {
  * @param entity
  * @returns
  */
-export const getJavaControllerImports = (entity: Entity) => {
+export const getJavaControllerImports = (
+  entity: Entity,
+  spec: OpenAPIObject,
+) => {
   const resources: Record<string, boolean> = {};
-
-  // Add service
-  const servicePath = getJavaPackageName(entity.name, entity.name + 'Service');
-  resources[servicePath] = true;
 
   for (const operationWrapper of entity.operationList) {
     // Find response type
-    const successResponse = operationWrapper.operation.responses?.['200']
-      ?.content?.['application/json']?.schema as SchemaObject;
+    const successResponse = getResponse(operationWrapper);
     const responseType = successResponse?.['x-resourceId'];
 
     // Handle list responses
+    const responseData = successResponse?.properties?.data as SchemaObject;
+    if (responseData?.type === 'array') {
+      const resourcePath =
+        JAVA_SERVER_PACKAGE + '.common.resultlist.ResultList';
+      resources[resourcePath] = true;
+    }
 
+    // Add response object
     if (responseType !== undefined) {
-      const resourcePath = getJavaPackageName(responseType, true, 'models');
+      const resourcePath =
+        JAVA_SERVER_PACKAGE +
+        '.entities.' +
+        lc(responseType) +
+        '.models.' +
+        capitalize(responseType) +
+        'DTO';
+      resources[resourcePath] = true;
+      resources['org.springframework.http.ResponseEntity'] = true;
+    }
+
+    // Add request object
+    const requestBody = getRequestBody(operationWrapper.operation);
+    if (requestBody) {
+      const resourceId = requestBody['x-resourceId'];
+      if (resourceId) {
+        resources[
+          JAVA_SERVER_PACKAGE +
+            '.entities.' +
+            lc(resourceId) +
+            '.models.' +
+            capitalize(resourceId)
+        ] = true;
+      } else {
+        const modelImports = getJavaModelImports(requestBody);
+        modelImports.forEach((modelImport) => (resources[modelImport] = true));
+      }
+    }
+
+    // Path parameters
+    const pathParameters = getPathParameters(operationWrapper.operation);
+    pathParameters.forEach((pathParameter) => {
+      resources['jakarta.validation.Valid'] = true;
+      resources['org.springframework.web.bind.annotation.PathVariable'] = true;
+      if (pathParameter?.required) {
+        resources['jakarta.validation.constraints.NotNull'] = true;
+      }
+      if (/Id$/i.test(pathParameter?.name ?? '')) {
+        const existingObjectPath =
+          JAVA_SERVER_PACKAGE +
+          '.features.validation.existingobject.ExistingObject';
+        resources[existingObjectPath] = true;
+        if (operationWrapper.entityName != entity.name) {
+          const servicePath =
+            JAVA_SERVER_PACKAGE +
+            '.entities.' +
+            lc(operationWrapper.entityName) +
+            '.' +
+            capitalize(operationWrapper.entityName) +
+            'Service';
+          resources[servicePath] = true;
+        }
+      }
+    });
+
+    // Query parameters
+    const queryParametersClass = getQueryParametersClass(
+      operationWrapper,
+      spec,
+    );
+    if (queryParametersClass?.className) {
+      const resourcePath =
+        JAVA_SERVER_PACKAGE +
+        '.entities.' +
+        lc(entity.name) +
+        '.models.' +
+        capitalize(queryParametersClass.className) +
+        'DTO';
       resources[resourcePath] = true;
     }
 
@@ -78,7 +168,7 @@ export const getJavaControllerImports = (entity: Entity) => {
         resources['org.springframework.web.bind.annotation.RequestBody'] = true;
         break;
       case 'put':
-        resources['org.springframework.web.bind.annotation.PostMapping'] = true;
+        resources['org.springframework.web.bind.annotation.PutMapping'] = true;
         resources['org.springframework.web.bind.annotation.RequestBody'] = true;
         break;
       case 'delete':
@@ -87,33 +177,6 @@ export const getJavaControllerImports = (entity: Entity) => {
         break;
     }
   }
-  return Object.keys(resources);
-};
-
-export const getJavaImports = (
-  object: SchemaObject | Entity | ParameterObject,
-  { model = false, controller = false },
-): string[] => {
-  const resources: Record<string, boolean> = {};
-
-  // This is an Entity or ParameterObject
-  if ((object as Entity).schema) {
-    return getJavaImports((object as Entity).schema!, { model, controller });
-  }
-
-  // Recursively add imports for properties
-  if ((object as SchemaObject).properties) {
-    const properties = (object as SchemaObject).properties ?? {};
-    for (const propertyName in properties) {
-      const property = properties[propertyName] as SchemaObject;
-      const propertyResources = getJavaImports(property, { model, controller });
-      propertyResources.forEach((resourceId) => (resources[resourceId] = true));
-    }
-  }
-
-  if (model) {
-  }
-
   return Object.keys(resources);
 };
 
@@ -129,9 +192,17 @@ export const getJavaImportsForProperty = (property: SchemaObject) => {
   // If this property references a resource, it will have a resourceId
   // ExpandableFields are always anyOf, since it's anyOf the resource or a string
   getResourceIdsFromSchema(property).forEach((resourceId) => {
-    const resourcePath = getJavaPackageName(resourceId, true, 'models');
+    const resourcePath =
+      JAVA_SERVER_PACKAGE +
+      '.entities.' +
+      lc(resourceId) +
+      '.models.' +
+      capitalize(resourceId) +
+      'DTO';
     res[resourcePath] = true;
-    res[getJavaPackageName('ExpandableField', 'ExpandableField')] = true;
+    const expandablePath =
+      JAVA_SERVER_PACKAGE + '.common.expandablefield.ExpandableField';
+    res[expandablePath] = true;
   });
 
   if (property.type === 'array') res['java.util.List'] = true;
@@ -165,15 +236,30 @@ export const getJavaImportsForProperty = (property: SchemaObject) => {
         res['jakarta.validation.constraints.Email'] = true;
         break;
       case 'url':
-        res['jakarta.validation.constraints.URL'] = true;
+        res['org.hibernate.validator.constraints.URL'] = true;
+        break;
+      case 'password:':
         break;
       default:
-        res['no.einnsyn.apiv3.features.validation.nossn.NoSSN'] = true;
+        if (!property.enum) {
+          res[JAVA_SERVER_PACKAGE + '.features.validation.nossn.NoSSN'] = true;
+        }
         break;
+    }
+    if (property.enum && property.enum.length > 1) {
+      res[JAVA_SERVER_PACKAGE + '.features.validation.validenum.ValidEnum'] =
+        true;
     }
   }
 
   if (property['x-expandableField']) res['jakarta.validation.Valid'] = true;
+
+  // If this is an array, check child items
+  if (property.type === 'array') {
+    const items = property.items as SchemaObject;
+    const itemsResources = getJavaImportsForProperty(items);
+    itemsResources.forEach((resourceId) => (res[resourceId] = true));
+  }
 
   return Object.keys(res);
 };
@@ -194,10 +280,10 @@ export const getDataType = (
     case 'string':
       return 'String';
     case 'integer':
-      if (schemaObject.format === 'int32') {
-        return 'Integer';
-      } else {
+      if (schemaObject.format === 'int64') {
         return 'Long';
+      } else {
+        return 'Integer';
       }
     case 'number':
       if (schemaObject.format === 'float') {
@@ -238,7 +324,11 @@ export const getDataType = (
 
 export const getResourceIdsFromSchema = (schema: SchemaObject) => {
   const resources: Record<string, boolean> = {};
-  const anyOf = schema?.anyOf ?? (schema?.items as SchemaObject)?.anyOf;
+  const anyOf =
+    schema?.anyOf ??
+    ((schema?.items as SchemaObject)?.anyOf ?? schema?.items
+      ? [schema?.items as SchemaObject]
+      : [schema]);
   anyOf?.forEach((anyOfPropertyUntyped) => {
     const anyOfProperty = anyOfPropertyUntyped as SchemaObject;
     const resourceId = anyOfProperty['x-resourceId'];
@@ -290,8 +380,9 @@ export function getPathParamValidator(
     const propertySchema = operationWrapper.entity.schema?.properties?.[
       propertyName
     ] as SchemaObject;
-    const resourceIds = getResourceIdsFromSchema(propertySchema);
-    if (resourceIds.length === 1) {
+    const resourceIds =
+      propertySchema && getResourceIdsFromSchema(propertySchema);
+    if (resourceIds?.length === 1) {
       string +=
         '@ExistingObject(service = ' +
         capitalize(resourceIds[0]) +
@@ -302,21 +393,8 @@ export function getPathParamValidator(
   return string;
 }
 
-export function getJavaPackageName(
-  name: string,
-  a?: boolean | string,
-  b?: string,
-) {
-  const withClass = typeof a === 'boolean' ? a : false;
-  const prefix = typeof a === 'string' ? a : b;
-  let packageName = JAVA_SERVER_PACKAGE + '.entities.' + lc(name);
-  if (typeof prefix === 'string') {
-    packageName += '.' + prefix;
-  }
-  if (withClass === true) {
-    packageName += '.' + capitalize(name) + 'DTO';
-  }
-  return packageName;
+export function getJavaPackageName() {
+  return JAVA_SERVER_PACKAGE;
 }
 
 export const getResponse = (entityOperation: EntityOperation) => {
@@ -356,9 +434,7 @@ const getResponseType = (
   if (data?.type === 'array') {
     const items = data.items as SchemaObject;
     const resourceIds = getResourceIdsFromSchema(items);
-    // If there are multiple resourceIds, we need a union type
-    if (resourceIds.length > 1) {
-    }
+    // Responses should always have a single type
     if (resourceIds.length === 1) {
       responsetype =
         'ResultList<' +
@@ -394,6 +470,63 @@ export const getPathParameters = (operation: OperationObject) => {
     .filter((x) => x !== undefined);
 };
 
+export const getOperationParameters = (
+  operationWrapper: EntityOperation,
+  spec: OpenAPIObject,
+) => {
+  const operation = operationWrapper.operation;
+  const parameters: {
+    name: string;
+    datatype: string;
+    annotations: string[];
+  }[] = [];
+
+  // Add path parameters
+  const pathParameters = getPathParameters(operation);
+  pathParameters.forEach((pathParameter) => {
+    if (pathParameter) {
+      parameters.push({
+        name: pathParameter.name,
+        datatype: pathParameter.datatype,
+        annotations: [
+          '@Valid',
+          '@PathVariable',
+          getPathParamValidator(pathParameter.name, operationWrapper),
+        ],
+      });
+    }
+  });
+
+  // Add query parameter object
+  const queryParameters = getQueryParametersClass(operationWrapper, spec);
+  if (queryParameters.className) {
+    parameters.push({
+      name: 'query',
+      datatype: queryParameters.className + 'DTO',
+      annotations: ['@Valid'],
+    });
+  }
+
+  // Add request body
+  const requestBody = getRequestBody(operation);
+  if (requestBody) {
+    const requestBodyType = getRequestBodyType(operation);
+    parameters.push({
+      name: 'body',
+      datatype: requestBodyType + 'DTO',
+      annotations: ['@Valid', '@RequestBody'],
+    });
+  }
+
+  return parameters;
+};
+
+export const getRequestBody = (operation: OperationObject) => {
+  const requestBodyObject = operation.requestBody as RequestBodyObject;
+  return requestBodyObject?.content?.['application/json']
+    ?.schema as SchemaObject;
+};
+
 /**
  * Get query parameters for an operation
  *
@@ -414,18 +547,26 @@ export const getQueryParameters = (operation: OperationObject) => {
     .filter((x) => x !== undefined);
 };
 
+/**
+ *
+ * @param operation
+ * @param spec
+ * @returns
+ */
 export const getQueryParametersClass = (
-  operation: OperationObject,
+  operationWrapper: EntityOperation,
   spec: OpenAPIObject,
 ) => {
+  const operation = operationWrapper.operation;
   const queryParameters = getQueryParameters(operation);
-  const response =
-    operation.responses?.['200']?.content?.['application/json']?.schema;
-  const isList = response?.properties?.data?.type === 'array';
+  const response = getResponse(operationWrapper);
+  const isList = (response?.properties?.data as SchemaObject)?.type === 'array';
   const baseClassName = isList ? 'ListQueryParameters' : 'QueryParameters';
   const baseClass = spec.components?.schemas?.[baseClassName] as SchemaObject;
   const className =
-    capitalize(getOperationName('', '', operation)) + baseClassName;
+    capitalize(operationWrapper.entityName) +
+    capitalize(operation.operationId) +
+    'QueryParameters';
 
   if (queryParameters.length === 0) {
     return {};
@@ -535,8 +676,6 @@ export const addJavaServerHandlebarsHelpers = (
   handlebars.registerHelper('java-response-resourceId', getResponseResourceId);
   handlebars.registerHelper('java-response-type', getResponseType);
   handlebars.registerHelper('java-package-name', getJavaPackageName);
-  handlebars.registerHelper('java-path-parameters', getPathParameters);
-  handlebars.registerHelper('java-query-parameters', getQueryParameters);
   handlebars.registerHelper('java-path-param-validator', getPathParamValidator);
   handlebars.registerHelper(
     'java-resources-for-property',
@@ -544,7 +683,8 @@ export const addJavaServerHandlebarsHelpers = (
   );
   handlebars.registerHelper('java-service-name', getJavaServiceName);
   handlebars.registerHelper(
-    'java-query-parameters-class',
-    getQueryParametersClass,
+    'java-operation-parameters',
+    getOperationParameters,
   );
+  handlebars.registerHelper('java-request-body', getRequestBody);
 };

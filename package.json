@@ -3,9 +3,9 @@
   "module": "index.ts",
   "type": "module",
   "scripts": {
-    "generate": "bun index.ts --all",
-    "generate:java-server": "bun index.ts --java-server",
-    "generate:ts": "bun index.ts --ts"
+    "generate": "rm -rf ./out/* && bun index.ts --all",
+    "generate:java-server": "rm -rf ./out/java-server/* && bun index.ts --java-server",
+    "generate:ts": "rm -rf ./out/ts-client/* && bun index.ts --ts"
   },
   "devDependencies": {
     "bun-types": "latest"

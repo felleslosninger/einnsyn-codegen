@@ -1,6 +1,16 @@
 @Getter
 @Setter
-public {{#if schema.x-isExtended}}abstract {{/if}} class {{name}}DTO {{#if schema.x-extends}}extends {{capitalize schema.x-extends}}DTO{{/if}} {
+public
+  {{#if schema.x-isExtended}}abstract {{/if}}
+    class {{name}}DTO
+  {{#if schema.x-extends}}
+    extends {{capitalize schema.x-extends}}DTO
+  {{else}}
+    {{! If it doesn't extend, and has an ID field, it should implement HasId }}
+    {{#if (and schema.properties.id (eq schema.properties.id.type 'string'))}}
+      implements HasId
+    {{/if}}
+  {{/if}} {
 
 {{#each schema.properties}}
 
@@ -28,12 +38,19 @@ public {{#if schema.x-isExtended}}abstract {{/if}} class {{name}}DTO {{#if schem
     {{else if (eq format 'url')}}
     @URL
 
+    {{else if (eq format 'password')}}
+    {{! Currently noop, avoid setting NoSSN }}
+
     {{else if enum}}
-    {{! Currently noop }}
+    {{! Currently noop, avoid setting NoSSN }}
 
     {{else}}
     @NoSSN
 
+    {{/if}}
+
+    {{#if (and enum (ne (length enum) 1) (ne (length enum) 0))}}
+    @ValidEnum(enumClass = {{capitalize @key}}Enum.class)
     {{/if}}
   {{/eq}}
 
@@ -49,8 +66,6 @@ public {{#if schema.x-isExtended}}abstract {{/if}} class {{name}}DTO {{#if schem
   @Valid
   {{/if}}
 
-  private 
-
     {{! Enums with length 1 should be final }}
     {{#if (and enum (eq (length enum) 1))}}
       final
@@ -59,10 +74,8 @@ public {{#if schema.x-isExtended}}abstract {{/if}} class {{name}}DTO {{#if schem
     {{! transient values won't be serialized }}
     {{#if writeOnly}}transient {{/if}}
 
-    {{! Data type. Enum will use a generated enum class. }}
-    {{#if (and enum (ne (length enum) 1) (ne (length enum) 0))}}
-      {{capitalize @key}}Enum
-    {{else if (eq type 'object')}}
+    {{! Data type }}
+    {{#if (eq type 'object')}}
       {{capitalize @key}}DTO
     {{else}}
       {{{java-datatype .}}}
@@ -72,20 +85,11 @@ public {{#if schema.x-isExtended}}abstract {{/if}} class {{name}}DTO {{#if schem
     {{@key}}
 
     {{! Set default value if specified }}
-    {{#default}} = "{{.}}"{{/default}};
+    {{#if default}} = 
+      "{{default}}"
+    {{/if}}
+    ;
 
-{{/each}}
-
-{{! Add enum classes for enum values }}
-{{#each schema.properties}}
-  {{! For enum values, create a enum class }}
-  {{#if (and enum (ne (length enum) 1) (ne (length enum) 0))}}
-  public enum {{capitalize @key}}Enum {
-    {{#each enum}}
-    {{this}}{{#unless @last}},{{/unless}}
-    {{/each}}
-  }
-  {{/if}}
 {{/each}}
 
 {{! Add objects for object properties }}

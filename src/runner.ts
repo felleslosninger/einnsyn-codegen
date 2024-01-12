@@ -6,6 +6,7 @@ import { ParsedArgs } from 'minimist';
 import {
   OpenAPIObject,
   OperationObject,
+  ParameterObject,
   RequestBodyObject,
   ResponseObject,
   SchemaObject,
@@ -73,43 +74,43 @@ const run = async (args: ParsedArgs) => {
     });
   }
 
-  // Create resource-ids for inline request/response bodies
-  const paths = spec.paths ?? {};
-  for (const path in paths) {
-    const pathItem = paths[path];
+  // Create query parameter objects for each operation. We want paths like
+  // GET /bruker/innsynskrav
+  // to inherit (or extend, if needed) query parameters from
+  // GET /innsynskrav
+  // so that the same object can be used and type checked throughout the codebase.
+  for (const path in spec.paths) {
+    const pathItem = spec.paths[path];
 
-    for (const methodUntyped in pathItem) {
-      const method = methodUntyped as keyof typeof pathItem;
-      const operation = pathItem[method] as OperationObject;
-      const requestBody = operation.requestBody as RequestBodyObject;
-      const responses = operation.responses;
-      const operationId = operation.operationId;
+    // We're only interested in GET. The others will get generated custom objects.
+    const get = pathItem.get as OperationObject;
+    if (!get) continue;
 
-      if (requestBody && operationId) {
-        const requestBodyContent = requestBody.content;
-        const content = requestBodyContent['application/json'];
-        const schema = content?.schema as SchemaObject;
-        if (schema && !schema['x-resourceId']) {
-          const resourceId = `${operationId}RequestBody`;
-          schema['x-resourceId'] = resourceId;
-          schemas[resourceId] = schema;
-        }
-      }
+    // Get the query parameters from the path
+    const pathParameters = pathItem.parameters as ParameterObject[];
+    const pathQueryParameters = pathParameters?.filter((p) => p.in === 'query');
+    const queryProperties = pathQueryParameters?.reduce(
+      (acc, p) => {
+        acc[p.name] = p.schema as SchemaObject;
+        return acc;
+      },
+      {} as { [key: string]: SchemaObject },
+    );
 
-      if (responses && operationId) {
-        for (const statusCode in responses) {
-          const response = responses[statusCode] as ResponseObject;
-          const responseContent = response.content;
-          const content = responseContent?.['application/json'];
-          const schema = content?.schema as SchemaObject;
-          if (schema && !schema['x-resourceId']) {
-            const resourceId = `${operationId}ResponseBody`;
-            schema['x-resourceId'] = resourceId;
-            schemas[resourceId] = schema;
-          }
-        }
-      }
-    }
+    // Differ between List and Single.
+    const response = get.responses?.['200'] as ResponseObject;
+    const responseBody = response?.content?.['application/json']
+      ?.schema as SchemaObject;
+    const isList = responseBody?.['x-resourceId'] === 'ResultList';
+
+    // Find the entity object
+    const entity = isList
+      ? ((responseBody?.properties?.data as SchemaObject)
+          ?.items as SchemaObject as SchemaObject)
+      : responseBody;
+    const entityName = entity?.['x-resourceId'];
+
+    // Find the root entity object
   }
 
   if (args.ts || args.all) {

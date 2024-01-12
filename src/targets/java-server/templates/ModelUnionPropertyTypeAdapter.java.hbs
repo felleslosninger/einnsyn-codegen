@@ -1,7 +1,7 @@
 // Auto-generated from our OpenAPI spec
 // https://github.com/felleslosninger/ein-openapi/
 
-package {{java-package-name entityName 'models'}};
+package {{java-package-name}}.entities.{{lc entityName}}.models;
 
 import java.lang.reflect.Type;
 import org.springframework.boot.autoconfigure.gson.GsonBuilderCustomizer;
@@ -17,11 +17,13 @@ import com.google.gson.JsonSerializationContext;
 import com.google.gson.JsonSerializer;
 
 {{#each resources}}
-import {{java-package-name . true 'models'}};
+  {{#if (ne . ../entityName)}}
+    import {{java-package-name}}.entities.{{lc .}}.models.{{capitalize .}}DTO;
+  {{/if}}
 {{/each}}
 
 @Configuration
-public class {{capitalize entityName}}{{capitalize propertyName}}TypeAdapter {
+public class UnionProperty{{capitalize propertyName}}TypeAdapter {
 
   @Bean
   GsonBuilderCustomizer registerTypeAdapter() {
@@ -67,6 +69,7 @@ public class {{capitalize entityName}}{{capitalize propertyName}}TypeAdapter {
             case "{{capitalize .}}":
               return context.deserialize(json, {{capitalize .}}DTO.class);
           {{/each}}
+            default:
         }
       }
 
