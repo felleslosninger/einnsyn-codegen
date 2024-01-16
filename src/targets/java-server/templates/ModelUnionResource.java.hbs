@@ -12,11 +12,11 @@ import lombok.Setter;
     import {{java-package-name}}.entities.{{lc .}}.models.{{capitalize .}}DTO;
   {{/if}}
 {{/each}}
-import {{java-package-name}}.entities.HasId;
+import {{java-package-name}}.common.hasid.HasId;
 
 @Getter
 @Setter
-public class UnionProperty{{capitalize propertyName}} implements HasId {
+public class UnionResource{{capitalize propertyName}} implements HasId {
 
   String id;
 
@@ -25,7 +25,14 @@ public class UnionProperty{{capitalize propertyName}} implements HasId {
     {{capitalize .}}DTO {{deCapitalize .}};
   {{/each}}
 
-  public UnionProperty{{capitalize propertyName}}(String id) {
+  public UnionResource{{capitalize propertyName}}(String id) {
     this.id = id;
   }
+
+  {{#each resources}}
+    public UnionResource{{capitalize ../propertyName}}({{capitalize .}}DTO {{deCapitalize .}}) {
+      this.{{deCapitalize .}} = {{deCapitalize .}};
+      this.id = {{deCapitalize .}}.getId();
+    }
+  {{/each}}
 }

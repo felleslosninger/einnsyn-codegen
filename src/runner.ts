@@ -15,6 +15,7 @@ import { JSONObject, deepMergeAllOf } from './utils/deepMergeAllOf';
 
 import * as ts from './targets/ts-client/tsGenerator';
 import * as javaServer from './targets/java-server/javaServerGenerator';
+import { addOperationQueryProperties } from './utils/addOperationQueryProperties';
 
 const run = async (args: ParsedArgs) => {
   // Parse spec
@@ -74,44 +75,8 @@ const run = async (args: ParsedArgs) => {
     });
   }
 
-  // Create query parameter objects for each operation. We want paths like
-  // GET /bruker/innsynskrav
-  // to inherit (or extend, if needed) query parameters from
-  // GET /innsynskrav
-  // so that the same object can be used and type checked throughout the codebase.
-  for (const path in spec.paths) {
-    const pathItem = spec.paths[path];
-
-    // We're only interested in GET. The others will get generated custom objects.
-    const get = pathItem.get as OperationObject;
-    if (!get) continue;
-
-    // Get the query parameters from the path
-    const pathParameters = pathItem.parameters as ParameterObject[];
-    const pathQueryParameters = pathParameters?.filter((p) => p.in === 'query');
-    const queryProperties = pathQueryParameters?.reduce(
-      (acc, p) => {
-        acc[p.name] = p.schema as SchemaObject;
-        return acc;
-      },
-      {} as { [key: string]: SchemaObject },
-    );
-
-    // Differ between List and Single.
-    const response = get.responses?.['200'] as ResponseObject;
-    const responseBody = response?.content?.['application/json']
-      ?.schema as SchemaObject;
-    const isList = responseBody?.['x-resourceId'] === 'ResultList';
-
-    // Find the entity object
-    const entity = isList
-      ? ((responseBody?.properties?.data as SchemaObject)
-          ?.items as SchemaObject as SchemaObject)
-      : responseBody;
-    const entityName = entity?.['x-resourceId'];
-
-    // Find the root entity object
-  }
+  // Add query properties
+  addOperationQueryProperties(spec);
 
   if (args.ts || args.all) {
     ts.generate(spec, handlebars);

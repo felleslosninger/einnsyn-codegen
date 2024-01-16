@@ -4,6 +4,7 @@ import {
   RequestBodyObject,
   SchemaObject,
 } from 'openapi3-ts/oas30';
+import { getRequestBody } from './helpers';
 
 // Capitalize first letter
 export const capitalize = (s = '') => {
@@ -132,4 +133,5 @@ export const addHandlebarsHelpers = (handlebars: typeof Handlebars) => {
   handlebars.registerHelper('operation-name', getOperationName);
   handlebars.registerHelper('request-body-type', getRequestBodyType);
   handlebars.registerHelper('const-var-name', constVarName);
+  handlebars.registerHelper('request-body', getRequestBody);
 };

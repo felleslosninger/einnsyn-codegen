@@ -92,10 +92,37 @@ public
 
 {{/each}}
 
+{{#if inlineEnums}}
+  {{#each schema.properties}}
+    {{#if enum}}
+      public enum {{capitalize @key}}Enum {
+        {{#each enum}}
+        {{const-var-name .}}("{{.}}"){{#unless @last}},{{/unless}}
+        {{/each}};
+
+        private final String value;
+
+        {{capitalize @key}}Enum(String value) {
+          this.value = value;
+        }
+
+        @Override
+        public String toString() {
+          return value;
+        }
+
+        public String toJson() {
+          return value;
+        }
+      }
+    {{/if}}
+  {{/each}}
+{{/if}}
+
 {{! Add objects for object properties }}
 {{#each schema.properties}}
   {{#if (eq type 'object')}}
-    {{> modelPartial schema=. name=(capitalize @key)}}
+    {{> modelPartial schema=. name=(capitalize @key) inlineEnums=inlineEnums}}
   {{/if}}
 {{/each}}
 

@@ -2,7 +2,6 @@ import {
   OpenAPIObject,
   OperationObject,
   ParameterObject,
-  RequestBodyObject,
   SchemaObject,
 } from 'openapi3-ts/oas30';
 import {
@@ -11,6 +10,11 @@ import {
   getRequestBodyType,
   lc,
 } from '../../utils/handlebarsHelpers';
+import {
+  getRequestBody,
+  getResourceIds,
+  getResponseBody,
+} from '../../utils/helpers';
 import {
   Entity,
   EntityOperation,
@@ -35,22 +39,51 @@ export const getJavaModelImports = (entityOrSchema: Entity | SchemaObject) => {
     propertyResources.forEach((resourceId) => (resources[resourceId] = true));
   }
 
+  const resourceIds = getResourceIds(schema);
+  if (resourceIds[0] === 'ResultList') {
+    // Handle ResultList separately (it is not an entity)
+    resourceIds.shift();
+    resources[JAVA_SERVER_PACKAGE + '.common.resultlist.ResultList'] = true;
+
+    // Push the data items resources
+    const dataItems = (schema.properties?.data as SchemaObject)
+      ?.items as SchemaObject;
+    const dataItemsResources = getResourceIds(dataItems);
+    resourceIds.push(...dataItemsResources);
+  }
+
   // If this entity extends another entity, we need to import that entity
   const extendsResource = schema?.['x-extends'];
   if (extendsResource) {
+    const extendsEntity = schema?.['x-extends-entity'];
+    if (extendsEntity) {
+      const extendsEntityPath =
+        JAVA_SERVER_PACKAGE +
+        '.entities.' +
+        lc(extendsEntity) +
+        '.models.' +
+        capitalize(extendsResource) +
+        'DTO';
+      resources[extendsEntityPath] = true;
+    } else {
+      resourceIds.push(extendsResource);
+    }
+  }
+
+  resourceIds.forEach((resourceId) => {
     const resourcePath =
       JAVA_SERVER_PACKAGE +
       '.entities.' +
-      lc(extendsResource) +
+      lc(resourceId) +
       '.models.' +
-      capitalize(extendsResource) +
+      capitalize(resourceId) +
       'DTO';
     resources[resourcePath] = true;
-  }
+  });
 
   // Import HasId if this doesn't extend anything and has an ID property
   if (!extendsResource && properties.id) {
-    resources[JAVA_SERVER_PACKAGE + '.entities.HasId'] = true;
+    resources[JAVA_SERVER_PACKAGE + '.common.hasid.HasId'] = true;
   }
 
   // All models needs Getter and Setter
@@ -65,54 +98,39 @@ export const getJavaModelImports = (entityOrSchema: Entity | SchemaObject) => {
  * @param entity
  * @returns
  */
-export const getJavaControllerImports = (
-  entity: Entity,
-  spec: OpenAPIObject,
-) => {
+export const getJavaControllerImports = (entity: Entity) => {
   const resources: Record<string, boolean> = {};
 
   for (const operationWrapper of entity.operationList) {
-    // Find response type
-    const successResponse = getResponse(operationWrapper);
-    const responseType = successResponse?.['x-resourceId'];
-
-    // Handle list responses
-    const responseData = successResponse?.properties?.data as SchemaObject;
-    if (responseData?.type === 'array') {
-      const resourcePath =
-        JAVA_SERVER_PACKAGE + '.common.resultlist.ResultList';
-      resources[resourcePath] = true;
-    }
-
     // Add response object
-    if (responseType !== undefined) {
-      const resourcePath =
-        JAVA_SERVER_PACKAGE +
-        '.entities.' +
-        lc(responseType) +
-        '.models.' +
-        capitalize(responseType) +
-        'DTO';
-      resources[resourcePath] = true;
+    const responseBody = getResponseBody(operationWrapper.operation);
+    if (responseBody) {
       resources['org.springframework.http.ResponseEntity'] = true;
+      const resourceIds = getResourceIds(responseBody);
+      if (resourceIds.join() === 'ResultList') {
+        resourceIds.shift();
+        const dataItems = (responseBody.properties?.data as SchemaObject)
+          ?.items as SchemaObject;
+        const dataItemsResources = getResourceIds(dataItems);
+        resourceIds.push(...dataItemsResources);
+        resources[JAVA_SERVER_PACKAGE + '.common.resultlist.ResultList'] = true;
+      }
+      if (resourceIds.length > 1) {
+        resources[
+          JAVA_SERVER_PACKAGE +
+            '.entities.' +
+            lc(entity.name) +
+            '.models.UnionResource' +
+            operationWrapper.operation.operationId
+        ] = true;
+      }
     }
 
     // Add request object
     const requestBody = getRequestBody(operationWrapper.operation);
     if (requestBody) {
-      const resourceId = requestBody['x-resourceId'];
-      if (resourceId) {
-        resources[
-          JAVA_SERVER_PACKAGE +
-            '.entities.' +
-            lc(resourceId) +
-            '.models.' +
-            capitalize(resourceId)
-        ] = true;
-      } else {
-        const modelImports = getJavaModelImports(requestBody);
-        modelImports.forEach((modelImport) => (resources[modelImport] = true));
-      }
+      const modelImports = getJavaModelImports(requestBody);
+      modelImports.forEach((modelImport) => (resources[modelImport] = true));
     }
 
     // Path parameters
@@ -125,8 +143,7 @@ export const getJavaControllerImports = (
       }
       if (/Id$/i.test(pathParameter?.name ?? '')) {
         const existingObjectPath =
-          JAVA_SERVER_PACKAGE +
-          '.features.validation.existingobject.ExistingObject';
+          JAVA_SERVER_PACKAGE + '.validation.existingobject.ExistingObject';
         resources[existingObjectPath] = true;
         if (operationWrapper.entityName != entity.name) {
           const servicePath =
@@ -142,19 +159,36 @@ export const getJavaControllerImports = (
     });
 
     // Query parameters
-    const queryParametersClass = getQueryParametersClass(
-      operationWrapper,
-      spec,
-    );
-    if (queryParametersClass?.className) {
-      const resourcePath =
-        JAVA_SERVER_PACKAGE +
-        '.entities.' +
-        lc(entity.name) +
-        '.models.' +
-        capitalize(queryParametersClass.className) +
-        'DTO';
-      resources[resourcePath] = true;
+    const xRequestQuery = operationWrapper.operation['x-request-query'];
+    if (xRequestQuery) {
+      const {
+        'x-extend-entity': extendEntityName,
+        'x-extend-name': extendName,
+        'x-custom-name': customName,
+        'x-custom-entity': customEntity,
+      } = xRequestQuery;
+      if (extendEntityName && extendName) {
+        const baseQueryObjectPath =
+          JAVA_SERVER_PACKAGE +
+          '.entities.' +
+          lc(extendEntityName) +
+          '.models.' +
+          capitalize(extendName) +
+          'DTO';
+        resources[baseQueryObjectPath] = true;
+        resources['jakarta.validation.Valid'] = true;
+      }
+      if (customName && customEntity) {
+        const customQueryObjectPath =
+          JAVA_SERVER_PACKAGE +
+          '.entities.' +
+          lc(customEntity) +
+          '.models.' +
+          capitalize(customName) +
+          'DTO';
+        resources[customQueryObjectPath] = true;
+        resources['jakarta.validation.Valid'] = true;
+      }
     }
 
     // Add spring imports
@@ -191,7 +225,7 @@ export const getJavaImportsForProperty = (property: SchemaObject) => {
 
   // If this property references a resource, it will have a resourceId
   // ExpandableFields are always anyOf, since it's anyOf the resource or a string
-  getResourceIdsFromSchema(property).forEach((resourceId) => {
+  getResourceIds(property).forEach((resourceId) => {
     const resourcePath =
       JAVA_SERVER_PACKAGE +
       '.entities.' +
@@ -215,14 +249,11 @@ export const getJavaImportsForProperty = (property: SchemaObject) => {
 
   if (property['readOnly']) {
     res['jakarta.validation.constraints.Null'] = true;
-    res[JAVA_SERVER_PACKAGE + '.features.validation.validationgroups.Insert'] =
-      true;
-    res[JAVA_SERVER_PACKAGE + '.features.validation.validationgroups.Update'] =
-      true;
+    res[JAVA_SERVER_PACKAGE + '.validation.validationgroups.Insert'] = true;
+    res[JAVA_SERVER_PACKAGE + '.validation.validationgroups.Update'] = true;
   } else if (property['x-required']) {
     res['jakarta.validation.constraints.NotNull'] = true;
-    res[JAVA_SERVER_PACKAGE + '.features.validation.validationgroups.Insert'] =
-      true;
+    res[JAVA_SERVER_PACKAGE + '.validation.validationgroups.Insert'] = true;
   }
 
   if (property.type === 'string') {
@@ -242,13 +273,12 @@ export const getJavaImportsForProperty = (property: SchemaObject) => {
         break;
       default:
         if (!property.enum) {
-          res[JAVA_SERVER_PACKAGE + '.features.validation.nossn.NoSSN'] = true;
+          res[JAVA_SERVER_PACKAGE + '.validation.nossn.NoSSN'] = true;
         }
         break;
     }
     if (property.enum && property.enum.length > 1) {
-      res[JAVA_SERVER_PACKAGE + '.features.validation.validenum.ValidEnum'] =
-        true;
+      res[JAVA_SERVER_PACKAGE + '.validation.validenum.ValidEnum'] = true;
     }
   }
 
@@ -301,14 +331,14 @@ export const getDataType = (
 
   // Type not found, this is probably an ExpandableField
   const resources: Record<string, boolean> = {};
-  getResourceIdsFromSchema(schemaObject).forEach(
+  getResourceIds(schemaObject).forEach(
     (resourceId) => (resources[resourceId] = true),
   );
 
   // Expandable field with multiple possible types
   if (Object.keys(resources).length > 1) {
     const wrapperClass =
-      'UnionProperty' + capitalize(property['x-expandableField'] ?? 'unnamed');
+      'UnionResource' + capitalize(property['x-expandableField'] ?? 'unnamed');
     return 'ExpandableField<' + wrapperClass + '>';
   }
 
@@ -320,23 +350,6 @@ export const getDataType = (
   console.log('Unknown datatype', property);
 
   return 'Object';
-};
-
-export const getResourceIdsFromSchema = (schema: SchemaObject) => {
-  const resources: Record<string, boolean> = {};
-  const anyOf =
-    schema?.anyOf ??
-    ((schema?.items as SchemaObject)?.anyOf ?? schema?.items
-      ? [schema?.items as SchemaObject]
-      : [schema]);
-  anyOf?.forEach((anyOfPropertyUntyped) => {
-    const anyOfProperty = anyOfPropertyUntyped as SchemaObject;
-    const resourceId = anyOfProperty['x-resourceId'];
-    if (resourceId !== undefined) {
-      resources[resourceId] = true;
-    }
-  });
-  return Object.keys(resources);
 };
 
 /**
@@ -380,8 +393,7 @@ export function getPathParamValidator(
     const propertySchema = operationWrapper.entity.schema?.properties?.[
       propertyName
     ] as SchemaObject;
-    const resourceIds =
-      propertySchema && getResourceIdsFromSchema(propertySchema);
+    const resourceIds = propertySchema && getResourceIds(propertySchema);
     if (resourceIds?.length === 1) {
       string +=
         '@ExistingObject(service = ' +
@@ -397,53 +409,48 @@ export function getJavaPackageName() {
   return JAVA_SERVER_PACKAGE;
 }
 
-export const getResponse = (entityOperation: EntityOperation) => {
-  const operation = entityOperation.operation;
-  const successResponse = operation.responses?.['200']?.content?.[
-    'application/json'
-  ]?.schema as SchemaObject;
-  return successResponse;
-};
-
-export const getResponseResourceId = (entityOperation: EntityOperation) => {
-  const successResponse = getResponse(entityOperation);
-  return successResponse?.['x-resourceId'];
-};
-
 /**
  * Get the response type for an operation
  *
  * @param operation
  * @returns
  */
-const getResponseType = (
-  entityOperation: EntityOperation,
-): string | undefined => {
-  const successResponse = getResponse(entityOperation);
-
+const getResponseType = (operation: OperationObject): string | undefined => {
   // If there is no application/json success response, skip (it might be a binary download)
+  const successResponse = getResponseBody(operation);
   if (!successResponse) {
     return 'byte[]';
   }
 
-  // If the response is a single resource, return the resource type)
-  let responsetype = successResponse['x-resourceId'] + 'DTO';
-
-  // ResponseList is a special case, it is a generic list of resources
-  const data = successResponse.properties?.data as SchemaObject;
-  if (data?.type === 'array') {
-    const items = data.items as SchemaObject;
-    const resourceIds = getResourceIdsFromSchema(items);
-    // Responses should always have a single type
+  // For resultLists, find the type of the items
+  let resourceIds = getResourceIds(successResponse);
+  if (resourceIds[0] === 'ResultList') {
+    resourceIds = getResourceIds(
+      (successResponse.properties?.data as SchemaObject)?.items as SchemaObject,
+    );
     if (resourceIds.length === 1) {
-      responsetype =
+      return (
         'ResultList<' +
         resourceIds.map((resourceId) => resourceId + 'DTO').join() +
-        '>';
+        '>'
+      );
+    } else if (resourceIds.length > 1) {
+      return 'ResultList<' + 'UnionResource' + operation.operationId + '>';
+    } else {
+      throw new Error('Unknown response type');
     }
   }
 
-  return responsetype;
+  // If we have one resource type, return that
+  if (resourceIds.length === 1) {
+    return resourceIds.join() + 'DTO';
+  }
+  // For multiple types, return a union type
+  else if (resourceIds.length > 1) {
+    return 'UnionResource' + operation.operationId;
+  } else {
+    throw new Error('Unknown response type');
+  }
 };
 
 /**
@@ -498,13 +505,17 @@ export const getOperationParameters = (
   });
 
   // Add query parameter object
-  const queryParameters = getQueryParametersClass(operationWrapper, spec);
-  if (queryParameters.className) {
-    parameters.push({
-      name: 'query',
-      datatype: queryParameters.className + 'DTO',
-      annotations: ['@Valid'],
-    });
+  const xRequestQuery = operation['x-request-query'];
+  if (xRequestQuery) {
+    const extendName = xRequestQuery['x-extend-name'];
+    const customName = xRequestQuery['x-custom-name'];
+    if (extendName || customName) {
+      parameters.push({
+        name: 'query',
+        datatype: (customName ?? extendName) + 'DTO',
+        annotations: ['@Valid'],
+      });
+    }
   }
 
   // Add request body
@@ -519,131 +530,6 @@ export const getOperationParameters = (
   }
 
   return parameters;
-};
-
-export const getRequestBody = (operation: OperationObject) => {
-  const requestBodyObject = operation.requestBody as RequestBodyObject;
-  return requestBodyObject?.content?.['application/json']
-    ?.schema as SchemaObject;
-};
-
-/**
- * Get query parameters for an operation
- *
- * @param operation
- * @returns
- */
-export const getQueryParameters = (operation: OperationObject) => {
-  const parameters = operation.parameters ?? [];
-  return parameters
-    .map((parameter) => {
-      const parameterObject = parameter as ParameterObject;
-      if (parameterObject.in !== 'query') {
-        return undefined;
-      }
-
-      return parameterObject;
-    })
-    .filter((x) => x !== undefined);
-};
-
-/**
- *
- * @param operation
- * @param spec
- * @returns
- */
-export const getQueryParametersClass = (
-  operationWrapper: EntityOperation,
-  spec: OpenAPIObject,
-) => {
-  const operation = operationWrapper.operation;
-  const queryParameters = getQueryParameters(operation);
-  const response = getResponse(operationWrapper);
-  const isList = (response?.properties?.data as SchemaObject)?.type === 'array';
-  const baseClassName = isList ? 'ListQueryParameters' : 'QueryParameters';
-  const baseClass = spec.components?.schemas?.[baseClassName] as SchemaObject;
-  const className =
-    capitalize(operationWrapper.entityName) +
-    capitalize(operation.operationId) +
-    'QueryParameters';
-
-  if (queryParameters.length === 0) {
-    return {};
-  }
-
-  // Create property object from query parameters
-  const properties: Record<string, SchemaObject> = {};
-  queryParameters.forEach((queryParameter) => {
-    const name = queryParameter?.name as keyof SchemaObject;
-    const schema = queryParameter?.schema as SchemaObject;
-    // Add required parameter?
-    if (name) properties[name] = schema;
-  });
-
-  // Check differences between query parameters and base class
-  let missingProperties = false;
-  const baseClassProperties = baseClass.properties ?? {};
-  for (const propertyName in baseClassProperties) {
-    const baseProperty = baseClassProperties[propertyName] as SchemaObject;
-    if (isDifferent(baseProperty, properties[propertyName])) {
-      missingProperties = true;
-      break;
-    }
-  }
-
-  // If there are missing properties, create a new class that doesn't extend the base class
-  if (missingProperties) {
-    return {
-      className,
-      properties,
-    };
-  }
-
-  // Check if we have additional properties
-  else {
-    let hasAdditionalProperties = false;
-    hasAdditionalProperties = isDifferent(properties, baseClassProperties);
-
-    // There are additional properties, create a new class that extends the base class
-    if (hasAdditionalProperties) {
-      // Remove properties that are already in the base class
-      for (const propertyName in baseClassProperties) {
-        delete properties[propertyName];
-      }
-      return {
-        className,
-        extends: baseClassName,
-        properties,
-      };
-    }
-    // There are no additional properties, use the base class
-    else {
-      return {
-        className: baseClassName,
-      };
-    }
-  }
-};
-
-const isDifferent = (propA?: any, propB?: any): boolean => {
-  if (Array.isArray(propA) && Array.isArray(propB)) {
-    if (propA.length !== propB.length) return true;
-    for (let i = 0; i < propA.length; i++) {
-      if (isDifferent(propA[i], propB[i])) return true;
-    }
-  } else if (typeof propA === 'object' && typeof propB === 'object') {
-    for (const p in propA) {
-      const valA = propA[p];
-      const valB = propB[p];
-      if (isDifferent(valA, valB)) {
-        return true;
-      }
-    }
-  } else {
-    return propA !== propB;
-  }
-  return false;
 };
 
 /**
@@ -672,19 +558,11 @@ export const addJavaServerHandlebarsHelpers = (
     'java-controller-imports',
     getJavaControllerImports,
   );
-  handlebars.registerHelper('java-response', getResponse);
-  handlebars.registerHelper('java-response-resourceId', getResponseResourceId);
   handlebars.registerHelper('java-response-type', getResponseType);
   handlebars.registerHelper('java-package-name', getJavaPackageName);
-  handlebars.registerHelper('java-path-param-validator', getPathParamValidator);
-  handlebars.registerHelper(
-    'java-resources-for-property',
-    getJavaImportsForProperty,
-  );
   handlebars.registerHelper('java-service-name', getJavaServiceName);
   handlebars.registerHelper(
     'java-operation-parameters',
     getOperationParameters,
   );
-  handlebars.registerHelper('java-request-body', getRequestBody);
 };

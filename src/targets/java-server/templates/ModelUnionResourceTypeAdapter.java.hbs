@@ -23,20 +23,20 @@ import com.google.gson.JsonSerializer;
 {{/each}}
 
 @Configuration
-public class UnionProperty{{capitalize propertyName}}TypeAdapter {
+public class UnionResource{{capitalize propertyName}}TypeAdapter {
 
   @Bean
   GsonBuilderCustomizer registerTypeAdapter() {
     return builder -> {
-      builder.registerTypeAdapter(UnionProperty{{capitalize propertyName}}.class, new Serializer());
-      builder.registerTypeAdapter(UnionProperty{{capitalize propertyName}}.class, new Deserializer());
+      builder.registerTypeAdapter(UnionResource{{capitalize propertyName}}.class, new Serializer());
+      builder.registerTypeAdapter(UnionResource{{capitalize propertyName}}.class, new Deserializer());
     };
   }
 
 
-  class Serializer implements JsonSerializer<UnionProperty{{capitalize propertyName}}> {
+  class Serializer implements JsonSerializer<UnionResource{{capitalize propertyName}}> {
     @Override
-    public JsonElement serialize(UnionProperty{{capitalize propertyName}} src, Type typeOfSrc, JsonSerializationContext context) {
+    public JsonElement serialize(UnionResource{{capitalize propertyName}} src, Type typeOfSrc, JsonSerializationContext context) {
       {{#each resources}}
       if (src.get{{capitalize .}}() != null) {
         return context.serialize(src.get{{capitalize .}}(), {{capitalize .}}DTO.class);
@@ -47,9 +47,9 @@ public class UnionProperty{{capitalize propertyName}}TypeAdapter {
   }
 
 
-  class Deserializer implements JsonDeserializer<UnionProperty{{capitalize propertyName}}> {
+  class Deserializer implements JsonDeserializer<UnionResource{{capitalize propertyName}}> {
     @Override
-    public UnionProperty{{capitalize propertyName}} deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
+    public UnionResource{{capitalize propertyName}} deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
       if (json.isJsonNull()) {
         return null;
       }
@@ -57,7 +57,7 @@ public class UnionProperty{{capitalize propertyName}}TypeAdapter {
       if (json.isJsonPrimitive()) {
         JsonPrimitive jsonPrimitive = json.getAsJsonPrimitive();
         if (jsonPrimitive.isString()) {
-          return new UnionProperty{{capitalize propertyName}}(jsonPrimitive.getAsString());
+          return new UnionResource{{capitalize propertyName}}(jsonPrimitive.getAsString());
         }
       }
 
@@ -73,7 +73,7 @@ public class UnionProperty{{capitalize propertyName}}TypeAdapter {
         }
       }
 
-      throw new JsonParseException("Could not deserialize UnionPropertyParent");
+      throw new JsonParseException("Could not deserialize UnionResourceParent");
     }
   }
 }
