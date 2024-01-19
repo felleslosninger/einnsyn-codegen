@@ -53,9 +53,8 @@ export const getResourceIds = (schema: SchemaObject) => {
   const resources: Record<string, boolean> = {};
   const anyOf =
     schema?.anyOf ??
-    ((schema?.items as SchemaObject)?.anyOf ?? schema?.items
-      ? [schema?.items as SchemaObject]
-      : [schema]);
+    (schema?.items as SchemaObject)?.anyOf ??
+    (schema?.items ? [schema?.items as SchemaObject] : [schema]);
   anyOf?.forEach((anyOfPropertyUntyped) => {
     const anyOfProperty = anyOfPropertyUntyped as SchemaObject;
     const resourceId = anyOfProperty?.['x-resourceId'];

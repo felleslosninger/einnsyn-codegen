@@ -101,6 +101,8 @@ export const getJavaModelImports = (entityOrSchema: Entity | SchemaObject) => {
 export const getJavaControllerImports = (entity: Entity) => {
   const resources: Record<string, boolean> = {};
 
+  resources[JAVA_SERVER_PACKAGE + '.common.exceptions.EInnsynException'] = true;
+
   for (const operationWrapper of entity.operationList) {
     // Add response object
     const responseBody = getResponseBody(operationWrapper.operation);
@@ -131,6 +133,17 @@ export const getJavaControllerImports = (entity: Entity) => {
     if (requestBody) {
       const modelImports = getJavaModelImports(requestBody);
       modelImports.forEach((modelImport) => (resources[modelImport] = true));
+      if (operationWrapper.method === 'post') {
+        resources['org.springframework.validation.annotation.Validated'] = true;
+        resources[JAVA_SERVER_PACKAGE + '.validation.validationgroups.Insert'] =
+          true;
+      } else if (operationWrapper.method === 'put') {
+        resources['org.springframework.validation.annotation.Validated'] = true;
+        resources[JAVA_SERVER_PACKAGE + '.validation.validationgroups.Update'] =
+          true;
+      } else {
+        resources['jakarta.validation.Valid'] = true;
+      }
     }
 
     // Path parameters
@@ -141,20 +154,19 @@ export const getJavaControllerImports = (entity: Entity) => {
       if (pathParameter?.required) {
         resources['jakarta.validation.constraints.NotNull'] = true;
       }
-      if (/Id$/i.test(pathParameter?.name ?? '')) {
+      const resourceId = pathParameter?.['x-resourceId'];
+      if (resourceId) {
         const existingObjectPath =
           JAVA_SERVER_PACKAGE + '.validation.existingobject.ExistingObject';
         resources[existingObjectPath] = true;
-        if (operationWrapper.entityName != entity.name) {
-          const servicePath =
-            JAVA_SERVER_PACKAGE +
-            '.entities.' +
-            lc(operationWrapper.entityName) +
-            '.' +
-            capitalize(operationWrapper.entityName) +
-            'Service';
-          resources[servicePath] = true;
-        }
+        const servicePath =
+          JAVA_SERVER_PACKAGE +
+          '.entities.' +
+          lc(resourceId) +
+          '.' +
+          capitalize(resourceId) +
+          'Service';
+        resources[servicePath] = true;
       }
     });
 
@@ -269,7 +281,8 @@ export const getJavaImportsForProperty = (property: SchemaObject) => {
       case 'url':
         res['org.hibernate.validator.constraints.URL'] = true;
         break;
-      case 'password:':
+      case 'password':
+        res[JAVA_SERVER_PACKAGE + '.validation.password.Password'] = true;
         break;
       default:
         if (!property.enum) {
@@ -374,32 +387,10 @@ export function getPathParamValidator(
     string += '@NotNull ';
   }
 
-  // If parameter ends with `id`, assume that the previous path name is the resource name
-  const pathParts = operationWrapper.pathParts;
-  const partIndex = pathParts.indexOf('{' + pathParam + '}');
-
-  // If partIndex === 1, this is the ID of the root resource
-  if (partIndex === 1 && /id$/i.test(pathParam)) {
+  const resourceId = parameter?.['x-resourceId'];
+  if (resourceId) {
     string +=
-      '@ExistingObject(service = ' +
-      operationWrapper.entityName +
-      'Service.class) ';
-  }
-
-  // If this is the third part, we need to get the resource name from the second part
-  // /enhet/id_abc/underenhet/id_def
-  if (partIndex === 3 && /id$/i.test(pathParam)) {
-    const propertyName = pathParts[2];
-    const propertySchema = operationWrapper.entity.schema?.properties?.[
-      propertyName
-    ] as SchemaObject;
-    const resourceIds = propertySchema && getResourceIds(propertySchema);
-    if (resourceIds?.length === 1) {
-      string +=
-        '@ExistingObject(service = ' +
-        capitalize(resourceIds[0]) +
-        'Service.class) ';
-    }
+      '@ExistingObject(service = ' + capitalize(resourceId) + 'Service.class) ';
   }
 
   return string;
@@ -467,12 +458,7 @@ export const getPathParameters = (operation: OperationObject) => {
       if (parameterObject.in !== 'path') {
         return undefined;
       }
-      return {
-        name: parameterObject.name,
-        description: parameterObject.description,
-        required: parameterObject.required,
-        datatype: getDataType(parameterObject),
-      };
+      return parameterObject;
     })
     .filter((x) => x !== undefined);
 };
@@ -494,7 +480,7 @@ export const getOperationParameters = (
     if (pathParameter) {
       parameters.push({
         name: pathParameter.name,
-        datatype: pathParameter.datatype,
+        datatype: getDataType(pathParameter),
         annotations: [
           '@Valid',
           '@PathVariable',
@@ -522,10 +508,19 @@ export const getOperationParameters = (
   const requestBody = getRequestBody(operation);
   if (requestBody) {
     const requestBodyType = getRequestBodyType(operation);
+    const annotations = ['@RequestBody'];
+    if (operationWrapper.method === 'post') {
+      annotations.push('@Validated(Insert.class)');
+    } else if (operationWrapper.method === 'put') {
+      annotations.push('@Validated(Update.class)');
+    } else {
+      annotations.push('@Valid');
+    }
+
     parameters.push({
       name: 'body',
       datatype: requestBodyType + 'DTO',
-      annotations: ['@Valid', '@RequestBody'],
+      annotations,
     });
   }
 

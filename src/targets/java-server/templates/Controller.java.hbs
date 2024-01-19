@@ -3,15 +3,14 @@
 
 package {{java-package-name}}.entities.{{lc name}};
 
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-{{#each (java-controller-imports . @spec)}}
+{{#each (java-controller-imports .)}}
 import {{.}};
 {{/each}}
 
-@Slf4j
+@SuppressWarnings("java:S1130")
 @RestController
 public class {{name}}Controller {
 
@@ -27,37 +26,28 @@ public class {{name}}Controller {
     {{#eq (uc method) 'PUT'}}@PutMapping("{{path}}"){{/eq}}
     {{#eq (uc method) 'DELETE'}}@DeleteMapping("{{path}}"){{/eq}}
     public ResponseEntity<{{{java-response-type operation}}}> {{operation-name entityName method operation}}(
-      {{#each (java-operation-parameters . @spec)}}
+      {{#each (java-operation-parameters .)}}
         {{#each annotations}}{{{.}}} {{/each}}
         {{{datatype}}}
         {{name}}
         {{#unless @last}},{{/unless}}
       {{/each}}
-    ) {
-
-      try {
-        var responseBody = service.{{java-service-name entityName method operation}}(
-        {{#each (java-operation-parameters . @spec)}}
-          {{name}}
-          {{#unless @last}},{{/unless}}
-        {{/each}}
-        );
-        {{! POST operations should return 201 Created, with a Location header }}
-        {{#if (eq (uc method) 'POST')}}
-          var location = URI.create("/{{lc (request-body-type operation)}}/" + responseBody.getId());
-          return ResponseEntity
-            .created(location)
-            .body(responseBody);
-        {{else}}
-          return ResponseEntity.ok().body(responseBody);
-        {{/if}}
-
-      } catch (Exception e) {
-        log.error("Error executing {{../name}}Service.{{java-service-name entityName method operation}}", e);
+    ) throws EInnsynException {
+      var responseBody = service.{{java-service-name entityName method operation}}(
+      {{#each (java-operation-parameters .)}}
+        {{name}}
+        {{#unless @last}},{{/unless}}
+      {{/each}}
+      );
+      {{! POST operations should return 201 Created, with a Location header }}
+      {{#if (eq (uc method) 'POST')}}
+        var location = URI.create("/{{lc (request-body-type operation)}}/" + responseBody.getId());
         return ResponseEntity
-          .status(HttpStatus.INTERNAL_SERVER_ERROR)
-          .body(null);
-      }
+          .created(location)
+          .body(responseBody);
+      {{else}}
+        return ResponseEntity.ok().body(responseBody);
+      {{/if}}
     }
   {{/each}}
 

@@ -22,4 +22,13 @@ public enum {{name}} {
   public String toJson() {
     return value;
   }
+
+  public static {{name}} fromValue(String value) {
+    for ({{name}} val : values()) {
+      if (val.value.equals(value)) {
+          return val;
+      }
+    }
+    throw new IllegalArgumentException("No enum constant for value: " + value);
+  }
 }

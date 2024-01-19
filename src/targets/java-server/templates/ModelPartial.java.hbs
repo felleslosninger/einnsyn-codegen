@@ -39,6 +39,7 @@ public
     @URL
 
     {{else if (eq format 'password')}}
+    @Password
     {{! Currently noop, avoid setting NoSSN }}
 
     {{else if enum}}
@@ -55,7 +56,9 @@ public
   {{/eq}}
 
   {{#if readOnly}}
-    @Null(groups = {Insert.class, Update.class})
+    {{#unless (and enum (eq (length enum) 1))}}
+      @Null(groups = {Insert.class, Update.class})
+    {{/unless}}
   {{else}}
     {{#if x-required}}
       @NotNull(groups = {Insert.class})
@@ -113,6 +116,15 @@ public
 
         public String toJson() {
           return value;
+        }
+
+        public static {{capitalize @key}}Enum fromValue(String value) {
+          for ({{capitalize @key}}Enum val : values()) {
+            if (val.value.equals(value)) {
+                return val;
+            }
+          }
+          throw new IllegalArgumentException("No enum constant for value: " + value);
         }
       }
     {{/if}}
