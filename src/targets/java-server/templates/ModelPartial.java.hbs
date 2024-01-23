@@ -89,7 +89,11 @@ public
 
     {{! Set default value if specified }}
     {{#if default}} = 
-      "{{default}}"
+      {{#if (eq type 'string')}}
+        "{{default}}"
+      {{else}}
+        {{default}}
+      {{/if}}
     {{/if}}
     ;
 
