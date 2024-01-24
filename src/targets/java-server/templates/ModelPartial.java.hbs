@@ -12,92 +12,92 @@ public
     {{/if}}
   {{/if}} {
 
-{{#each schema.properties}}
+  {{#each schema.properties}}
 
-  {{#eq type 'string'}}
-    {{! Strings should have a max length of 500 unless otherwise specified }}
-    {{#if minLength}}
-      @Size(min = {{minLength}}, max = {{fallback maxLength 500}})
-    {{else}}
-      @Size(max = {{fallback maxLength 500}})
-    {{/if}}
-
-    {{#if pattern}}
-    @Pattern(regexp = "{{pattern}}")
-    {{/if}}
-
-    {{#if (eq format 'email')}}
-    @Email
-
-    {{else if (eq format 'date-time')}}
-    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-
-    {{else if (eq format 'date')}}
-    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
-
-    {{else if (eq format 'url')}}
-    @URL
-
-    {{else if (eq format 'password')}}
-    @Password
-    {{! Currently noop, avoid setting NoSSN }}
-
-    {{else if enum}}
-    {{! Currently noop, avoid setting NoSSN }}
-
-    {{else}}
-    @NoSSN
-
-    {{/if}}
-
-    {{#if (and enum (ne (length enum) 1) (ne (length enum) 0))}}
-    @ValidEnum(enumClass = {{capitalize @key}}Enum.class)
-    {{/if}}
-  {{/eq}}
-
-  {{#if readOnly}}
-    {{#unless (and enum (eq (length enum) 1))}}
-      @Null(groups = {Insert.class, Update.class})
-    {{/unless}}
-  {{else}}
-    {{#if x-required}}
-      @NotNull(groups = {Insert.class})
-    {{/if}}
-  {{/if}}
-
-  {{#if x-expandableField}}
-  @Valid
-  {{/if}}
-
-    {{! Enums with length 1 should be final }}
-    {{#if (and enum (eq (length enum) 1))}}
-      final
-    {{/if}}
-
-    {{! transient values won't be serialized }}
-    {{#if writeOnly}}transient {{/if}}
-
-    {{! Data type }}
-    {{#if (eq type 'object')}}
-      {{capitalize @key}}DTO
-    {{else}}
-      {{{java-datatype .}}}
-    {{/if}}
-
-    {{! Field name }}
-    {{@key}}
-
-    {{! Set default value if specified }}
-    {{#if default}} = 
-      {{#if (eq type 'string')}}
-        "{{default}}"
+    {{#eq type 'string'}}
+      {{! Strings should have a max length of 500 unless otherwise specified }}
+      {{#if minLength}}
+        @Size(min = {{minLength}}, max = {{fallback maxLength 500}})
       {{else}}
-        {{default}}
+        @Size(max = {{fallback maxLength 500}})
+      {{/if}}
+
+      {{#if pattern}}
+      @Pattern(regexp = "{{pattern}}")
+      {{/if}}
+
+      {{#if (eq format 'email')}}
+      @Email
+
+      {{else if (eq format 'date-time')}}
+      @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+
+      {{else if (eq format 'date')}}
+      @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+
+      {{else if (eq format 'url')}}
+      @URL
+
+      {{else if (eq format 'password')}}
+      @Password
+      {{! Currently noop, avoid setting NoSSN }}
+
+      {{else if enum}}
+      {{! Currently noop, avoid setting NoSSN }}
+
+      {{else}}
+      @NoSSN
+
+      {{/if}}
+
+      {{#if (and enum (ne (length enum) 1) (ne (length enum) 0))}}
+      @ValidEnum(enumClass = {{capitalize @key}}Enum.class)
+      {{/if}}
+    {{/eq}}
+
+    {{#if readOnly}}
+      {{#unless (and enum (eq (length enum) 1))}}
+        @Null(groups = {Insert.class, Update.class})
+      {{/unless}}
+    {{else}}
+      {{#if x-required}}
+        @NotNull(groups = {Insert.class})
       {{/if}}
     {{/if}}
-    ;
 
-{{/each}}
+    {{#if x-expandableField}}
+    @Valid
+    {{/if}}
+
+      {{! Enums with length 1 should be final }}
+      {{#if (and enum (eq (length enum) 1))}}
+        final
+      {{/if}}
+
+      {{! transient values won't be serialized }}
+      {{#if writeOnly}}transient {{/if}}
+
+      {{! Data type }}
+      {{#if (eq type 'object')}}
+        {{capitalize @key}}DTO
+      {{else}}
+        {{{java-datatype .}}}
+      {{/if}}
+
+      {{! Field name }}
+      {{@key}}
+
+      {{! Set default value if specified }}
+      {{#if default}} = 
+        {{#if (eq type 'string')}}
+          "{{default}}"
+        {{else}}
+          {{default}}
+        {{/if}}
+      {{/if}}
+      ;
+
+  {{/each}}
 
 {{#if inlineEnums}}
   {{#each schema.properties}}
