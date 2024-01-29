@@ -4,7 +4,7 @@ import {
   RequestBodyObject,
   SchemaObject,
 } from 'openapi3-ts/oas30';
-import { getRequestBody } from './helpers';
+import { getRequestBody, getResourceIds } from './helpers';
 
 // Capitalize first letter
 export const capitalize = (s = '') => {
@@ -52,9 +52,25 @@ export function ne(this: any, a: string, b: string, options: HelperOptions) {
   }
 }
 
+export const echo = (value: string) => {
+  return value;
+};
+
 // Add a fallback-value helper
 export const fallback = (value: string, fallbackValue: string) => {
   return value ?? fallbackValue;
+};
+
+export const isList = (property: SchemaObject) => {
+  return property.type === 'array';
+};
+
+export const isExpandableField = (property: SchemaObject) => {
+  return getResourceIds(property).length > 0;
+};
+
+export const isExpandableFieldList = (property: SchemaObject) => {
+  return isList(property) && isExpandableField(property.items as SchemaObject);
 };
 
 /**
@@ -103,11 +119,11 @@ export const getOperationName = (
 export const getRequestBodyType = (
   operation: OperationObject,
 ): string | undefined => {
-  const requestBody = operation.requestBody as RequestBodyObject;
-  const content = requestBody?.content;
-  const schema = content?.['application/json']?.schema as SchemaObject;
-  const bodyType = schema?.['x-resourceId'] ?? operation.operationId;
-  return bodyType;
+  const requestBody = getRequestBody(operation);
+  if (requestBody) {
+    return requestBody?.['x-resourceId'] ?? operation.operationId;
+  }
+  return undefined;
 };
 
 /**
@@ -129,9 +145,13 @@ export const addHandlebarsHelpers = (handlebars: typeof Handlebars) => {
   handlebars.registerHelper('or', function () {
     return Array.prototype.slice.call(arguments, 0, -1).some(Boolean);
   });
+  handlebars.registerHelper('echo', echo);
   handlebars.registerHelper('fallback', fallback);
   handlebars.registerHelper('operation-name', getOperationName);
   handlebars.registerHelper('request-body-type', getRequestBodyType);
   handlebars.registerHelper('const-var-name', constVarName);
   handlebars.registerHelper('request-body', getRequestBody);
+  handlebars.registerHelper('is-list', isList);
+  handlebars.registerHelper('is-expandable-field', isExpandableField);
+  handlebars.registerHelper('is-expandable-field-list', isExpandableFieldList);
 };

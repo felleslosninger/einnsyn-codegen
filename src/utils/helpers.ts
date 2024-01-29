@@ -65,6 +65,19 @@ export const getResourceIds = (schema: SchemaObject) => {
   return Object.keys(resources);
 };
 
+export const getPathParameters = (operation: OperationObject) => {
+  const parameters = operation.parameters ?? [];
+  return parameters
+    .map((parameter) => {
+      const parameterObject = parameter as ParameterObject;
+      if (parameterObject.in !== 'path') {
+        return undefined;
+      }
+      return parameterObject;
+    })
+    .filter((x) => x !== undefined);
+};
+
 export const getQueryParameters = (operation: OperationObject) => {
   const parameters = operation.parameters ?? [];
   return parameters

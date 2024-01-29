@@ -9,14 +9,24 @@ import * as prettier from 'prettier';
 import {
   addHandlebarsHelpers,
   capitalize,
+  getRequestBodyType,
   lc,
 } from '../../utils/handlebarsHelpers';
-import { getResourceIds, getResponseBody } from '../../utils/helpers';
-import { addJavaServerHandlebarsHelpers } from './javaServerHandlebarsHelpers';
+import {
+  getRequestBody,
+  getResourceIds,
+  getResponseBody,
+} from '../../utils/helpers';
+import {
+  addJavaClientHandlebarsHelpers,
+  getExtendedProperties,
+  setSpec,
+} from './javaClientHandlebarsHelpers';
 
-export const JAVA_SERVER_PACKAGE = 'no.einnsyn.apiv3';
-const JAVA_SERVER_TEMPLATE_PATH = './src/targets/java-server/templates';
-const JAVA_SERVER_OUT_PATH = './out/java-server/src/main/java/no/einnsyn/apiv3';
+export const JAVA_CLIENT_PACKAGE = 'no.einnsyn.apiclient';
+const JAVA_CLIENT_TEMPLATE_PATH = './src/targets/java-client/templates';
+const JAVA_CLIENT_OUT_PATH =
+  './out/java-client/src/main/java/no/einnsyn/apiclient';
 
 export type Entity = {
   name: string;
@@ -40,11 +50,12 @@ export const generate = async (
   // Create a new handlebar instance and add TS-specific helpers
   const hb = handlebars.create();
   addHandlebarsHelpers(hb);
-  addJavaServerHandlebarsHelpers(hb);
+  addJavaClientHandlebarsHelpers(hb);
+  setSpec(spec);
 
   // Register partials
   const modelPartialTemplate = await fs.promises.readFile(
-    JAVA_SERVER_TEMPLATE_PATH + '/ModelPartial.java.hbs',
+    JAVA_CLIENT_TEMPLATE_PATH + '/ModelPartial.java.hbs',
     'utf8',
   );
   hb.registerPartial('modelPartial', modelPartialTemplate);
@@ -116,23 +127,64 @@ export const generate = async (
     const capName = capitalize(name);
     const lcName = lc(name);
     const entityPathName = `entities/${lcName}`;
-    const modelPathName = `${entityPathName}/models`;
+    const modelPathName = `${entityPathName}`;
+
+    if (entity.schema?.['x-isExtended']) {
+      continue;
+    }
 
     // Render JSON model
     if (entity.schema) {
       await render(
         hb,
         'Model.java.hbs',
-        `${modelPathName}/${capName}DTO.java`,
+        `${modelPathName}/${capName}.java`,
         entity,
       );
     }
 
+    // Render body for POST/PUT operations with non-entity bodies
+    for (const operation of entity.operationList) {
+      const requestBody = getRequestBody(operation.operation);
+      if (requestBody && !requestBody['x-resourceId']) {
+        const requestBodyType = getRequestBodyType(operation.operation);
+        await render(
+          hb,
+          'Model.java.hbs',
+          `${modelPathName}/${capitalize(requestBodyType)}.java`,
+          {
+            entityName: name,
+            name: capitalize(requestBodyType),
+            schema: requestBody,
+            inlineEnums: true,
+          },
+        );
+      }
+    }
+
+    // Render Services
+    await render(
+      hb,
+      'Service.java.hbs',
+      `${entityPathName}/${capName}Service.java`,
+      entity,
+    );
+
+    // Render query parameters for operations that aren't bound to an entity (search)
+    for (const operationWrapper of entity.operationList) {
+      const operation = operationWrapper.operation;
+      const xRequestQuery = operation['x-request-query'] ?? {};
+      if (xRequestQuery['x-no-entity']) {
+        await renderQueryParameters(xRequestQuery);
+      }
+    }
+
+    // Combine properties from superclasses
+    const properties = getExtendedProperties(entity.schema ?? {}) ?? {};
+
     // Render enums
-    for (const propertyName in entity.schema?.properties ?? {}) {
-      const property = entity.schema?.properties?.[
-        propertyName
-      ] as SchemaObject;
+    for (const propertyName in properties) {
+      const property = properties[propertyName] as SchemaObject;
       const enumValues = property.enum;
       if (enumValues === undefined || enumValues.length <= 1) {
         continue;
@@ -150,10 +202,8 @@ export const generate = async (
     }
 
     // Render Uninon wrappers for ExpandableFields that can take multiple types
-    for (const propertyName in entity.schema?.properties ?? {}) {
-      const property = entity.schema?.properties?.[
-        propertyName
-      ] as SchemaObject;
+    for (const propertyName in properties) {
+      const property = properties[propertyName];
       const resources =
         property.anyOf
           ?.map((anyOfProperty) => {
@@ -230,26 +280,6 @@ export const generate = async (
       );
     }
 
-    console.log('Generate controller for ' + name);
-    if (entity.operationList.length > 0) {
-      // Render controller
-      await render(
-        hb,
-        'Controller.java.hbs',
-        `${entityPathName}/${capName}Controller.java`,
-        entity,
-      );
-
-      // Render query parameters for operations that aren't bound to an entity
-      for (const operationWrapper of entity.operationList) {
-        const operation = operationWrapper.operation;
-        const xRequestQuery = operation['x-request-query'] ?? {};
-        if (xRequestQuery['x-no-entity']) {
-          await renderQueryParameters(xRequestQuery);
-        }
-      }
-    }
-
     const xRequestQuery = entity.schema?.['x-request-query'] ?? {};
     for (const method in xRequestQuery) {
       const props = xRequestQuery[method];
@@ -258,26 +288,32 @@ export const generate = async (
 
     async function renderQueryParameters(props: any) {
       const className = props['x-custom-name'];
-      const needsCustom = props['x-has-custom-props'];
-      if (!needsCustom) return;
-      const context = {
-        schema: {
-          properties: props['x-custom-props'],
-          'x-extends': props['x-extend-name'],
-          'x-extends-entity': props['x-extend-entity'],
-        },
-        entityName: name,
-        name: className,
-        inlineEnums: true,
-      };
-      await render(
-        hb,
-        'QueryParameters.java.hbs',
-        `${modelPathName}/${className}DTO.java`,
-        context,
-      );
+      const allProps = props['x-all-props'];
+      if (Object.keys(allProps ?? {}).length) {
+        const context = {
+          schema: {
+            properties: props['x-all-props'],
+            'x-extends': props['x-extend-name'],
+            'x-extends-entity': props['x-extend-entity'],
+          },
+          entityName: name,
+          name: className,
+          inlineEnums: true,
+        };
+        await render(
+          hb,
+          'QueryParameters.java.hbs',
+          `${modelPathName}/${className}.java`,
+          context,
+        );
+      }
     }
   }
+
+  // Render EInnsynClientBase
+  await render(hb, 'EInnsynClientBase.java.hbs', `EInnsynClientBase.java`, {
+    entityList,
+  });
 };
 
 /**
@@ -292,9 +328,9 @@ const render = async (
   outputFile: string,
   context: Record<string, unknown>,
 ) => {
-  const outputPath = JAVA_SERVER_OUT_PATH + '/' + outputFile;
+  const outputPath = JAVA_CLIENT_OUT_PATH + '/' + outputFile;
   const templateSource = await fs.promises.readFile(
-    JAVA_SERVER_TEMPLATE_PATH + '/' + templateFile,
+    JAVA_CLIENT_TEMPLATE_PATH + '/' + templateFile,
     'utf8',
   );
   const template = handlebars.compile(templateSource);

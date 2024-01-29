@@ -3,18 +3,12 @@ import fs from 'fs';
 import handlebars from 'handlebars';
 import yaml from 'js-yaml';
 import { ParsedArgs } from 'minimist';
-import {
-  OpenAPIObject,
-  OperationObject,
-  ParameterObject,
-  RequestBodyObject,
-  ResponseObject,
-  SchemaObject,
-} from 'openapi3-ts/oas30';
+import { OpenAPIObject, SchemaObject } from 'openapi3-ts/oas30';
 import { JSONObject, deepMergeAllOf } from './utils/deepMergeAllOf';
 
-import * as ts from './targets/ts-client/tsGenerator';
+import * as javaClient from './targets/java-client/javaClientGenerator';
 import * as javaServer from './targets/java-server/javaServerGenerator';
+import * as ts from './targets/ts-client/tsGenerator';
 import { addOperationQueryProperties } from './utils/addOperationQueryProperties';
 
 const run = async (args: ParsedArgs) => {
@@ -84,6 +78,10 @@ const run = async (args: ParsedArgs) => {
 
   if (args['java-server'] || args.all) {
     javaServer.generate(spec, handlebars);
+  }
+
+  if (args['java-client'] || args.all) {
+    javaClient.generate(spec, handlebars);
   }
 };
 

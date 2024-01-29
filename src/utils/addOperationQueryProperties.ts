@@ -100,10 +100,11 @@ export const addOperationQueryProperties = (spec: OpenAPIObject) => {
           'x-extend-entity': extendEntityName,
           'x-custom-entity': entityName,
           'x-custom-name':
-            Object.keys(remainingProperties).length > 0
-              ? capitalize(entityName) + capitalize(method) + 'Query'
-              : undefined,
+            capitalize(entityName) + capitalize(method) + 'Query',
           'x-custom-props': remainingProperties,
+          'x-has-custom-props': Object.keys(remainingProperties).length > 0,
+          'x-all-props': queryProperties,
+          'x-has-props': Object.keys(queryProperties).length > 0,
         };
         entity['x-request-query'] = entity['x-request-query'] ?? {};
         entity['x-request-query'][method] = operation['x-request-query'];
@@ -122,11 +123,11 @@ export const addOperationQueryProperties = (spec: OpenAPIObject) => {
         operation['x-request-query'] = {
           'x-no-entity': true,
           'x-custom-entity': entityName,
-          'x-custom-name':
-            Object.keys(queryParameters).length > 0
-              ? capitalize(operation.operationId) + 'Query'
-              : undefined,
+          'x-custom-name': capitalize(operation.operationId) + 'Query',
+          'x-has-custom-props': Object.keys(queryParameters).length > 0,
           'x-custom-props': queryParameters,
+          'x-all-props': queryParameters,
+          'x-has-props': Object.keys(queryProperties).length > 0,
         };
       }
     }

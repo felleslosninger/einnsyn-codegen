@@ -1,0 +1,33 @@
+// Auto-generated from our OpenAPI spec
+// https://github.com/felleslosninger/ein-openapi/
+
+package {{java-client-package-name}};
+
+{{#each entityList}}
+  {{#unless schema.x-isExtended}}
+    import {{java-client-package-name}}.entities.{{lc name}}.{{capitalize name}}Service;
+  {{/unless}}
+{{/each}}
+
+import {{java-client-package-name}}.net.Requester;
+
+public class EInnsynClientBase {
+
+  private final Requester requester;
+  public Requester getRequester() {
+    return requester;
+  }
+
+  public EInnsynClientBase(Requester requester) {
+    this.requester = requester;
+  }
+
+  {{#each entityList}}
+    {{! Extended schemas are abstract, and cannot be instantiated }}
+    {{#unless schema.x-isExtended}}
+      public {{capitalize name}}Service {{deCapitalize name}}() {
+        return new {{capitalize name}}Service(this.getRequester());
+      }
+    {{/unless}}
+  {{/each}}
+}

@@ -1,0 +1,55 @@
+// Auto-generated from our OpenAPI spec
+// https://github.com/felleslosninger/ein-openapi/
+
+package {{java-client-package-name}}.entities.{{lc name}};
+
+import {{java-client-package-name}}.common.apiservice.ApiService;
+import {{java-client-package-name}}.common.resultlist.ResultList;
+import {{java-client-package-name}}.common.queryparams.QueryParams;
+import {{java-client-package-name}}.net.Requester;
+import {{java-client-package-name}}.net.Requester.RequestMethod;
+import {{java-client-package-name}}.exceptions.EInnsynException;
+{{#each (java-client-service-imports .)}}
+import {{.}};
+{{/each}}
+
+public class {{capitalize name}}Service extends ApiService {
+
+  public {{capitalize name}}Service(Requester requester) {
+    super(requester);
+  }
+
+{{#each operationList}}
+
+  /**
+    * {{uc method}} {{path}}
+    * {{operation.description}}
+    *
+    * {{#each (java-client-operation-parameters .)}}
+    * @param {{name}} {{description}}
+    * {{/each}}
+    */
+  public {{{java-client-response-type operation}}} {{operation-name entityName method operation}}(
+    {{#each (java-client-operation-parameters .)}}
+      {{{datatype}}}
+      {{name}}
+      {{#unless @last}},{{/unless}}
+    {{/each}}
+  ) throws EInnsynException {
+    String path = {{{java-client-generate-path-string .}}};
+    return this.getRequester().<
+      {{{java-client-response-type operation}}}
+      {{#if (request-body-type operation)}}, {{{request-body-type operation}}}{{/if}}
+    >request(
+      {{#if (eq (uc method) 'GET')}}RequestMethod.GET{{/if}}
+      {{#if (eq (uc method) 'POST')}}RequestMethod.POST{{/if}}
+      {{#if (eq (uc method) 'PUT')}}RequestMethod.PUT{{/if}}
+      {{#if (eq (uc method) 'DELETE')}}RequestMethod.DELETE{{/if}}
+      , path
+      {{#if operation.x-request-query.x-has-props}}, query{{/if}}
+      {{#if (request-body-type operation)}}, body{{/if}}
+    );
+  }
+{{/each}}
+
+}

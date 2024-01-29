@@ -1,0 +1,37 @@
+// Auto-generated from our OpenAPI spec
+// https://github.com/felleslosninger/ein-openapi/
+
+package {{java-client-package-name}}.entities.{{lc entityName}};
+
+{{#each resources}}
+  {{#if (ne . ../entityName)}}
+    import {{java-client-package-name}}.entities.{{lc .}}.{{capitalize .}};
+  {{/if}}
+{{/each}}
+import {{java-client-package-name}}.common.hasid.HasId;
+
+public class UnionResource{{capitalize propertyName}} implements HasId {
+
+  private String id;
+  public String getId() {
+    return id;
+  }
+
+  {{#each resources}}
+    private {{capitalize .}} {{deCapitalize .}};
+    public {{capitalize .}} get{{capitalize .}}() {
+      return {{deCapitalize .}};
+    }
+  {{/each}}
+
+  public UnionResource{{capitalize propertyName}}(String id) {
+    this.id = id;
+  }
+
+  {{#each resources}}
+    public UnionResource{{capitalize ../propertyName}}({{capitalize .}} {{deCapitalize .}}) {
+      this.{{deCapitalize .}} = {{deCapitalize .}};
+      this.id = {{deCapitalize .}}.getId();
+    }
+  {{/each}}
+}

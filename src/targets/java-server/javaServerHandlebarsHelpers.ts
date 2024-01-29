@@ -11,6 +11,7 @@ import {
   lc,
 } from '../../utils/handlebarsHelpers';
 import {
+  getPathParameters,
   getRequestBody,
   getResourceIds,
   getResponseBody,
@@ -406,7 +407,9 @@ export function getJavaPackageName() {
  * @param operation
  * @returns
  */
-const getResponseType = (operation: OperationObject): string | undefined => {
+export const getResponseType = (
+  operation: OperationObject,
+): string | undefined => {
   // If there is no application/json success response, skip (it might be a binary download)
   const successResponse = getResponseBody(operation);
   if (!successResponse) {
@@ -444,29 +447,7 @@ const getResponseType = (operation: OperationObject): string | undefined => {
   }
 };
 
-/**
- * Get path parameters for an operation
- *
- * @param operation
- * @returns
- */
-export const getPathParameters = (operation: OperationObject) => {
-  const parameters = operation.parameters ?? [];
-  return parameters
-    .map((parameter) => {
-      const parameterObject = parameter as ParameterObject;
-      if (parameterObject.in !== 'path') {
-        return undefined;
-      }
-      return parameterObject;
-    })
-    .filter((x) => x !== undefined);
-};
-
-export const getOperationParameters = (
-  operationWrapper: EntityOperation,
-  spec: OpenAPIObject,
-) => {
+export const getOperationParameters = (operationWrapper: EntityOperation) => {
   const operation = operationWrapper.operation;
   const parameters: {
     name: string;
