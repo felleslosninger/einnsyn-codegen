@@ -5,6 +5,7 @@
   "scripts": {
     "generate": "rm -rf ./out/* && bun index.ts --all",
     "generate:java-server": "rm -rf ./out/java-server/* && bun index.ts --java-server",
+    "generate:java-client": "rm -rf ./out/java-client/* && bun index.ts --java-client",
     "generate:ts": "rm -rf ./out/ts-client/* && bun index.ts --ts"
   },
   "devDependencies": {
