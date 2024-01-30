@@ -325,6 +325,7 @@ export const javaClientGeneratePathString = (operation: EntityOperation) => {
  */
 export const getJavaClientOperationParameters = (
   operationWrapper: EntityOperation,
+  withQueryParameters = true,
 ) => {
   const operation = operationWrapper.operation;
   const parameters: {
@@ -345,7 +346,7 @@ export const getJavaClientOperationParameters = (
 
   // Add query parameter object
   const xRequestQuery = operation['x-request-query'];
-  if (xRequestQuery) {
+  if (withQueryParameters && xRequestQuery) {
     const extendName = xRequestQuery['x-extend-name'];
     const customName = xRequestQuery['x-custom-name'];
     const allProps = xRequestQuery['x-all-props'] ?? {};

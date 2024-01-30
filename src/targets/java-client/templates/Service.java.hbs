@@ -3,6 +3,8 @@
 
 package {{java-client-package-name}}.entities.{{lc name}};
 
+import com.google.gson.reflect.TypeToken;
+import java.util.function.UnaryOperator;
 import {{java-client-package-name}}.common.apiservice.ApiService;
 import {{java-client-package-name}}.common.resultlist.ResultList;
 import {{java-client-package-name}}.common.queryparams.QueryParams;
@@ -37,19 +39,115 @@ public class {{capitalize name}}Service extends ApiService {
     {{/each}}
   ) throws EInnsynException {
     String path = {{{java-client-generate-path-string .}}};
-    return this.getRequester().<
-      {{{java-client-response-type operation}}}
-      {{#if (request-body-type operation)}}, {{{request-body-type operation}}}{{/if}}
-    >request(
+    {{#if (request-body-type operation)}}
+      TypeToken<{{{request-body-type operation}}}> requestTypeToken = new TypeToken<{{{request-body-type operation}}}>() {};
+      String bodyJSON = this.getRequester().getGson().toJson(body, requestTypeToken.getType());
+    {{/if}}
+    String responseJSON = this.getRequester().request(
       {{#if (eq (uc method) 'GET')}}RequestMethod.GET{{/if}}
       {{#if (eq (uc method) 'POST')}}RequestMethod.POST{{/if}}
       {{#if (eq (uc method) 'PUT')}}RequestMethod.PUT{{/if}}
       {{#if (eq (uc method) 'DELETE')}}RequestMethod.DELETE{{/if}}
       , path
       {{#if operation.x-request-query.x-has-props}}, query{{/if}}
-      {{#if (request-body-type operation)}}, body{{/if}}
+      {{#if (request-body-type operation)}}, bodyJSON{{/if}}
     );
+    TypeToken<{{{java-client-response-type operation}}}> responseTypeToken = new TypeToken<{{{java-client-response-type operation}}}>() {};
+    return this.getRequester().getGson().fromJson(responseJSON, responseTypeToken.getType());
   }
+
+
+  {{! Overloader, replace Body with Body.Builder function }}
+  {{#if (request-body-type operation)}}
+    /**
+      * {{uc method}} {{path}}
+      * {{operation.description}}
+      *
+      * {{#each (java-client-operation-parameters .)}}
+      * @param {{name}} {{description}}
+      * {{/each}}
+      */
+    public {{{java-client-response-type operation}}} {{operation-name entityName method operation}}(
+      {{#each (java-client-operation-parameters .)}}
+        {{#if (eq "body" name)}}
+          UnaryOperator<{{request-body-type ../operation}}.Builder> bodyBuilderFunction
+        {{else}}
+          {{{datatype}}} {{name}}
+        {{/if}}
+        {{#unless @last}},{{/unless}}
+      {{/each}}
+    ) throws EInnsynException {
+      {{request-body-type operation}} body = bodyBuilderFunction.apply(new {{request-body-type operation}}.Builder()).build();
+      return this.{{operation-name entityName method operation}}(
+        {{#each (java-client-operation-parameters .)}}
+          {{name}}
+          {{#unless @last}},{{/unless}}
+        {{/each}}
+      );
+    }
+  {{/if}}
+
+  {{! Overloaders, no query param}}
+  {{#if operation.x-request-query.x-has-props}}
+    /**
+      * {{uc method}} {{path}}
+      * {{operation.description}}
+      *
+      * {{#each (java-client-operation-parameters . false)}}
+      * @param {{name}} {{description}}
+      * {{/each}}
+      */
+    public {{{java-client-response-type operation}}} {{operation-name entityName method operation}}(
+      {{#each (java-client-operation-parameters . false)}}
+        {{{datatype}}}
+        {{name}}
+        {{#unless @last}},{{/unless}}
+      {{/each}}
+    ) throws EInnsynException {
+      return this.{{operation-name entityName method operation}}(
+        {{#each (java-client-operation-parameters .)}}
+          {{#if (eq "query" name)}}null
+          {{else}}{{name}}
+          {{/if}}
+          {{#unless @last}},{{/unless}}
+        {{/each}}
+      );
+    }
+
+    {{! Overloader, replace Body with Body.Builder function }}
+    {{#if (request-body-type operation)}}
+      /**
+        * {{uc method}} {{path}}
+        * {{operation.description}}
+        *
+        * {{#each (java-client-operation-parameters . false)}}
+        * @param {{name}} {{description}}
+        * {{/each}}
+        */
+      public {{{java-client-response-type operation}}} {{operation-name entityName method operation}}(
+        {{#each (java-client-operation-parameters . false)}}
+          {{#if (eq "body" name)}}
+            UnaryOperator<{{request-body-type ../operation}}.Builder> bodyBuilderFunction
+          {{else}}
+            {{{datatype}}} {{name}}
+          {{/if}}
+          {{#unless @last}},{{/unless}}
+        {{/each}}
+      ) throws EInnsynException {
+        {{request-body-type operation}} body = bodyBuilderFunction.apply(new {{request-body-type operation}}.Builder()).build();
+        return this.{{operation-name entityName method operation}}(
+          {{#each (java-client-operation-parameters .)}}
+            {{#if (eq "query" name)}}null
+            {{else}}{{name}}
+            {{/if}}
+            {{#unless @last}},{{/unless}}
+          {{/each}}
+        );
+      }
+    {{/if}}
+
+  {{/if}}
+
 {{/each}}
 
 }
