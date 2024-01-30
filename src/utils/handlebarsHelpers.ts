@@ -126,6 +126,10 @@ export const getRequestBodyType = (
   return undefined;
 };
 
+export const isUnionResource = (schema: SchemaObject) => {
+  return getResourceIds(schema).length > 1;
+};
+
 /**
  * Handlebar helpers that can be used for all templates
  * @param handlebars
@@ -151,6 +155,7 @@ export const addHandlebarsHelpers = (handlebars: typeof Handlebars) => {
   handlebars.registerHelper('request-body-type', getRequestBodyType);
   handlebars.registerHelper('const-var-name', constVarName);
   handlebars.registerHelper('request-body', getRequestBody);
+  handlebars.registerHelper('is-union-resource', isUnionResource);
   handlebars.registerHelper('is-list', isList);
   handlebars.registerHelper('is-expandable-field', isExpandableField);
   handlebars.registerHelper('is-expandable-field-list', isExpandableFieldList);

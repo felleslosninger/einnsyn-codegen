@@ -121,6 +121,13 @@ export const generate = async (
     }
   }
 
+  // Render TypeAdapterFactoryProvider
+  await render(
+    'TypeAdapterFactoryProvider.java.hbs',
+    `net/TypeAdapterFactoryProvider.java`,
+    { entityList },
+  );
+
   // Iterate all entities
   for (const name in entityList) {
     const entity = entityList[name];
@@ -136,7 +143,6 @@ export const generate = async (
     // Render JSON model
     if (entity.schema) {
       await render(
-        hb,
         'Model.java.hbs',
         `${modelPathName}/${capName}.java`,
         entity,
@@ -149,7 +155,6 @@ export const generate = async (
       if (requestBody && !requestBody['x-resourceId']) {
         const requestBodyType = getRequestBodyType(operation.operation);
         await render(
-          hb,
           'Model.java.hbs',
           `${modelPathName}/${capitalize(requestBodyType)}.java`,
           {
@@ -164,7 +169,6 @@ export const generate = async (
 
     // Render Services
     await render(
-      hb,
       'Service.java.hbs',
       `${entityPathName}/${capName}Service.java`,
       entity,
@@ -190,7 +194,6 @@ export const generate = async (
         continue;
       }
       await render(
-        hb,
         'Enum.java.hbs',
         `${modelPathName}/${capitalize(propertyName)}Enum.java`,
         {
@@ -218,7 +221,6 @@ export const generate = async (
       // Render ModelUnionResource file
       const capPropName = capitalize(propertyName);
       await render(
-        hb,
         'ModelUnionResource.java.hbs',
         `${modelPathName}/UnionResource${capPropName}.java`,
         {
@@ -230,9 +232,8 @@ export const generate = async (
 
       // Render ModelUnionResource type adapter
       await render(
-        hb,
-        'ModelUnionResourceTypeAdapter.java.hbs',
-        `${modelPathName}/UnionResource${capPropName}TypeAdapter.java`,
+        'ModelUnionResourceTypeAdapterFactory.java.hbs',
+        `${modelPathName}/UnionResource${capPropName}TypeAdapterFactory.java`,
         {
           entityName: name,
           propertyName,
@@ -258,7 +259,6 @@ export const generate = async (
         continue;
       }
       await render(
-        hb,
         'ModelUnionResource.java.hbs',
         `${modelPathName}/UnionResource${operation.operation.operationId}.java`,
         {
@@ -269,9 +269,8 @@ export const generate = async (
       );
       // Render ModelUnionResource type adapter
       await render(
-        hb,
-        'ModelUnionResourceTypeAdapter.java.hbs',
-        `${modelPathName}/UnionResource${operation.operation.operationId}TypeAdapter.java`,
+        'ModelUnionResourceTypeAdapterFactory.java.hbs',
+        `${modelPathName}/UnionResource${operation.operation.operationId}TypeAdapterFactory.java`,
         {
           entityName: name,
           propertyName: operation.operation.operationId,
@@ -301,7 +300,6 @@ export const generate = async (
           inlineEnums: true,
         };
         await render(
-          hb,
           'QueryParameters.java.hbs',
           `${modelPathName}/${className}.java`,
           context,
@@ -311,42 +309,41 @@ export const generate = async (
   }
 
   // Render EInnsynClientBase
-  await render(hb, 'EInnsynClientBase.java.hbs', `EInnsynClientBase.java`, {
+  await render('EInnsynClientBase.java.hbs', `EInnsynClientBase.java`, {
     entityList,
   });
-};
 
-/**
- *
- * @param templateFile
- * @param outputPath
- * @param context
- */
-const render = async (
-  handlebars: typeof Handlebars,
-  templateFile: string,
-  outputFile: string,
-  context: Record<string, unknown>,
-) => {
-  const outputPath = JAVA_CLIENT_OUT_PATH + '/' + outputFile;
-  const templateSource = await fs.promises.readFile(
-    JAVA_CLIENT_TEMPLATE_PATH + '/' + templateFile,
-    'utf8',
-  );
-  const template = handlebars.compile(templateSource);
-  let output = template(context);
-  try {
-    output = await prettier.format(output, {
-      plugins: [require('prettier-plugin-java')],
-      parser: 'java',
-      proseWrap: 'always',
-      singleQuote: true,
+  /**
+   *
+   * @param templateFile
+   * @param outputPath
+   * @param context
+   */
+  async function render(
+    templateFile: string,
+    outputFile: string,
+    context: Record<string, unknown>,
+  ) {
+    const outputPath = JAVA_CLIENT_OUT_PATH + '/' + outputFile;
+    const templateSource = await fs.promises.readFile(
+      JAVA_CLIENT_TEMPLATE_PATH + '/' + templateFile,
+      'utf8',
+    );
+    const template = hb.compile(templateSource);
+    let output = template(context);
+    try {
+      output = await prettier.format(output, {
+        plugins: [require('prettier-plugin-java')],
+        parser: 'java',
+        proseWrap: 'always',
+        singleQuote: true,
+      });
+    } catch (e) {
+      console.error('Error formatting ' + outputPath);
+    }
+    await fs.promises.mkdir(outputPath.replace(/\/[^/]+$/, ''), {
+      recursive: true,
     });
-  } catch (e) {
-    console.error('Error formatting ' + outputPath);
+    await fs.promises.writeFile(outputPath, output);
   }
-  await fs.promises.mkdir(outputPath.replace(/\/[^/]+$/, ''), {
-    recursive: true,
-  });
-  await fs.promises.writeFile(outputPath, output);
 };

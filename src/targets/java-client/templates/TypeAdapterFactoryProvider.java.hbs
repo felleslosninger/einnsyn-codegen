@@ -1,0 +1,28 @@
+// Auto-generated from our OpenAPI spec
+// https://github.com/felleslosninger/ein-openapi/
+
+package {{java-client-package-name}}.net;
+
+import com.google.gson.TypeAdapterFactory;
+import java.util.ArrayList;
+import java.util.List;
+
+public class TypeAdapterFactoryProvider {
+
+  private static final List<TypeAdapterFactory> typeAdapterFactories = new ArrayList<>();
+  public static List<TypeAdapterFactory> getTypeAdapterFactories() {
+    return typeAdapterFactories;
+  }
+
+  static {
+    {{#each entityList}}
+      {{#unless schema.x-isExtended}}
+        {{#each (java-client-extended-properties schema)}}
+          {{#if (is-union-resource .)}}
+            typeAdapterFactories.add(new {{java-client-package-name}}.entities.{{lc @../key}}.UnionResource{{capitalize @key}}TypeAdapterFactory());
+          {{/if}}
+        {{/each}}
+      {{/unless}}
+    {{/each}}
+  };
+}

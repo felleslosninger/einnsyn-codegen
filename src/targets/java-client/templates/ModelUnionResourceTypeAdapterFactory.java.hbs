@@ -1,0 +1,96 @@
+// Auto-generated from our OpenAPI spec
+// https://github.com/felleslosninger/ein-openapi/
+
+package {{java-client-package-name}}.entities.{{lc entityName}};
+
+import com.google.gson.Gson;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
+import com.google.gson.JsonPrimitive;
+import com.google.gson.TypeAdapter;
+import com.google.gson.TypeAdapterFactory;
+import com.google.gson.internal.Streams;
+import com.google.gson.reflect.TypeToken;
+import com.google.gson.stream.JsonReader;
+import com.google.gson.stream.JsonWriter;
+import java.io.IOException;
+
+{{#each resources}}
+  {{#if (ne . ../entityName)}}
+    import {{java-client-package-name}}.entities.{{lc .}}.{{capitalize .}};
+  {{/if}}
+{{/each}}
+
+public class UnionResource{{capitalize propertyName}}TypeAdapterFactory implements TypeAdapterFactory {
+
+  @SuppressWarnings("unchecked")
+  @Override
+  public <T> TypeAdapter<T> create(Gson gson, TypeToken<T> type) {
+    if (!UnionResource{{capitalize propertyName}}.class.isAssignableFrom(type.getRawType())) {
+      return null;
+    }
+
+    {{#each resources}}
+      final TypeAdapter<{{capitalize .}}> {{deCapitalize .}}Adapter = gson.getDelegateAdapter(this, TypeToken.get({{capitalize .}}.class));
+    {{/each}}
+
+    TypeAdapter<UnionResource{{capitalize propertyName}}> unionResource{{capitalize propertyName}}Adapter =
+      new TypeAdapter<UnionResource{{capitalize propertyName}}>() {
+        @Override
+        public void write(JsonWriter out, UnionResource{{capitalize propertyName}} value) throws IOException {
+          if (value == null) {
+            out.nullValue();
+            return;
+          }
+
+          {{#each resources}}
+            if (value.get{{capitalize .}}() != null) {
+              {{deCapitalize .}}Adapter.write(out, value.get{{capitalize .}}());
+              return;
+            }
+          {{/each}}
+
+          if (value.getId() != null) {
+            out.value(value.getId());
+            return;
+          }
+
+          throw new IOException("Could not serialize UnionResource{{capitalize propertyName}}");
+        }
+
+        @Override
+        public UnionResource{{capitalize propertyName}} read(JsonReader in) throws IOException {
+          JsonElement jsonElement = Streams.parse(in);
+
+          if (jsonElement.isJsonNull()) {
+            return null;
+          }
+
+          if (jsonElement.isJsonPrimitive()) {
+            JsonPrimitive jsonPrimitive = jsonElement.getAsJsonPrimitive();
+            if (jsonPrimitive.isString()) {
+              return new UnionResource{{capitalize propertyName}}(jsonPrimitive.getAsString());
+            }
+          }
+
+          if (jsonElement.isJsonObject()) {
+            JsonObject jsonObject = jsonElement.getAsJsonObject();
+            String entity = jsonObject.get("entity").getAsString();
+            switch (entity) {
+              {{#each resources}}
+                case "{{capitalize .}}":
+                  return new UnionResource{{capitalize ../propertyName}}({{deCapitalize .}}Adapter.fromJsonTree(jsonElement));
+              {{/each}}
+                default:
+            }
+          }
+
+          throw new JsonParseException("Could not deserialize UnionResourceParent");
+        }
+      };
+
+    return (TypeAdapter<T>) unionResource{{capitalize propertyName}}Adapter.nullSafe();
+  }
+
+}
