@@ -477,10 +477,12 @@ export const getOperationParameters = (operationWrapper: EntityOperation) => {
   if (xRequestQuery) {
     const extendName = xRequestQuery['x-extend-name'];
     const customName = xRequestQuery['x-custom-name'];
+    const hasCustomProps = xRequestQuery['x-has-custom-props'];
     if (extendName || customName) {
+      const dataType = hasCustomProps ? customName : extendName;
       parameters.push({
         name: 'query',
-        datatype: (customName ?? extendName) + 'DTO',
+        datatype: (dataType ?? extendName) + 'DTO',
         annotations: ['@Valid'],
       });
     }
