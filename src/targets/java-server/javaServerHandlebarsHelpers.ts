@@ -179,6 +179,7 @@ export const getJavaControllerImports = (entity: Entity) => {
         'x-extend-name': extendName,
         'x-custom-name': customName,
         'x-custom-entity': customEntity,
+        'x-has-custom-props': hasCustomProps,
       } = xRequestQuery;
       if (extendEntityName && extendName) {
         const baseQueryObjectPath =
@@ -191,7 +192,7 @@ export const getJavaControllerImports = (entity: Entity) => {
         resources[baseQueryObjectPath] = true;
         resources['jakarta.validation.Valid'] = true;
       }
-      if (customName && customEntity) {
+      if (hasCustomProps && customName && customEntity) {
         const customQueryObjectPath =
           JAVA_SERVER_PACKAGE +
           '.entities.' +

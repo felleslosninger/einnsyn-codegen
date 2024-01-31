@@ -258,8 +258,8 @@ export const generate = async (
 
     async function renderQueryParameters(props: any) {
       const className = props['x-custom-name'];
-      const needsCustom = props['x-has-custom-props'];
-      if (!needsCustom) return;
+      const hasCustom = props['x-has-custom-props'];
+      if (!hasCustom) return;
       const context = {
         schema: {
           properties: props['x-custom-props'],
