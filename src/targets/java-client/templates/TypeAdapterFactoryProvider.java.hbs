@@ -9,20 +9,29 @@ import java.util.List;
 
 public class TypeAdapterFactoryProvider {
 
-  private static final List<TypeAdapterFactory> typeAdapterFactories = new ArrayList<>();
-  public static List<TypeAdapterFactory> getTypeAdapterFactories() {
-    return typeAdapterFactories;
-  }
-
-  static {
+  private final Requester requester;
+  private final List<TypeAdapterFactory> typeAdapterFactories;
+  
+  public TypeAdapterFactoryProvider(Requester requester) {
+    this.requester = requester;
+    typeAdapterFactories = new ArrayList<>();
     {{#each entityList}}
       {{#unless schema.x-isExtended}}
         {{#each (java-client-extended-properties schema)}}
           {{#if (is-union-resource .)}}
-            typeAdapterFactories.add(new {{java-client-package-name}}.entities.{{lc @../key}}.UnionResource{{capitalize @key}}TypeAdapterFactory());
+            typeAdapterFactories.add(new {{java-client-package-name}}.entities.{{lc @../key}}.UnionResource{{capitalize @key}}TypeAdapterFactory(requester));
           {{/if}}
         {{/each}}
       {{/unless}}
     {{/each}}
-  };
+  }
+
+  public Requester getRequester() {
+    return requester;
+  }
+
+    public List<TypeAdapterFactory> getTypeAdapterFactories() {
+    return typeAdapterFactories;
+  }
+
 }

@@ -15,6 +15,7 @@ import com.google.gson.reflect.TypeToken;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
 import java.io.IOException;
+import {{java-client-package-name}}.net.Requester;
 
 {{#each resources}}
   {{#if (ne . ../entityName)}}
@@ -23,6 +24,13 @@ import java.io.IOException;
 {{/each}}
 
 public class UnionResource{{capitalize propertyName}}TypeAdapterFactory implements TypeAdapterFactory {
+
+  private final Requester requester;
+
+  public UnionResource{{capitalize propertyName}}TypeAdapterFactory(Requester requester) {
+    super();
+    this.requester = requester;
+  }
 
   @SuppressWarnings("unchecked")
   @Override
