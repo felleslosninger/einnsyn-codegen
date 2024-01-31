@@ -33,11 +33,17 @@ export const addOperationQueryProperties = (spec: OpenAPIObject) => {
   baseEntity['x-request-query'] = {
     get: {
       'x-custom-name': 'BaseGetQuery',
+      'x-all-props': baseQueryParameters.properties,
+      'x-has-props': true,
       'x-custom-props': baseQueryParameters.properties,
+      'x-has-custom-props': true,
     },
     list: {
       'x-custom-name': 'BaseListQuery',
+      'x-all-props': baseListQueryParameters.properties,
+      'x-has-props': true,
       'x-custom-props': baseListQueryParameters.properties,
+      'x-has-custom-props': true,
     },
   };
 
