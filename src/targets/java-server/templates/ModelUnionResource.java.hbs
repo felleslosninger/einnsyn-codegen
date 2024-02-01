@@ -1,38 +1,48 @@
 // Auto-generated from our OpenAPI spec
 // https://github.com/felleslosninger/ein-openapi/
 
-package {{java-package-name}}.entities.{{lc entityName}}.models;
+package {{java-server-package-name}}.entities.{{lc entityName}}.models;
 
 import jakarta.validation.Valid;
 import lombok.Getter;
 import lombok.Setter;
 
 {{#each resources}}
-  {{#if (ne . ../entityName)}}
-    import {{java-package-name}}.entities.{{lc .}}.models.{{capitalize .}}DTO;
+  {{#if (ne x-resourceId ../entityName)}}
+    import {{java-server-package-name}}.entities.{{lc x-resourceId}}.models.{{capitalize x-resourceId}};
+    import {{java-server-package-name}}.entities.{{lc x-resourceId}}.models.{{capitalize x-resourceId}}DTO;
   {{/if}}
 {{/each}}
-import {{java-package-name}}.common.hasid.HasId;
+import {{java-server-package-name}}.common.hasid.HasId;
+import {{java-server-package-name}}.utils.IdGenerator;
 
 @Getter
 @Setter
-public class UnionResource{{capitalize propertyName}} implements HasId {
+public class {{className}} implements HasId {
 
   String id;
 
   {{#each resources}}
     @Valid
-    {{capitalize .}}DTO {{deCapitalize .}};
+    {{capitalize x-resourceId}}DTO {{deCapitalize x-resourceId}};
   {{/each}}
 
-  public UnionResource{{capitalize propertyName}}(String id) {
+  public {{className}}(String id) {
     this.id = id;
   }
 
   {{#each resources}}
-    public UnionResource{{capitalize ../propertyName}}({{capitalize .}}DTO {{deCapitalize .}}) {
-      this.{{deCapitalize .}} = {{deCapitalize .}};
-      this.id = {{deCapitalize .}}.getId();
+    public {{../className}}({{capitalize x-resourceId}}DTO {{deCapitalize x-resourceId}}) {
+      this.{{deCapitalize x-resourceId}} = {{deCapitalize x-resourceId}};
+      this.id = {{deCapitalize x-resourceId}}.getId();
+    }
+  {{/each}}
+
+  {{#each resources}}
+    public boolean is{{capitalize x-resourceId}}() {
+      return {{deCapitalize x-resourceId}} != null
+        {{#if x-idPrefix}}|| id.startsWith(IdGenerator.getPrefix({{capitalize x-resourceId}}.class)){{/if}}
+      ;
     }
   {{/each}}
 }

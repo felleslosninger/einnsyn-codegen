@@ -17,7 +17,7 @@ public class TypeAdapterFactoryProvider {
     typeAdapterFactories = new ArrayList<>();
     {{#each entityList}}
       {{#unless schema.x-isExtended}}
-        {{#each (java-client-extended-properties schema)}}
+        {{#each (properties entitySchema true)}}
           {{#if (is-union-resource .)}}
             typeAdapterFactories.add(new {{java-client-package-name}}.entities.{{lc @../key}}.UnionResource{{capitalize @key}}TypeAdapterFactory(requester));
           {{/if}}

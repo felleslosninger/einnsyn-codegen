@@ -1,18 +1,22 @@
 @Getter
 @Setter
 public
-  {{#if schema.x-isExtended}}abstract {{/if}}
-    class {{name}}DTO
-  {{#if schema.x-extends}}
-    extends {{capitalize schema.x-extends}}DTO
+  {{#if entitySchema.x-isExtended}}abstract {{/if}}
+    {{#if className}}
+      class {{className}}DTO
+    {{else}}
+      class {{entityName}}DTO
+    {{/if}}
+  {{#if entitySchema.x-extends}}
+    extends {{capitalize entitySchema.x-extends}}DTO
   {{else}}
     {{! If it doesn't extend, and has an ID field, it should implement HasId }}
-    {{#if (and schema.properties.id (eq schema.properties.id.type 'string'))}}
+    {{#if (and entitySchema.properties.id (eq entitySchema.properties.id.type 'string'))}}
       implements HasId
     {{/if}}
   {{/if}} {
 
-  {{#each schema.properties}}
+  {{#each entitySchema.properties}}
 
     {{#eq type 'string'}}
       {{! Strings should have a max length of 500 unless otherwise specified }}
@@ -81,7 +85,7 @@ public
       {{#if (eq type 'object')}}
         {{capitalize @key}}DTO
       {{else}}
-        {{{java-datatype .}}}
+        {{{java-server-datatype . @key ../entityName}}}
       {{/if}}
 
       {{! Field name }}
@@ -100,7 +104,7 @@ public
   {{/each}}
 
 {{#if inlineEnums}}
-  {{#each schema.properties}}
+  {{#each entitySchema.properties}}
     {{#if enum}}
       public enum {{capitalize @key}}Enum {
         {{#each enum}}
@@ -136,9 +140,9 @@ public
 {{/if}}
 
 {{! Add objects for object properties }}
-{{#each schema.properties}}
+{{#each entitySchema.properties}}
   {{#if (eq type 'object')}}
-    {{> modelPartial schema=. name=(capitalize @key) inlineEnums=inlineEnums}}
+    {{> modelPartial entitySchema=. entityName=../entityName className=(capitalize @key) inlineEnums=inlineEnums entityName=entityName}}
   {{/if}}
 {{/each}}
 

@@ -1,10 +1,14 @@
 import { HelperOptions } from 'handlebars';
 import {
-  OperationObject,
-  RequestBodyObject,
-  SchemaObject,
-} from 'openapi3-ts/oas30';
-import { getRequestBody, getResourceIds } from './helpers';
+  getOperationName,
+  getProperties,
+  getRequestBody,
+  getRequestBodyType,
+  isExpandableField,
+  isExpandableFieldList,
+  isList,
+  isUnionResource,
+} from './helpers';
 
 // Capitalize first letter
 export const capitalize = (s = '') => {
@@ -61,75 +65,6 @@ export const fallback = (value: string, fallbackValue: string) => {
   return value ?? fallbackValue;
 };
 
-export const isList = (property: SchemaObject) => {
-  return property.type === 'array';
-};
-
-export const isExpandableField = (property: SchemaObject) => {
-  return getResourceIds(property).length > 0;
-};
-
-export const isExpandableFieldList = (property: SchemaObject) => {
-  return isList(property) && isExpandableField(property.items as SchemaObject);
-};
-
-/**
- * Generate the name for a resource's operation
- *
- * @param entity
- * @param entityOperation
- * @returns
- */
-export const getOperationName = (
-  entityName: string,
-  method: string,
-  operation: OperationObject,
-) => {
-  let operationId = operation.operationId;
-  if (!operationId) {
-    return undefined;
-  }
-
-  const methodAlias =
-    method === 'post' ? 'add' : method === 'put' ? 'update' : method;
-
-  // GetSaksmappe, PostSaksmappe operations should be named "get", "post"
-  if (operationId === capitalize(method) + entityName) {
-    return methodAlias;
-  }
-  // GetSaksmappeList should be named "list"
-  else if (operationId === 'Get' + entityName + 'List') {
-    return 'list';
-  }
-  // PostSaksmappeJournalpost (add journalpost to Saksmappe) should be named postJournalpost
-  else {
-    const stripPrefixRE = new RegExp('^' + capitalize(method) + entityName);
-    return deCapitalize(
-      operationId.replace(stripPrefixRE, capitalize(methodAlias)),
-    );
-  }
-};
-
-/**
- * Get the request body type for an operation
- *
- * @param entityOperation
- * @returns
- */
-export const getRequestBodyType = (
-  operation: OperationObject,
-): string | undefined => {
-  const requestBody = getRequestBody(operation);
-  if (requestBody) {
-    return requestBody?.['x-resourceId'] ?? operation.operationId;
-  }
-  return undefined;
-};
-
-export const isUnionResource = (schema: SchemaObject) => {
-  return getResourceIds(schema).length > 1;
-};
-
 /**
  * Handlebar helpers that can be used for all templates
  * @param handlebars
@@ -159,4 +94,5 @@ export const addHandlebarsHelpers = (handlebars: typeof Handlebars) => {
   handlebars.registerHelper('is-list', isList);
   handlebars.registerHelper('is-expandable-field', isExpandableField);
   handlebars.registerHelper('is-expandable-field-list', isExpandableFieldList);
+  handlebars.registerHelper('properties', getProperties);
 };

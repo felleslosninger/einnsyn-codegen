@@ -1,34 +1,23 @@
 import {
-  OpenAPIObject,
   OperationObject,
   ParameterObject,
   SchemaObject,
 } from 'openapi3-ts/oas30';
-import {
-  capitalize,
-  getRequestBodyType,
-  lc,
-} from '../../utils/handlebarsHelpers';
+import { capitalize, lc } from '../../utils/handlebarsHelpers';
 import {
   getPathParameters,
+  getProperties,
   getRequestBody,
+  getRequestBodyType,
   getResourceIds,
   getResponseBody,
 } from '../../utils/helpers';
-import {
-  getDataType,
-  getJavaServiceName,
-} from '../java-server/javaServerHandlebarsHelpers';
+import { getJavaServerDataType } from '../java-server/javaServerHandlebarsHelpers';
 import {
   Entity,
   EntityOperation,
   JAVA_CLIENT_PACKAGE,
 } from './javaClientGenerator';
-
-let spec: OpenAPIObject;
-export const setSpec = (specIn: OpenAPIObject) => {
-  spec = specIn;
-};
 
 export const getJavaClientPackageName = () => {
   return JAVA_CLIENT_PACKAGE;
@@ -104,7 +93,7 @@ export const getJavaClientModelImports = (
   const resources: Record<string, boolean> = {};
   const schema =
     (entityOrSchema as Entity).schema ?? (entityOrSchema as SchemaObject);
-  const properties = getExtendedProperties(schema) ?? {};
+  const properties = getProperties(schema, true) ?? {};
 
   for (const propertyName in properties) {
     const property = properties[propertyName] as SchemaObject;
@@ -187,27 +176,6 @@ export const getJavaClientImportsForProperty = (property: SchemaObject) => {
   }
 
   return Object.keys(res);
-};
-
-/**
- * Get properties from the givent schema, merged with all extended schemas
- * @param entitySchema
- * @returns
- */
-export const getExtendedProperties = (entitySchema: SchemaObject) => {
-  let properties: Record<string, SchemaObject> = {};
-  const extendsClass = entitySchema?.['x-extends'];
-  if (extendsClass && spec?.components?.schemas?.[extendsClass]) {
-    const extendsSchema = spec.components.schemas[extendsClass] as SchemaObject;
-    if (extendsSchema) {
-      properties = { ...properties, ...getExtendedProperties(extendsSchema) };
-    }
-  }
-  const entityProperties = entitySchema?.properties as Record<
-    string,
-    SchemaObject
-  >;
-  return { ...properties, ...entityProperties };
 };
 
 export const getJavaClientListItemDataType = (property: SchemaObject) => {
@@ -430,10 +398,6 @@ export const addJavaClientHandlebarsHelpers = (
     'java-client-imports-for-property',
     getJavaClientImportsForProperty,
   );
-  handlebars.registerHelper(
-    'java-client-extended-properties',
-    getExtendedProperties,
-  );
   handlebars.registerHelper('is-union-resource', isUnionResource);
   handlebars.registerHelper('filter-writeable', filterWriteable);
   handlebars.registerHelper('java-client-has-id', javaClientHasId);
@@ -448,7 +412,7 @@ export const addJavaClientHandlebarsHelpers = (
     getJavaClientListItemDataType,
   );
   handlebars.registerHelper('get-resource-ids', getResourceIds);
-  handlebars.registerHelper('java-datatype', getDataType);
+  handlebars.registerHelper('java-server-datatype', getJavaServerDataType);
   handlebars.registerHelper(
     'java-client-response-type',
     getJavaClientResponseType,
@@ -461,5 +425,4 @@ export const addJavaClientHandlebarsHelpers = (
     'java-client-service-imports',
     getJavaClientServiceImports,
   );
-  handlebars.registerHelper('java-service-name', getJavaServiceName);
 };

@@ -5,7 +5,7 @@ package {{java-client-package-name}};
 
 {{#each entityList}}
   {{#unless schema.x-isExtended}}
-    import {{java-client-package-name}}.entities.{{lc name}}.{{capitalize name}}Service;
+    import {{java-client-package-name}}.entities.{{lc entityName}}.{{capitalize name}}Service;
   {{/unless}}
 {{/each}}
 

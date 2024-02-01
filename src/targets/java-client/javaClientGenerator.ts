@@ -9,19 +9,17 @@ import * as prettier from 'prettier';
 import {
   addHandlebarsHelpers,
   capitalize,
-  getRequestBodyType,
   lc,
 } from '../../utils/handlebarsHelpers';
 import {
+  getProperties,
   getRequestBody,
+  getRequestBodyType,
   getResourceIds,
   getResponseBody,
-} from '../../utils/helpers';
-import {
-  addJavaClientHandlebarsHelpers,
-  getExtendedProperties,
   setSpec,
-} from './javaClientHandlebarsHelpers';
+} from '../../utils/helpers';
+import { addJavaClientHandlebarsHelpers } from './javaClientHandlebarsHelpers';
 
 export const JAVA_CLIENT_PACKAGE = 'no.einnsyn.apiclient';
 const JAVA_CLIENT_TEMPLATE_PATH = './src/targets/java-client/templates';
@@ -38,7 +36,6 @@ export type EntityOperation = {
   entity: Entity;
   entityName: string;
   path: string;
-  pathParts: string[];
   method: string;
   operation: OperationObject;
 };
@@ -106,15 +103,10 @@ export const generate = async (
         continue;
       }
 
-      // Trim path, split on / and remove empty strings
-      const trimmedPath = path.replace(/(^\/|\/$)/g, '');
-      const pathParts = trimmedPath.split('/').filter((s) => s.length > 0);
-
       entity.operationList.push({
         entity,
         entityName,
         path,
-        pathParts,
         method,
         operation,
       });
@@ -184,7 +176,7 @@ export const generate = async (
     }
 
     // Combine properties from superclasses
-    const properties = getExtendedProperties(entity.schema ?? {}) ?? {};
+    const properties = getProperties(entity.schema ?? {}, true) ?? {};
 
     // Render enums
     for (const propertyName in properties) {

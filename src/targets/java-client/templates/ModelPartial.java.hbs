@@ -7,7 +7,7 @@ public class {{name}}
   {{/if}}
 {
 
-  {{#each (java-client-extended-properties schema)}}
+  {{#each (properties entitySchema true)}}
     {{! Define field }}
     {{#if description}}
     /**
@@ -54,7 +54,7 @@ public class {{name}}
   {{! Constructor }}
   public {{name}}(
     {{! Arguments }}
-    {{#each (filter-writeable (java-client-extended-properties schema))}}
+    {{#each (filter-writeable (properties schema true))}}
       {{#if (eq type 'object')}}
         {{capitalize @key}} {{@key}}
       {{else}}
@@ -64,7 +64,7 @@ public class {{name}}
     {{/each}}
   ) {
     {{! Set values }}
-    {{#each (filter-writeable (java-client-extended-properties schema))}}
+    {{#each (filter-writeable (properties schema true))}}
       {{#if (and enum (eq (length enum) 1))}}
         {{#if (eq type 'string')}}
           this.{{@key}} = "{{default}}";
@@ -78,7 +78,7 @@ public class {{name}}
   }
 
   {{! Add enums }}
-  {{#each (java-client-extended-properties schema)}}
+  {{#each (properties entitySchema true)}}
     {{#if (and enum (ne (length enum) 1))}}
       public enum {{capitalize @key}}Enum {
         {{#each enum}}
@@ -113,9 +113,9 @@ public class {{name}}
   {{/each}}
 
   {{! Add objects for object properties }}
-  {{#each (java-client-extended-properties schema)}}
+  {{#each (properties entitySchema true)}}
     {{#if (eq type 'object')}}
-      {{> modelPartial schema=. name=(capitalize @key) inlineEnums=inlineEnums}}
+      {{> modelPartial schema=. name=(capitalize @key) inlineEnums=inlineEnums entityName=entityName}}
     {{/if}}
   {{/each}}
 
@@ -125,7 +125,7 @@ public class {{name}}
   }
 
   public static class Builder {
-    {{#each (filter-writeable (java-client-extended-properties schema))}}
+    {{#each (filter-writeable (properties schema true))}}
       {{#if (eq type 'object')}}
         private {{capitalize @key}} {{@key}};
       {{else}}
@@ -133,7 +133,7 @@ public class {{name}}
       {{/if}}
     {{/each}}
 
-    {{#each (filter-writeable (java-client-extended-properties schema))}}
+    {{#each (filter-writeable (properties schema true))}}
       {{#if (eq type 'object')}}
         /**
           * Set `{{@key}}`. {{#if description}}See {{echo '{'}}@link {{capitalize ../name}}#{{@key}}{{echo '}'}}.{{/if}}
@@ -282,7 +282,7 @@ public class {{name}}
 
     public {{name}} build() {
       return new {{name}}(
-        {{#each (filter-writeable (java-client-extended-properties schema))}}
+        {{#each (filter-writeable (properties schema true))}}
           {{@key}}
           {{#unless @last}},{{/unless}}
         {{/each}}

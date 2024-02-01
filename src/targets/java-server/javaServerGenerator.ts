@@ -1,37 +1,24 @@
 import fs from 'fs';
 import Handlebars from 'handlebars';
-import {
-  OpenAPIObject,
-  OperationObject,
-  SchemaObject,
-} from 'openapi3-ts/oas30';
-import * as prettier from 'prettier';
+import { OpenAPIObject, SchemaObject } from 'openapi3-ts/oas30';
 import {
   addHandlebarsHelpers,
   capitalize,
   lc,
 } from '../../utils/handlebarsHelpers';
-import { getResourceIds, getResponseBody } from '../../utils/helpers';
+import {
+  getEntities,
+  getProperties,
+  getResourceIds,
+  getResources,
+  getResponseBody,
+} from '../../utils/helpers';
+import { getRenderer } from '../../utils/renderer';
 import { addJavaServerHandlebarsHelpers } from './javaServerHandlebarsHelpers';
 
 export const JAVA_SERVER_PACKAGE = 'no.einnsyn.apiv3';
 const JAVA_SERVER_TEMPLATE_PATH = './src/targets/java-server/templates';
 const JAVA_SERVER_OUT_PATH = './out/java-server/src/main/java/no/einnsyn/apiv3';
-
-export type Entity = {
-  name: string;
-  schema?: SchemaObject;
-  operationList: EntityOperation[];
-};
-
-export type EntityOperation = {
-  entity: Entity;
-  entityName: string;
-  path: string;
-  pathParts: string[];
-  method: string;
-  operation: OperationObject;
-};
 
 export const generate = async (
   spec: OpenAPIObject,
@@ -41,6 +28,11 @@ export const generate = async (
   const hb = handlebars.create();
   addHandlebarsHelpers(hb);
   addJavaServerHandlebarsHelpers(hb);
+  const render = getRenderer(
+    hb,
+    JAVA_SERVER_OUT_PATH,
+    JAVA_SERVER_TEMPLATE_PATH,
+  );
 
   // Register partials
   const modelPartialTemplate = await fs.promises.readFile(
@@ -49,268 +41,152 @@ export const generate = async (
   );
   hb.registerPartial('modelPartial', modelPartialTemplate);
 
-  const entityList: {
-    [key: string]: Entity;
-  } = {};
+  // Iterate all entities
+  for (const entityMetadata of getEntities(spec)) {
+    const entitySchema = entityMetadata.entitySchema;
+    const entityName = entityMetadata.entityName;
+    const capEntityName = capitalize(entityName);
+    const lcEntityName = lc(entityName);
+    const entityPathName = `entities/${lcEntityName}`;
+    const modelPathName = `${entityPathName}/models`;
 
-  // Add all schemas
-  const schemas = spec.components?.schemas ?? {};
-  for (const name in schemas) {
-    const schema = schemas[name] as SchemaObject;
-
-    // Add an exception for ResultList, this is implemented manually
-    if (schema['x-resourceId'] === undefined || name === 'ResultList') {
+    if (entityName === 'ResultList') {
       continue;
     }
 
-    entityList[name] = {
-      name,
-      schema,
-      operationList: [],
-    };
-  }
-
-  // Iterate all paths, group them by matching root entity
-  for (const path in spec.paths) {
-    // Look up entity name from path
-    const entityName = capitalize(path.split('/')[1] ?? '');
-    let entity = entityList[entityName];
-
-    // Entity not found
-    if (!entity) {
-      entity = {
-        name: entityName,
-        operationList: [],
-      };
-      entityList[entityName] = entity;
-    }
-
-    // Add operations to entity
-    const pathItem = spec.paths[path];
-    for (const methodUntyped in pathItem) {
-      const method = methodUntyped as keyof typeof pathItem;
-      const operation = pathItem[method] as OperationObject;
-      const operationId = operation.operationId;
-      if (!operationId) {
-        continue;
-      }
-
-      // Trim path, split on / and remove empty strings
-      const trimmedPath = path.replace(/(^\/|\/$)/g, '');
-      const pathParts = trimmedPath.split('/').filter((s) => s.length > 0);
-
-      entity.operationList.push({
-        entity,
-        entityName,
-        path,
-        pathParts,
-        method,
-        operation,
-      });
-    }
-  }
-
-  // Iterate all entities
-  for (const name in entityList) {
-    const entity = entityList[name];
-    const capName = capitalize(name);
-    const lcName = lc(name);
-    const entityPathName = `entities/${lcName}`;
-    const modelPathName = `${entityPathName}/models`;
-
     // Render JSON model
-    if (entity.schema) {
-      await render(
-        hb,
-        'Model.java.hbs',
-        `${modelPathName}/${capName}DTO.java`,
-        entity,
-      );
-    }
+    if (entitySchema) {
+      if (entitySchema['x-resourceId']) {
+        await render(
+          'Model.java.hbs',
+          `${modelPathName}/${capEntityName}DTO.java`,
+          entityMetadata,
+        );
 
-    // Render enums
-    for (const propertyName in entity.schema?.properties ?? {}) {
-      const property = entity.schema?.properties?.[
-        propertyName
-      ] as SchemaObject;
-      const enumValues = property.enum;
-      if (enumValues === undefined || enumValues.length <= 1) {
+        // Render enums
+        const enumProperties = getProperties(entitySchema).filter(
+          (prop) =>
+            prop.propertySchema.enum && prop.propertySchema.enum.length > 1,
+        );
+        for (const propertyMetadata of enumProperties) {
+          const propertySchema = propertyMetadata.propertySchema;
+          const propertyName = propertyMetadata.propertyName;
+          const enumValues = propertySchema.enum;
+          await render(
+            'Enum.java.hbs',
+            `${modelPathName}/${capitalize(propertyName)}Enum.java`,
+            {
+              entityName: entityName,
+              name: capitalize(propertyName) + 'Enum',
+              values: enumValues,
+            },
+          );
+        }
+      } // end if(x-resourceId)
+
+      // Render Uninon wrappers for ExpandableFields that can take multiple types
+      for (const propertyMetadata of getProperties(entitySchema)) {
+        const propertySchema = propertyMetadata.propertySchema;
+        const propertyName = propertyMetadata.propertyName;
+        const resources = getResources(propertySchema);
+        const className =
+          capitalize(entityName) + capitalize(propertyName) + 'DTO';
+
+        if (resources.length < 2) {
+          continue;
+        }
+
+        const renderContext = {
+          entityName,
+          propertyName,
+          className,
+          resources,
+        };
+
+        await render(
+          'ModelUnionResource.java.hbs',
+          `${modelPathName}/${className}.java`,
+          renderContext,
+        );
+
+        await render(
+          'ModelUnionResourceTypeAdapter.java.hbs',
+          `${modelPathName}/${className}TypeAdapter.java`,
+          renderContext,
+        );
+      }
+    } // End if (entitySchema)
+
+    // UnionResource properties for responses
+    for (const operationMetadata of entityMetadata.entityOperationList) {
+      const operation = operationMetadata.operation;
+      const responseBody = getResponseBody(operation);
+      if (getResourceIds(responseBody).join() !== 'ResultList') {
         continue;
       }
-      await render(
-        hb,
-        'Enum.java.hbs',
-        `${modelPathName}/${capitalize(propertyName)}Enum.java`,
-        {
-          entityName: name,
-          name: capitalize(propertyName) + 'Enum',
-          values: enumValues,
-        },
-      );
-    }
 
-    // Render Uninon wrappers for ExpandableFields that can take multiple types
-    for (const propertyName in entity.schema?.properties ?? {}) {
-      const property = entity.schema?.properties?.[
-        propertyName
-      ] as SchemaObject;
-      const resources =
-        property.anyOf
-          ?.map((anyOfProperty) => {
-            return (anyOfProperty as SchemaObject)['x-resourceId'];
-          })
-          .filter((resourceId) => resourceId !== undefined) ?? [];
+      const resultListSchema = responseBody.properties?.data as SchemaObject;
+      const resources = getResources(resultListSchema);
 
       if (resources.length < 2) {
         continue;
       }
 
-      // Render ModelUnionResource file
-      const capPropName = capitalize(propertyName);
+      const propertyName = operation.operationId;
+      const className =
+        capitalize(entityName) + capitalize(propertyName) + 'ResponseDTO';
+      const renderContext = {
+        entityName,
+        propertyName,
+        className,
+        resources,
+      };
+
       await render(
-        hb,
         'ModelUnionResource.java.hbs',
-        `${modelPathName}/UnionResource${capPropName}.java`,
-        {
-          entityName: name,
-          propertyName,
-          resources,
-        },
+        `${modelPathName}/${className}.java`,
+        renderContext,
       );
 
-      // Render ModelUnionResource type adapter
       await render(
-        hb,
         'ModelUnionResourceTypeAdapter.java.hbs',
-        `${modelPathName}/UnionResource${capPropName}TypeAdapter.java`,
-        {
-          entityName: name,
-          propertyName,
-          resources,
-        },
+        `${modelPathName}/${className}TypeAdapter.java`,
+        renderContext,
       );
     }
 
-    // UnionResource properties for responses
-    for (const operation of entity.operationList) {
-      const responseBody = getResponseBody(operation.operation);
-      const resourceIds = getResourceIds(responseBody);
-      if (resourceIds.join() === 'ResultList') {
-        resourceIds.shift();
-        resourceIds.push(
-          ...getResourceIds(
-            ((responseBody.properties?.data as SchemaObject)
-              ?.items as SchemaObject) ?? {},
-          ),
-        );
-      }
-      if (resourceIds.length < 2) {
-        continue;
-      }
+    if (entityMetadata.entityOperationList.length > 0) {
       await render(
-        hb,
-        'ModelUnionResource.java.hbs',
-        `${modelPathName}/UnionResource${operation.operation.operationId}.java`,
-        {
-          entityName: name,
-          propertyName: operation.operation.operationId,
-          resources: resourceIds,
-        },
-      );
-      // Render ModelUnionResource type adapter
-      await render(
-        hb,
-        'ModelUnionResourceTypeAdapter.java.hbs',
-        `${modelPathName}/UnionResource${operation.operation.operationId}TypeAdapter.java`,
-        {
-          entityName: name,
-          propertyName: operation.operation.operationId,
-          resources: resourceIds,
-        },
-      );
-    }
-
-    console.log('Generate controller for ' + name);
-    if (entity.operationList.length > 0) {
-      // Render controller
-      await render(
-        hb,
         'Controller.java.hbs',
-        `${entityPathName}/${capName}Controller.java`,
-        entity,
+        `${entityPathName}/${capEntityName}Controller.java`,
+        entityMetadata,
       );
-
-      // Render query parameters for operations that aren't bound to an entity
-      for (const operationWrapper of entity.operationList) {
-        const operation = operationWrapper.operation;
-        const xRequestQuery = operation['x-request-query'] ?? {};
-        if (xRequestQuery['x-no-entity']) {
-          await renderQueryParameters(xRequestQuery);
-        }
-      }
     }
 
-    const xRequestQuery = entity.schema?.['x-request-query'] ?? {};
+    // Render query parameters for all operations
+    const xRequestQuery = entitySchema?.['x-request-query'] ?? {};
     for (const method in xRequestQuery) {
       const props = xRequestQuery[method];
-      await renderQueryParameters(props);
-    }
-
-    async function renderQueryParameters(props: any) {
       const className = props['x-custom-name'];
       const hasCustom = props['x-has-custom-props'];
-      if (!hasCustom) return;
+      if (!hasCustom) {
+        continue;
+      }
       const context = {
-        schema: {
+        entitySchema: {
           properties: props['x-custom-props'],
           'x-extends': props['x-extend-name'],
           'x-extends-entity': props['x-extend-entity'],
         },
-        entityName: name,
-        name: className,
+        entityName,
+        className,
         inlineEnums: true,
       };
       await render(
-        hb,
         'QueryParameters.java.hbs',
         `${modelPathName}/${className}DTO.java`,
         context,
       );
     }
   }
-};
-
-/**
- *
- * @param templateFile
- * @param outputPath
- * @param context
- */
-const render = async (
-  handlebars: typeof Handlebars,
-  templateFile: string,
-  outputFile: string,
-  context: Record<string, unknown>,
-) => {
-  const outputPath = JAVA_SERVER_OUT_PATH + '/' + outputFile;
-  const templateSource = await fs.promises.readFile(
-    JAVA_SERVER_TEMPLATE_PATH + '/' + templateFile,
-    'utf8',
-  );
-  const template = handlebars.compile(templateSource);
-  let output = template(context);
-  try {
-    output = await prettier.format(output, {
-      plugins: [require('prettier-plugin-java')],
-      parser: 'java',
-      proseWrap: 'always',
-      singleQuote: true,
-    });
-  } catch (e) {
-    console.error('Error formatting ' + outputPath);
-  }
-  await fs.promises.mkdir(outputPath.replace(/\/[^/]+$/, ''), {
-    recursive: true,
-  });
-  await fs.promises.writeFile(outputPath, output);
 };

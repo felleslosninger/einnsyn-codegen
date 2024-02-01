@@ -5,11 +5,8 @@ import {
   SchemaObject,
 } from 'openapi3-ts/oas30';
 import { Entity, EntityOperation } from './tsGenerator';
-import {
-  capitalize,
-  deCapitalize,
-  getRequestBodyType,
-} from '../../utils/handlebarsHelpers';
+import { capitalize, deCapitalize } from '../../utils/handlebarsHelpers';
+import { getRequestBodyType } from '../../utils/helpers';
 
 /**
  * Get TypeScript datatype for a property or parameter object

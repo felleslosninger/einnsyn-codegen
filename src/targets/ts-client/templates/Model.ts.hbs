@@ -17,7 +17,7 @@ import { expandListToObject, type ExpandObject } from '../utils/expandListToObje
 
 {{! Type }}
 export type {{name}} = {{#if schema.x-extends}}{{schema.x-extends}} & {{/if}} {
-  {{#each schema.properties}}
+  {{#each entitySchema.properties}}
   {{@key}}{{#unless x-required}}?{{/unless}}: {{ts-datatype .}};
   {{/each}}
 }
@@ -45,7 +45,7 @@ export const validate = (
     errors.push(...{{deCapitalize schema.x-extends}}.validate(obj, expand));
   {{/if}}
 
-  {{#each schema.properties}}
+  {{#each entitySchema.properties}}
     (
       {{! If not required, check for undefined first }}
       {{#unless x-required}}

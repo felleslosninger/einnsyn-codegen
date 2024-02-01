@@ -1,10 +1,10 @@
 // Auto-generated from our OpenAPI spec
 // https://github.com/felleslosninger/ein-openapi/
 
-package {{java-package-name}}.entities.{{lc entityName}}.models;
+package {{java-server-package-name}}.entities.{{lc entityName}}.models;
 
-{{#each (java-model-imports .)}}
+{{#each (java-server-model-imports .)}}
 import {{.}};
 {{/each}}
 
-{{> modelPartial this }}
+{{> modelPartial this entityName=entityName}}
