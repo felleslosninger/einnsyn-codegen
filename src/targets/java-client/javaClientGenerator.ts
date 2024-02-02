@@ -12,7 +12,7 @@ import {
   lc,
 } from '../../utils/handlebarsHelpers';
 import {
-  getProperties,
+  getPropertyList,
   getRequestBody,
   getRequestBodyType,
   getResourceIds,
@@ -176,7 +176,7 @@ export const generate = async (
     }
 
     // Combine properties from superclasses
-    const properties = getProperties(entity.schema ?? {}, true) ?? {};
+    const properties = getPropertyList(entity.schema ?? {}, true) ?? {};
 
     // Render enums
     for (const propertyName in properties) {

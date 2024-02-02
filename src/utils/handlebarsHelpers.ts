@@ -1,7 +1,7 @@
 import { HelperOptions } from 'handlebars';
 import {
   getOperationName,
-  getProperties,
+  getPropertyList,
   getRequestBody,
   getRequestBodyType,
   isExpandableField,
@@ -94,5 +94,5 @@ export const addHandlebarsHelpers = (handlebars: typeof Handlebars) => {
   handlebars.registerHelper('is-list', isList);
   handlebars.registerHelper('is-expandable-field', isExpandableField);
   handlebars.registerHelper('is-expandable-field-list', isExpandableFieldList);
-  handlebars.registerHelper('properties', getProperties);
+  handlebars.registerHelper('properties', getPropertyList);
 };

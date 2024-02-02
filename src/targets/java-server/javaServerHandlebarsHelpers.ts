@@ -26,7 +26,7 @@ export const getJavaServerModelImports = (
 ) => {
   const resources: Record<string, boolean> = {};
   const schema =
-    (entityOrSchema as EntityMetadata).entitySchema ??
+    (entityOrSchema as EntityMetadata).schema ??
     (entityOrSchema as SchemaObject);
   const properties = schema?.properties ?? {};
 

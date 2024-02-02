@@ -6,7 +6,8 @@ import {
 import { capitalize, lc } from '../../utils/handlebarsHelpers';
 import {
   getPathParameters,
-  getProperties,
+  getPropertyList,
+  getPropertyObject,
   getRequestBody,
   getRequestBodyType,
   getResourceIds,
@@ -93,7 +94,7 @@ export const getJavaClientModelImports = (
   const resources: Record<string, boolean> = {};
   const schema =
     (entityOrSchema as Entity).schema ?? (entityOrSchema as SchemaObject);
-  const properties = getProperties(schema, true) ?? {};
+  const properties = getPropertyObject(schema, true) ?? {};
 
   for (const propertyName in properties) {
     const property = properties[propertyName] as SchemaObject;
@@ -271,7 +272,7 @@ export const getJavaClientDatatype = (
 };
 
 export const javaClientHasId = (entitySchema: Entity) => {
-  const properties = getExtendedProperties(entitySchema ?? {}) ?? {};
+  const properties = getPropertyObject(entitySchema ?? {}, true) ?? {};
   return properties.id !== undefined;
 };
 

@@ -55,7 +55,7 @@ public class {{entityName}}Controller {
   {{#each entityOperationList}}
     {{#with (request-body operation)}}
       {{#unless x-resourceId}}
-        {{> modelPartial entitySchema=. className=../operation.operationId entityName=../../entityName}}
+        {{> modelPartial schema=. className=../operation.operationId entityName=../../entityName}}
       {{/unless}}
     {{/with}}
   {{/each}}

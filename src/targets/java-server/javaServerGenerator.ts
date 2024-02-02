@@ -8,7 +8,7 @@ import {
 } from '../../utils/handlebarsHelpers';
 import {
   getEntities,
-  getProperties,
+  getPropertyList,
   getResourceIds,
   getResources,
   getResponseBody,
@@ -43,7 +43,7 @@ export const generate = async (
 
   // Iterate all entities
   for (const entityMetadata of getEntities(spec)) {
-    const entitySchema = entityMetadata.entitySchema;
+    const entitySchema = entityMetadata.schema;
     const entityName = entityMetadata.entityName;
     const capEntityName = capitalize(entityName);
     const lcEntityName = lc(entityName);
@@ -60,11 +60,14 @@ export const generate = async (
         await render(
           'Model.java.hbs',
           `${modelPathName}/${capEntityName}DTO.java`,
-          entityMetadata,
+          {
+            ...entityMetadata,
+            className: entityName,
+          },
         );
 
         // Render enums
-        const enumProperties = getProperties(entitySchema).filter(
+        const enumProperties = getPropertyList(entitySchema).filter(
           (prop) =>
             prop.propertySchema.enum && prop.propertySchema.enum.length > 1,
         );
@@ -85,7 +88,7 @@ export const generate = async (
       } // end if(x-resourceId)
 
       // Render Uninon wrappers for ExpandableFields that can take multiple types
-      for (const propertyMetadata of getProperties(entitySchema)) {
+      for (const propertyMetadata of getPropertyList(entitySchema)) {
         const propertySchema = propertyMetadata.propertySchema;
         const propertyName = propertyMetadata.propertyName;
         const resources = getResources(propertySchema);
@@ -173,7 +176,7 @@ export const generate = async (
         continue;
       }
       const context = {
-        entitySchema: {
+        schema: {
           properties: props['x-custom-props'],
           'x-extends': props['x-extend-name'],
           'x-extends-entity': props['x-extend-entity'],

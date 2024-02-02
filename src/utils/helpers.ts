@@ -65,7 +65,7 @@ export const getOperations = (spec: OpenAPIObject) => {
 
 export type EntityMetadata = {
   entityName: string;
-  entitySchema?: SchemaObject;
+  schema?: SchemaObject;
   entityOperationList: OperationMetadata[];
 };
 
@@ -85,7 +85,7 @@ export const getEntities = (spec: OpenAPIObject) => {
     const entitySchema = schemas[schemaName] as SchemaObject;
     const entityMetadata: EntityMetadata = {
       entityName: schemaName,
-      entitySchema,
+      schema: entitySchema,
       entityOperationList: [],
     };
     entityMap[schemaName] = entityMetadata;
@@ -101,7 +101,7 @@ export const getEntities = (spec: OpenAPIObject) => {
       if (!entityMetadata) {
         entityMetadata = {
           entityName,
-          entitySchema: schemas[entityName] as SchemaObject,
+          schema: schemas[entityName] as SchemaObject,
           entityOperationList: [],
         };
         entityMetadataList.push(entityMetadata);
@@ -125,7 +125,10 @@ type PropertyMetadata = {
  * @param entitySchema
  * @returns
  */
-export const getProperties = (entitySchema: SchemaObject, extended = false) => {
+export const getPropertyObject = (
+  entitySchema: SchemaObject,
+  extended = false,
+) => {
   let propertyObject: Record<string, PropertyMetadata> = {};
 
   // Initialize own props
@@ -146,7 +149,7 @@ export const getProperties = (entitySchema: SchemaObject, extended = false) => {
         extendsClass
       ] as SchemaObject;
       if (extendsSchema) {
-        const extendsProperties = getProperties(extendsSchema, extended);
+        const extendsProperties = getPropertyList(extendsSchema, extended);
         for (const property of extendsProperties) {
           propertyObject[property.propertyName] = property;
         }
@@ -154,6 +157,14 @@ export const getProperties = (entitySchema: SchemaObject, extended = false) => {
     }
   }
 
+  return propertyObject;
+};
+
+export const getPropertyList = (
+  entitySchema: SchemaObject,
+  extended = false,
+) => {
+  const propertyObject = getPropertyObject(entitySchema, extended);
   return Object.keys(propertyObject).map((key) => propertyObject[key]);
 };
 
