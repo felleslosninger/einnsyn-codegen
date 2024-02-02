@@ -270,12 +270,11 @@ export const hasOperations = (entityName: string) => {
  * @param entityOperation
  * @returns
  */
-export const getOperationName = (
-  entityName: string,
-  method: string,
-  operation: OperationObject,
-) => {
-  let operationId = operation.operationId;
+export const getOperationName = (operationMetadata: OperationMetadata) => {
+  const operation = operationMetadata.operation;
+  const entityName = operationMetadata.entityName;
+  const method = operationMetadata.method;
+  const operationId = operation.operationId;
   if (!operationId) {
     return undefined;
   }
@@ -293,10 +292,15 @@ export const getOperationName = (
   }
   // PostSaksmappeJournalpost (add journalpost to Saksmappe) should be named postJournalpost
   else {
-    const stripPrefixRE = new RegExp('^' + capitalize(method) + entityName);
-    return deCapitalize(
-      operationId.replace(stripPrefixRE, capitalize(methodAlias)),
+    const stripPrefixRE = new RegExp(
+      '^(' + capitalize(method) + entityName + ')([A-Z]|$)',
     );
+    let operationName = deCapitalize(
+      operationId.replace(stripPrefixRE, capitalize(methodAlias) + '$2'),
+    );
+    operationName = operationName.replace(/^post/, 'add');
+    operationName = operationName.replace(/^put/, 'update');
+    return operationName;
   }
 };
 

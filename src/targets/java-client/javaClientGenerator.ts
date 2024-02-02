@@ -235,11 +235,9 @@ export const generate = async (
     for (const operation of relatedOperations) {
       const className = operation['x-custom-name'];
       const hasProps = operation['x-has-props'];
-      console.log('Render ' + entityName + ' ' + className + '?');
       if (!hasProps) {
         continue;
       }
-      console.log('Render ' + entityName + ' ' + className);
       const renderContext = {
         schema: {
           properties: operation['x-all-props'],

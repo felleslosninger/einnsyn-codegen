@@ -197,7 +197,6 @@ export const generate = async (
       if (!hasCustomProps) {
         continue;
       }
-      console.log('Render props: ' + entityName);
       const renderContext = {
         schema: {
           properties: operation['x-custom-props'],
