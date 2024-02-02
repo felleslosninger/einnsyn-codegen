@@ -15,12 +15,32 @@ public class TypeAdapterFactoryProvider {
   public TypeAdapterFactoryProvider(Requester requester) {
     this.requester = requester;
     typeAdapterFactories = new ArrayList<>();
-    {{#each entityList}}
+    {{#each entityMetadataList}}
       {{#unless schema.x-isExtended}}
-        {{#each (properties entitySchema true)}}
+
+        {{! Request bodies }}
+        {{#each (propertyObject schema true)}}
           {{#if (is-union-resource .)}}
-            typeAdapterFactories.add(new {{java-client-package-name}}.entities.{{lc @../key}}.UnionResource{{capitalize @key}}TypeAdapterFactory(requester));
+            typeAdapterFactories.add(new {{java-client-package-name}}.entities.{{lc ../entityName}}.{{capitalize ../entityName}}{{capitalize @key}}TypeAdapterFactory(requester));
           {{/if}}
+        {{/each}}
+
+        {{! Response bodies }}
+        {{#each (entity-operation-list entityName)}}
+
+          {{! Single elements}}
+          {{#if (is-union-resource (response-body operation))}}
+            typeAdapterFactories.add(new {{java-client-package-name}}.entities.{{lc entityName}}.{{capitalize entityName}}ResponseTypeAdapterFactory(requester));
+          {{/if}}
+
+          {{! Lists }}
+          {{#with (response-body operation)}}
+            {{#if properties.data.items}}
+              {{#if (is-union-resource properties.data.items)}}
+                typeAdapterFactories.add(new {{java-client-package-name}}.entities.{{lc ../entityName}}.{{capitalize ../entityName}}{{capitalize ../operation.operationId}}ResponseTypeAdapterFactory(requester));
+              {{/if}}
+            {{/if}}
+          {{/with}}
         {{/each}}
       {{/unless}}
     {{/each}}

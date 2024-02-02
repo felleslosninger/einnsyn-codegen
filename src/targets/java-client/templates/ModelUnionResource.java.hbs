@@ -4,13 +4,13 @@
 package {{java-client-package-name}}.entities.{{lc entityName}};
 
 {{#each resources}}
-  {{#if (ne . ../entityName)}}
-    import {{java-client-package-name}}.entities.{{lc .}}.{{capitalize .}};
+  {{#if (ne x-resourceId ../entityName)}}
+    import {{java-client-package-name}}.entities.{{lc x-resourceId}}.{{capitalize x-resourceId}};
   {{/if}}
 {{/each}}
 import {{java-client-package-name}}.common.hasid.HasId;
 
-public class UnionResource{{capitalize propertyName}} implements HasId {
+public class {{className}} implements HasId {
 
   private String id;
   public String getId() {
@@ -18,20 +18,20 @@ public class UnionResource{{capitalize propertyName}} implements HasId {
   }
 
   {{#each resources}}
-    private {{capitalize .}} {{deCapitalize .}};
-    public {{capitalize .}} get{{capitalize .}}() {
-      return {{deCapitalize .}};
+    private {{capitalize x-resourceId}} {{deCapitalize x-resourceId}};
+    public {{capitalize x-resourceId}} get{{capitalize x-resourceId}}() {
+      return {{deCapitalize x-resourceId}};
     }
   {{/each}}
 
-  public UnionResource{{capitalize propertyName}}(String id) {
+  public {{className}}(String id) {
     this.id = id;
   }
 
   {{#each resources}}
-    public UnionResource{{capitalize ../propertyName}}({{capitalize .}} {{deCapitalize .}}) {
-      this.{{deCapitalize .}} = {{deCapitalize .}};
-      this.id = {{deCapitalize .}}.getId();
+    public {{../className}}({{capitalize x-resourceId}} {{deCapitalize x-resourceId}}) {
+      this.{{deCapitalize x-resourceId}} = {{deCapitalize x-resourceId}};
+      this.id = {{deCapitalize x-resourceId}}.getId();
     }
   {{/each}}
 }

@@ -1,9 +1,13 @@
 import { HelperOptions } from 'handlebars';
 import {
+  getEntityOperationList,
   getOperationName,
   getPropertyList,
+  getPropertyObject,
   getRequestBody,
   getRequestBodyType,
+  getResponseBody,
+  hasOperations,
   isExpandableField,
   isExpandableFieldList,
   isList,
@@ -94,5 +98,9 @@ export const addHandlebarsHelpers = (handlebars: typeof Handlebars) => {
   handlebars.registerHelper('is-list', isList);
   handlebars.registerHelper('is-expandable-field', isExpandableField);
   handlebars.registerHelper('is-expandable-field-list', isExpandableFieldList);
-  handlebars.registerHelper('properties', getPropertyList);
+  handlebars.registerHelper('propertyList', getPropertyList);
+  handlebars.registerHelper('propertyObject', getPropertyObject);
+  handlebars.registerHelper('response-body', getResponseBody);
+  handlebars.registerHelper('entity-operation-list', getEntityOperationList);
+  handlebars.registerHelper('has-operations', hasOperations);
 };

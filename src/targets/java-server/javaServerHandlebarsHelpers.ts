@@ -3,6 +3,7 @@ import { capitalize, lc } from '../../utils/handlebarsHelpers';
 import {
   EntityMetadata,
   OperationMetadata,
+  getEntityOperationList,
   getPathParameters,
   getRequestBody,
   getRequestBodyType,
@@ -99,10 +100,11 @@ export const getJavaServerControllerImports = (
   entityMetadata: EntityMetadata,
 ) => {
   const resources: Record<string, boolean> = {};
+  const entityOperationList = getEntityOperationList(entityMetadata.entityName);
 
   resources[JAVA_SERVER_PACKAGE + '.common.exceptions.EInnsynException'] = true;
 
-  for (const operationMetadata of entityMetadata.entityOperationList) {
+  for (const operationMetadata of entityOperationList) {
     // Add response object
     const responseBody = getResponseBody(operationMetadata.operation);
     if (responseBody) {

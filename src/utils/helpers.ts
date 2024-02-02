@@ -41,6 +41,7 @@ export const getOperations = (spec: OpenAPIObject) => {
   const operationList = pathList.reduce((acc, pathItem) => {
     const pathItemObject = pathItem.pathItemObject;
     const path = pathItem.path;
+    const entityName = capitalize(path.split('/')[1] ?? '');
     return [
       ...acc,
       ...(['get', 'put', 'post', 'delete']
@@ -53,6 +54,7 @@ export const getOperations = (spec: OpenAPIObject) => {
               description: pathItemObject.description,
               method: requestMethod,
               operation: pathItemObject[requestMethod] as OperationObject,
+              entityName,
             };
           }
         })
@@ -66,7 +68,6 @@ export const getOperations = (spec: OpenAPIObject) => {
 export type EntityMetadata = {
   entityName: string;
   schema?: SchemaObject;
-  entityOperationList: OperationMetadata[];
 };
 
 /**
@@ -86,7 +87,6 @@ export const getEntities = (spec: OpenAPIObject) => {
     const entityMetadata: EntityMetadata = {
       entityName: schemaName,
       schema: entitySchema,
-      entityOperationList: [],
     };
     entityMap[schemaName] = entityMetadata;
     entityMetadataList.push(entityMetadata);
@@ -102,17 +102,22 @@ export const getEntities = (spec: OpenAPIObject) => {
         entityMetadata = {
           entityName,
           schema: schemas[entityName] as SchemaObject,
-          entityOperationList: [],
         };
         entityMetadataList.push(entityMetadata);
       }
       operation.entity = entityMetadata;
       operation.entityName = entityName;
-      entityMetadata.entityOperationList.push(operation);
     }
   }
 
   return entityMetadataList;
+};
+
+export const getEntityOperationList = (entityName: string) => {
+  const operationList = getOperations(spec);
+  return operationList.filter(
+    (operation) => operation.entityName === entityName,
+  );
 };
 
 type PropertyMetadata = {
@@ -129,16 +134,13 @@ export const getPropertyObject = (
   entitySchema: SchemaObject,
   extended = false,
 ) => {
-  let propertyObject: Record<string, PropertyMetadata> = {};
+  let propertyObject: Record<string, SchemaObject> = {};
 
   // Initialize own props
   const properties = entitySchema?.properties ?? {};
   for (const propertyName in properties) {
     const propertySchema = properties[propertyName] as SchemaObject;
-    propertyObject[propertyName] = {
-      propertyName,
-      propertySchema,
-    };
+    propertyObject[propertyName] = propertySchema;
   }
 
   // Extend superclass props
@@ -149,10 +151,11 @@ export const getPropertyObject = (
         extendsClass
       ] as SchemaObject;
       if (extendsSchema) {
-        const extendsProperties = getPropertyList(extendsSchema, extended);
-        for (const property of extendsProperties) {
-          propertyObject[property.propertyName] = property;
-        }
+        const extendsProperties = getPropertyObject(extendsSchema, extended);
+        propertyObject = {
+          ...extendsProperties,
+          ...propertyObject,
+        };
       }
     }
   }
@@ -161,11 +164,20 @@ export const getPropertyObject = (
 };
 
 export const getPropertyList = (
-  entitySchema: SchemaObject,
+  entitySchema: SchemaObject = {},
   extended = false,
 ) => {
   const propertyObject = getPropertyObject(entitySchema, extended);
-  return Object.keys(propertyObject).map((key) => propertyObject[key]);
+  const propertyNameList = Object.keys(propertyObject);
+  const propertyList: PropertyMetadata[] = propertyNameList.map(
+    (propertyName) => {
+      return {
+        propertyName,
+        propertySchema: propertyObject[propertyName],
+      };
+    },
+  );
+  return propertyList;
 };
 
 export const getResponseBody = (operation: OperationObject) => {
@@ -245,6 +257,10 @@ export const getQueryParameters = (operation: OperationObject) => {
 
 export const isUnionResource = (schema: SchemaObject) => {
   return getResourceIds(schema).length > 1;
+};
+
+export const hasOperations = (entityName: string) => {
+  return getEntityOperationList(entityName).length > 0;
 };
 
 /**

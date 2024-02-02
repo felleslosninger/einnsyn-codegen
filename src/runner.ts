@@ -6,7 +6,7 @@ import { ParsedArgs } from 'minimist';
 import { OpenAPIObject, SchemaObject } from 'openapi3-ts/oas30';
 import { JSONObject, deepMergeAllOf } from './utils/deepMergeAllOf';
 
-//import * as javaClient from './targets/java-client/javaClientGenerator';
+import * as javaClient from './targets/java-client/javaClientGenerator';
 import * as javaServer from './targets/java-server/javaServerGenerator';
 import * as ts from './targets/ts-client/tsGenerator';
 import { addOperationQueryProperties } from './utils/addOperationQueryProperties';
@@ -80,9 +80,9 @@ const run = async (args: ParsedArgs) => {
     javaServer.generate(spec, handlebars);
   }
 
-  // if (args['java-client'] || args.all) {
-  //   javaClient.generate(spec, handlebars);
-  // }
+  if (args['java-client'] || args.all) {
+    javaClient.generate(spec, handlebars);
+  }
 };
 
 export default run;

@@ -19,7 +19,7 @@ public class {{entityName}}Controller {
     this.service = service;
   }
 
-  {{#each entityOperationList}}
+  {{#each (entity-operation-list entityName)}}
     {{#eq (uc method) 'GET'}}@GetMapping("{{path}}"){{/eq}}
     {{#eq (uc method) 'POST'}}@PostMapping("{{path}}"){{/eq}}
     {{#eq (uc method) 'PUT'}}@PutMapping("{{path}}"){{/eq}}
@@ -52,7 +52,7 @@ public class {{entityName}}Controller {
 
 
   {{! Request bodies without a resource ID should be added inline }}
-  {{#each entityOperationList}}
+  {{#each (entity-operation-list entityName)}}
     {{#with (request-body operation)}}
       {{#unless x-resourceId}}
         {{> modelPartial schema=. className=../operation.operationId entityName=../../entityName}}

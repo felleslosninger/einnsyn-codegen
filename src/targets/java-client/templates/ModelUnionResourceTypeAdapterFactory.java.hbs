@@ -18,16 +18,16 @@ import java.io.IOException;
 import {{java-client-package-name}}.net.Requester;
 
 {{#each resources}}
-  {{#if (ne . ../entityName)}}
-    import {{java-client-package-name}}.entities.{{lc .}}.{{capitalize .}};
+  {{#if (ne x-resourceId ../entityName)}}
+    import {{java-client-package-name}}.entities.{{lc x-resourceId}}.{{capitalize x-resourceId}};
   {{/if}}
 {{/each}}
 
-public class UnionResource{{capitalize propertyName}}TypeAdapterFactory implements TypeAdapterFactory {
+public class {{className}}TypeAdapterFactory implements TypeAdapterFactory {
 
   private final Requester requester;
 
-  public UnionResource{{capitalize propertyName}}TypeAdapterFactory(Requester requester) {
+  public {{className}}TypeAdapterFactory(Requester requester) {
     super();
     this.requester = requester;
   }
@@ -35,26 +35,26 @@ public class UnionResource{{capitalize propertyName}}TypeAdapterFactory implemen
   @SuppressWarnings("unchecked")
   @Override
   public <T> TypeAdapter<T> create(Gson gson, TypeToken<T> type) {
-    if (!UnionResource{{capitalize propertyName}}.class.isAssignableFrom(type.getRawType())) {
+    if (!{{className}}.class.isAssignableFrom(type.getRawType())) {
       return null;
     }
 
     {{#each resources}}
-      final TypeAdapter<{{capitalize .}}> {{deCapitalize .}}Adapter = gson.getDelegateAdapter(this, TypeToken.get({{capitalize .}}.class));
+      final TypeAdapter<{{capitalize x-resourceId}}> {{deCapitalize x-resourceId}}Adapter = gson.getDelegateAdapter(this, TypeToken.get({{capitalize x-resourceId}}.class));
     {{/each}}
 
-    TypeAdapter<UnionResource{{capitalize propertyName}}> unionResource{{capitalize propertyName}}Adapter =
-      new TypeAdapter<UnionResource{{capitalize propertyName}}>() {
+    TypeAdapter<{{className}}> unionResource{{capitalize propertyName}}Adapter =
+      new TypeAdapter<{{className}}>() {
         @Override
-        public void write(JsonWriter out, UnionResource{{capitalize propertyName}} value) throws IOException {
+        public void write(JsonWriter out, {{className}} value) throws IOException {
           if (value == null) {
             out.nullValue();
             return;
           }
 
           {{#each resources}}
-            if (value.get{{capitalize .}}() != null) {
-              {{deCapitalize .}}Adapter.write(out, value.get{{capitalize .}}());
+            if (value.get{{capitalize x-resourceId}}() != null) {
+              {{deCapitalize x-resourceId}}Adapter.write(out, value.get{{capitalize x-resourceId}}());
               return;
             }
           {{/each}}
@@ -64,11 +64,11 @@ public class UnionResource{{capitalize propertyName}}TypeAdapterFactory implemen
             return;
           }
 
-          throw new IOException("Could not serialize UnionResource{{capitalize propertyName}}");
+          throw new IOException("Could not serialize {{className}}");
         }
 
         @Override
-        public UnionResource{{capitalize propertyName}} read(JsonReader in) throws IOException {
+        public {{className}} read(JsonReader in) throws IOException {
           JsonElement jsonElement = Streams.parse(in);
 
           if (jsonElement.isJsonNull()) {
@@ -78,7 +78,7 @@ public class UnionResource{{capitalize propertyName}}TypeAdapterFactory implemen
           if (jsonElement.isJsonPrimitive()) {
             JsonPrimitive jsonPrimitive = jsonElement.getAsJsonPrimitive();
             if (jsonPrimitive.isString()) {
-              return new UnionResource{{capitalize propertyName}}(jsonPrimitive.getAsString());
+              return new {{capitalize className}}(jsonPrimitive.getAsString());
             }
           }
 
@@ -87,17 +87,16 @@ public class UnionResource{{capitalize propertyName}}TypeAdapterFactory implemen
             String entity = jsonObject.get("entity").getAsString();
             switch (entity) {
               {{#each resources}}
-                case "{{capitalize .}}":
-                  return new UnionResource{{capitalize ../propertyName}}({{deCapitalize .}}Adapter.fromJsonTree(jsonElement));
+                case "{{capitalize x-resourceId}}":
+                  return new {{../className}}({{deCapitalize x-resourceId}}Adapter.fromJsonTree(jsonElement));
               {{/each}}
                 default:
             }
           }
 
-          throw new JsonParseException("Could not deserialize UnionResourceParent");
+          throw new JsonParseException("Could not deserialize {{className}}");
         }
       };
-
     return (TypeAdapter<T>) unionResource{{capitalize propertyName}}Adapter.nullSafe();
   }
 

@@ -5,31 +5,31 @@ import {
 } from 'openapi3-ts/oas30';
 import { capitalize, lc } from '../../utils/handlebarsHelpers';
 import {
+  EntityMetadata,
+  OperationMetadata,
+  getEntityOperationList,
   getPathParameters,
-  getPropertyList,
   getPropertyObject,
   getRequestBody,
   getRequestBodyType,
   getResourceIds,
   getResponseBody,
+  isUnionResource,
 } from '../../utils/helpers';
 import { getJavaServerDataType } from '../java-server/javaServerHandlebarsHelpers';
-import {
-  Entity,
-  EntityOperation,
-  JAVA_CLIENT_PACKAGE,
-} from './javaClientGenerator';
+import { JAVA_CLIENT_PACKAGE } from './javaClientGenerator';
 
 export const getJavaClientPackageName = () => {
   return JAVA_CLIENT_PACKAGE;
 };
 
-export const getJavaClientServiceImports = (entity: Entity) => {
+export const getJavaClientServiceImports = (entityMetadata: EntityMetadata) => {
   const resources: Record<string, boolean> = {};
+  const entityOperationList = getEntityOperationList(entityMetadata.entityName);
 
   resources[JAVA_CLIENT_PACKAGE + '.exceptions.EInnsynException'] = true;
 
-  for (const operationWrapper of entity.operationList) {
+  for (const operationWrapper of entityOperationList) {
     // Add response object
     const responseBody = getResponseBody(operationWrapper.operation);
     if (responseBody) {
@@ -46,9 +46,11 @@ export const getJavaClientServiceImports = (entity: Entity) => {
         resources[
           JAVA_CLIENT_PACKAGE +
             '.entities.' +
-            lc(entity.name) +
-            '.UnionResource' +
-            operationWrapper.operation.operationId
+            lc(entityMetadata.entityName) +
+            '.' +
+            capitalize(entityMetadata.entityName) +
+            capitalize(operationWrapper.operation.operationId) +
+            'Response'
         ] = true;
       }
     }
@@ -89,11 +91,12 @@ export const getJavaClientServiceImports = (entity: Entity) => {
  * @returns
  */
 export const getJavaClientModelImports = (
-  entityOrSchema: Entity | SchemaObject,
+  entityOrSchema: EntityMetadata | SchemaObject,
 ) => {
   const resources: Record<string, boolean> = {};
   const schema =
-    (entityOrSchema as Entity).schema ?? (entityOrSchema as SchemaObject);
+    (entityOrSchema as EntityMetadata).schema ??
+    (entityOrSchema as SchemaObject);
   const properties = getPropertyObject(schema, true) ?? {};
 
   for (const propertyName in properties) {
@@ -179,25 +182,26 @@ export const getJavaClientImportsForProperty = (property: SchemaObject) => {
   return Object.keys(res);
 };
 
-export const getJavaClientListItemDataType = (property: SchemaObject) => {
+export const getJavaClientListItemDatatype = (
+  property: SchemaObject,
+  propertyName: string,
+  entityName: string,
+) => {
   const items = property.items as SchemaObject;
-  return getJavaClientDatatype(items);
+  return getJavaClientDatatype(items, propertyName, entityName);
 };
 
-export const getExpandedDataType = (property: SchemaObject) => {
+export const getExpandedDatatype = (
+  property: SchemaObject,
+  propertyName: string,
+  entityName: string,
+) => {
   const resourceIds = getResourceIds(property);
   if (resourceIds.length > 1) {
-    return (
-      'UnionResource' + capitalize(property['x-expandableField'] ?? 'unnamed')
-    );
+    return capitalize(entityName) + capitalize(propertyName);
   } else {
     return resourceIds.join();
   }
-};
-
-export const isUnionResource = (property: SchemaObject) => {
-  const resourceIds = getResourceIds(property);
-  return resourceIds.length > 1;
 };
 
 export const filterWriteable = (properties: Record<string, SchemaObject>) => {
@@ -214,6 +218,8 @@ export const filterWriteable = (properties: Record<string, SchemaObject>) => {
 
 export const getJavaClientDatatype = (
   property: ParameterObject | SchemaObject,
+  propertyName: string,
+  entityName: string,
 ): string => {
   const schemaObject = ((property as ParameterObject).schema ??
     property) as SchemaObject;
@@ -238,7 +244,11 @@ export const getJavaClientDatatype = (
     case 'array':
       return (
         'List<' +
-        getJavaClientDatatype(schemaObject.items as SchemaObject) +
+        getJavaClientDatatype(
+          schemaObject.items as SchemaObject,
+          propertyName,
+          entityName,
+        ) +
         '>'
       );
     case 'object':
@@ -253,11 +263,11 @@ export const getJavaClientDatatype = (
 
   // Expandable field with multiple possible types
   if (Object.keys(resources).length > 1) {
-    //const wrapperClass =
-    //  'UnionResource' + capitalize(property['x-expandableField'] ?? 'unnamed');
-    //return 'ExpandableField<' + wrapperClass + '>';
     return (
-      'UnionResource' + capitalize(property['x-expandableField'] ?? 'unnamed')
+      'ExpandableField<' +
+      capitalize(entityName) +
+      capitalize(propertyName) +
+      '>'
     );
   }
 
@@ -271,13 +281,15 @@ export const getJavaClientDatatype = (
   return 'Object';
 };
 
-export const javaClientHasId = (entitySchema: Entity) => {
-  const properties = getPropertyObject(entitySchema ?? {}, true) ?? {};
+export const javaClientHasId = (schema: SchemaObject) => {
+  const properties = getPropertyObject(schema ?? {}, true) ?? {};
   return properties.id !== undefined;
 };
 
-export const javaClientGeneratePathString = (operation: EntityOperation) => {
-  const originalPath = operation.path ?? '';
+export const javaClientGeneratePathString = (
+  operationMetadata: OperationMetadata,
+) => {
+  const originalPath = operationMetadata.path ?? '';
   const modifiedPath =
     '"' +
     originalPath.replace(/{([^}]+)}/g, (a: string, b: string) => {
@@ -289,14 +301,14 @@ export const javaClientGeneratePathString = (operation: EntityOperation) => {
 
 /**
  *
- * @param operationWrapper
+ * @param operationMetadata
  * @returns
  */
 export const getJavaClientOperationParameters = (
-  operationWrapper: EntityOperation,
+  operationMetadata: OperationMetadata,
   withQueryParameters = true,
 ) => {
-  const operation = operationWrapper.operation;
+  const operation = operationMetadata.operation;
   const parameters: {
     name: string;
     datatype: string;
@@ -308,7 +320,11 @@ export const getJavaClientOperationParameters = (
     if (pathParameter) {
       parameters.push({
         name: pathParameter.name,
-        datatype: getJavaClientDatatype(pathParameter),
+        datatype: getJavaClientDatatype(
+          pathParameter,
+          pathParameter.name,
+          operationMetadata.entityName ?? '',
+        ),
       });
     }
   });
@@ -348,6 +364,7 @@ export const getJavaClientOperationParameters = (
  */
 export const getJavaClientResponseType = (
   operation: OperationObject,
+  entityName: string,
 ): string | undefined => {
   // If there is no application/json success response, skip (it might be a binary download)
   const successResponse = getResponseBody(operation);
@@ -366,7 +383,12 @@ export const getJavaClientResponseType = (
         'ResultList<' + resourceIds.map((resourceId) => resourceId).join() + '>'
       );
     } else if (resourceIds.length > 1) {
-      return 'ResultList<' + 'UnionResource' + operation.operationId + '>';
+      return (
+        'ResultList<' +
+        capitalize(entityName) +
+        operation.operationId +
+        'Response>'
+      );
     } else {
       throw new Error('Unknown response type');
     }
@@ -378,7 +400,7 @@ export const getJavaClientResponseType = (
   }
   // For multiple types, return a union type
   else if (resourceIds.length > 1) {
-    return 'UnionResource' + operation.operationId;
+    return capitalize(entityName) + operation.operationId + 'Response';
   } else {
     throw new Error('Unknown response type');
   }
@@ -395,10 +417,6 @@ export const addJavaClientHandlebarsHelpers = (
     'java-client-model-imports',
     getJavaClientModelImports,
   );
-  handlebars.registerHelper(
-    'java-client-imports-for-property',
-    getJavaClientImportsForProperty,
-  );
   handlebars.registerHelper('is-union-resource', isUnionResource);
   handlebars.registerHelper('filter-writeable', filterWriteable);
   handlebars.registerHelper('java-client-has-id', javaClientHasId);
@@ -407,10 +425,10 @@ export const addJavaClientHandlebarsHelpers = (
     'java-client-generate-path-string',
     javaClientGeneratePathString,
   );
-  handlebars.registerHelper('java-expanded-datatype', getExpandedDataType);
+  handlebars.registerHelper('java-expanded-datatype', getExpandedDatatype);
   handlebars.registerHelper(
     'java-client-list-item-datatype',
-    getJavaClientListItemDataType,
+    getJavaClientListItemDatatype,
   );
   handlebars.registerHelper('get-resource-ids', getResourceIds);
   handlebars.registerHelper('java-server-datatype', getJavaServerDataType);

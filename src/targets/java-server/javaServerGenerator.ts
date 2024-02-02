@@ -8,13 +8,16 @@ import {
 } from '../../utils/handlebarsHelpers';
 import {
   getEntities,
+  getEntityOperationList,
   getPropertyList,
   getResourceIds,
   getResources,
   getResponseBody,
+  setSpec,
 } from '../../utils/helpers';
 import { getRenderer } from '../../utils/renderer';
 import { addJavaServerHandlebarsHelpers } from './javaServerHandlebarsHelpers';
+import { Schema } from 'js-yaml';
 
 export const JAVA_SERVER_PACKAGE = 'no.einnsyn.apiv3';
 const JAVA_SERVER_TEMPLATE_PATH = './src/targets/java-server/templates';
@@ -28,6 +31,7 @@ export const generate = async (
   const hb = handlebars.create();
   addHandlebarsHelpers(hb);
   addJavaServerHandlebarsHelpers(hb);
+  setSpec(spec);
   const render = getRenderer(
     hb,
     JAVA_SERVER_OUT_PATH,
@@ -43,49 +47,47 @@ export const generate = async (
 
   // Iterate all entities
   for (const entityMetadata of getEntities(spec)) {
-    const entitySchema = entityMetadata.schema;
     const entityName = entityMetadata.entityName;
+    if (entityName === 'ResultList') {
+      continue;
+    }
+    const entitySchema = entityMetadata.schema;
     const capEntityName = capitalize(entityName);
     const lcEntityName = lc(entityName);
     const entityPathName = `entities/${lcEntityName}`;
     const modelPathName = `${entityPathName}/models`;
-
-    if (entityName === 'ResultList') {
-      continue;
-    }
+    const entityOperationList = getEntityOperationList(entityName);
 
     // Render JSON model
-    if (entitySchema) {
-      if (entitySchema['x-resourceId']) {
+    if (entitySchema?.['x-resourceId']) {
+      await render(
+        'Model.java.hbs',
+        `${modelPathName}/${capEntityName}DTO.java`,
+        {
+          ...entityMetadata,
+          className: entityName,
+        },
+      );
+
+      // Render enums
+      const enumProperties = getPropertyList(entitySchema).filter(
+        (prop) =>
+          prop.propertySchema.enum && prop.propertySchema.enum.length > 1,
+      );
+      for (const propertyMetadata of enumProperties) {
+        const propertySchema = propertyMetadata.propertySchema;
+        const propertyName = propertyMetadata.propertyName;
+        const enumValues = propertySchema.enum;
         await render(
-          'Model.java.hbs',
-          `${modelPathName}/${capEntityName}DTO.java`,
+          'Enum.java.hbs',
+          `${modelPathName}/${capitalize(propertyName)}Enum.java`,
           {
-            ...entityMetadata,
-            className: entityName,
+            entityName,
+            name: capitalize(propertyName) + 'Enum',
+            values: enumValues,
           },
         );
-
-        // Render enums
-        const enumProperties = getPropertyList(entitySchema).filter(
-          (prop) =>
-            prop.propertySchema.enum && prop.propertySchema.enum.length > 1,
-        );
-        for (const propertyMetadata of enumProperties) {
-          const propertySchema = propertyMetadata.propertySchema;
-          const propertyName = propertyMetadata.propertyName;
-          const enumValues = propertySchema.enum;
-          await render(
-            'Enum.java.hbs',
-            `${modelPathName}/${capitalize(propertyName)}Enum.java`,
-            {
-              entityName: entityName,
-              name: capitalize(propertyName) + 'Enum',
-              values: enumValues,
-            },
-          );
-        }
-      } // end if(x-resourceId)
+      }
 
       // Render Uninon wrappers for ExpandableFields that can take multiple types
       for (const propertyMetadata of getPropertyList(entitySchema)) {
@@ -121,7 +123,7 @@ export const generate = async (
     } // End if (entitySchema)
 
     // UnionResource properties for responses
-    for (const operationMetadata of entityMetadata.entityOperationList) {
+    for (const operationMetadata of entityOperationList) {
       const operation = operationMetadata.operation;
       const responseBody = getResponseBody(operation);
       if (getResourceIds(responseBody).join() !== 'ResultList') {
@@ -158,7 +160,7 @@ export const generate = async (
       );
     }
 
-    if (entityMetadata.entityOperationList.length > 0) {
+    if (entityOperationList.length > 0) {
       await render(
         'Controller.java.hbs',
         `${entityPathName}/${capEntityName}Controller.java`,
@@ -166,20 +168,41 @@ export const generate = async (
       );
     }
 
+    let relatedOperations: SchemaObject[] = [];
+    // For normal entities, query parameters metadata is stored in x-request-query
+    if (entitySchema) {
+      const xRequestQuery: Record<string, SchemaObject> =
+        entitySchema['x-request-query'] ?? {};
+      const methods = Object.keys(xRequestQuery);
+      relatedOperations = methods
+        .map(
+          (method) =>
+            xRequestQuery[method as keyof typeof xRequestQuery] as SchemaObject,
+        )
+        .filter((x) => x !== undefined);
+    }
+    // For entities without a schema (/search), query parameters are stored in the operation
+    else {
+      relatedOperations = entityOperationList
+        .map(
+          (operationMetadata) => operationMetadata.operation['x-request-query'],
+        )
+        .filter((x) => x !== undefined);
+    }
+
     // Render query parameters for all operations
-    const xRequestQuery = entitySchema?.['x-request-query'] ?? {};
-    for (const method in xRequestQuery) {
-      const props = xRequestQuery[method];
-      const className = props['x-custom-name'];
-      const hasCustom = props['x-has-custom-props'];
-      if (!hasCustom) {
+    for (const operation of relatedOperations) {
+      const className = operation['x-custom-name'];
+      const hasCustomProps = operation['x-has-custom-props'];
+      if (!hasCustomProps) {
         continue;
       }
-      const context = {
+      console.log('Render props: ' + entityName);
+      const renderContext = {
         schema: {
-          properties: props['x-custom-props'],
-          'x-extends': props['x-extend-name'],
-          'x-extends-entity': props['x-extend-entity'],
+          properties: operation['x-custom-props'],
+          'x-extends': operation['x-extend-name'],
+          'x-extends-entity': operation['x-extend-entity'],
         },
         entityName,
         className,
@@ -188,7 +211,7 @@ export const generate = async (
       await render(
         'QueryParameters.java.hbs',
         `${modelPathName}/${className}DTO.java`,
-        context,
+        renderContext,
       );
     }
   }
