@@ -1,7 +1,7 @@
 // Auto-generated from our OpenAPI spec
 // https://github.com/felleslosninger/ein-openapi/
 
-package {{java-package-name}}.entities.{{lc entityName}}.models;
+package {{java-server-package-name}}.entities.{{lc entityName}}.models;
 
 import java.lang.reflect.Type;
 import org.springframework.boot.autoconfigure.gson.GsonBuilderCustomizer;
@@ -17,29 +17,29 @@ import com.google.gson.JsonSerializationContext;
 import com.google.gson.JsonSerializer;
 
 {{#each resources}}
-  {{#if (ne . ../entityName)}}
-    import {{java-package-name}}.entities.{{lc .}}.models.{{capitalize .}}DTO;
+  {{#if (ne x-resourceId ../entityName)}}
+    import {{java-server-package-name}}.entities.{{lc x-resourceId}}.models.{{capitalize x-resourceId}}DTO;
   {{/if}}
 {{/each}}
 
 @Configuration
-public class UnionResource{{capitalize propertyName}}TypeAdapter {
+public class {{className}}TypeAdapter {
 
   @Bean
   GsonBuilderCustomizer registerTypeAdapter() {
     return builder -> {
-      builder.registerTypeAdapter(UnionResource{{capitalize propertyName}}.class, new Serializer());
-      builder.registerTypeAdapter(UnionResource{{capitalize propertyName}}.class, new Deserializer());
+      builder.registerTypeAdapter({{className}}.class, new Serializer());
+      builder.registerTypeAdapter({{className}}.class, new Deserializer());
     };
   }
 
 
-  class Serializer implements JsonSerializer<UnionResource{{capitalize propertyName}}> {
+  class Serializer implements JsonSerializer<{{className}}> {
     @Override
-    public JsonElement serialize(UnionResource{{capitalize propertyName}} src, Type typeOfSrc, JsonSerializationContext context) {
+    public JsonElement serialize({{className}} src, Type typeOfSrc, JsonSerializationContext context) {
       {{#each resources}}
-      if (src.get{{capitalize .}}() != null) {
-        return context.serialize(src.get{{capitalize .}}(), {{capitalize .}}DTO.class);
+      if (src.get{{capitalize x-resourceId}}() != null) {
+        return context.serialize(src.get{{capitalize x-resourceId}}(), {{capitalize x-resourceId}}DTO.class);
       }
       {{/each}}
       return new JsonPrimitive(src.getId());
@@ -47,9 +47,9 @@ public class UnionResource{{capitalize propertyName}}TypeAdapter {
   }
 
 
-  class Deserializer implements JsonDeserializer<UnionResource{{capitalize propertyName}}> {
+  class Deserializer implements JsonDeserializer<{{className}}> {
     @Override
-    public UnionResource{{capitalize propertyName}} deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
+    public {{className}} deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
       if (json.isJsonNull()) {
         return null;
       }
@@ -57,7 +57,7 @@ public class UnionResource{{capitalize propertyName}}TypeAdapter {
       if (json.isJsonPrimitive()) {
         JsonPrimitive jsonPrimitive = json.getAsJsonPrimitive();
         if (jsonPrimitive.isString()) {
-          return new UnionResource{{capitalize propertyName}}(jsonPrimitive.getAsString());
+          return new {{className}}(jsonPrimitive.getAsString());
         }
       }
 
@@ -66,14 +66,15 @@ public class UnionResource{{capitalize propertyName}}TypeAdapter {
         String entity = jsonObject.get("entity").getAsString();
         switch (entity) {
           {{#each resources}}
-            case "{{capitalize .}}":
-              return context.deserialize(json, {{capitalize .}}DTO.class);
+            case "{{capitalize x-resourceId}}":
+              {{capitalize x-resourceId}}DTO {{deCapitalize x-resourceId}} = ({{capitalize x-resourceId}}DTO) context.deserialize(json, {{capitalize x-resourceId}}DTO.class);
+              return new {{../className}}({{deCapitalize x-resourceId}});
           {{/each}}
             default:
         }
       }
 
-      throw new JsonParseException("Could not deserialize UnionResourceParent");
+      throw new JsonParseException("Could not deserialize {{capitalize className}}");
     }
   }
 }

@@ -3,10 +3,10 @@
 
 package {{java-client-package-name}};
 
-{{#each entityList}}
-  {{#unless schema.x-isExtended}}
-    import {{java-client-package-name}}.entities.{{lc name}}.{{capitalize name}}Service;
-  {{/unless}}
+{{#each entityMetadataList}}
+  {{#if (has-operations entityName)}}
+    import {{java-client-package-name}}.entities.{{lc entityName}}.{{capitalize entityName}}Service;
+  {{/if}}
 {{/each}}
 
 import {{java-client-package-name}}.net.Requester;
@@ -22,12 +22,12 @@ public class EInnsynClientBase {
     this.requester = requester;
   }
 
-  {{#each entityList}}
+  {{#each entityMetadataList}}
     {{! Extended schemas are abstract, and cannot be instantiated }}
-    {{#unless schema.x-isExtended}}
-      public {{capitalize name}}Service {{deCapitalize name}}() {
-        return new {{capitalize name}}Service(this.getRequester());
+    {{#if (has-operations entityName)}}
+      public {{capitalize entityName}}Service {{deCapitalize entityName}}() {
+        return new {{capitalize entityName}}Service(this.getRequester());
       }
-    {{/unless}}
+    {{/if}}
   {{/each}}
 }

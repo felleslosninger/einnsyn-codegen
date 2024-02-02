@@ -1,5 +1,4 @@
-{{log name}}
-public class {{name}}
+public class {{className}}
   {{#if (java-client-has-id schema)}}
     implements HasId
   {{else if queryParams}}
@@ -7,7 +6,7 @@ public class {{name}}
   {{/if}}
 {
 
-  {{#each (java-client-extended-properties schema)}}
+  {{#each (propertyObject schema true)}}
     {{! Define field }}
     {{#if description}}
     /**
@@ -21,7 +20,7 @@ public class {{name}}
       {{#if (eq type 'object')}}
         {{capitalize @key}}
       {{else}}
-        {{{java-client-datatype .}}}
+        {{{java-client-datatype . @key ../entityName}}}
       {{/if}}
       {{@key}}
       {{#if default}} =
@@ -32,10 +31,11 @@ public class {{name}}
         {{/if}}
       {{/if}};
 
+
     {{! Define getter }}
     {{#if description}}
     /**
-      * Getter for the field {{echo '{'}}@link {{capitalize ../name}}#{{@key}}{{echo '}'}}.
+      * Getter for the field {{echo '{'}}@link {{capitalize ../entityName}}#{{@key}}{{echo '}'}}.
       *
       * @return The value of `{{@key}}`.
       */
@@ -45,26 +45,26 @@ public class {{name}}
         return {{@key}};
       }
     {{else}}
-      public {{{java-client-datatype .}}} get{{capitalize @key}}() {
+      public {{{java-client-datatype . @key ../entityName}}} get{{capitalize @key}}() {
         return {{@key}};
       }
     {{/if}}
   {{/each}}
 
   {{! Constructor }}
-  public {{name}}(
+  public {{className}}(
     {{! Arguments }}
-    {{#each (filter-writeable (java-client-extended-properties schema))}}
+    {{#each (filter-writeable (propertyObject schema true))}}
       {{#if (eq type 'object')}}
         {{capitalize @key}} {{@key}}
       {{else}}
-        {{{java-client-datatype .}}} {{@key}}
+        {{{java-client-datatype . @key ../entityName}}} {{@key}}
       {{/if}}
       {{#unless @last}},{{/unless}}
     {{/each}}
   ) {
     {{! Set values }}
-    {{#each (filter-writeable (java-client-extended-properties schema))}}
+    {{#each (filter-writeable (propertyObject schema true))}}
       {{#if (and enum (eq (length enum) 1))}}
         {{#if (eq type 'string')}}
           this.{{@key}} = "{{default}}";
@@ -78,7 +78,7 @@ public class {{name}}
   }
 
   {{! Add enums }}
-  {{#each (java-client-extended-properties schema)}}
+  {{#each (propertyObject schema true)}}
     {{#if (and enum (ne (length enum) 1))}}
       public enum {{capitalize @key}}Enum {
         {{#each enum}}
@@ -113,9 +113,9 @@ public class {{name}}
   {{/each}}
 
   {{! Add objects for object properties }}
-  {{#each (java-client-extended-properties schema)}}
+  {{#each (propertyObject schema true)}}
     {{#if (eq type 'object')}}
-      {{> modelPartial schema=. name=(capitalize @key) inlineEnums=inlineEnums}}
+      {{> modelPartial schema=. className=(capitalize @key) inlineEnums=inlineEnums entityName=../entityName}}
     {{/if}}
   {{/each}}
 
@@ -125,15 +125,15 @@ public class {{name}}
   }
 
   public static class Builder {
-    {{#each (filter-writeable (java-client-extended-properties schema))}}
+    {{#each (filter-writeable (propertyObject schema true))}}
       {{#if (eq type 'object')}}
         private {{capitalize @key}} {{@key}};
       {{else}}
-        private {{{java-client-datatype .}}} {{@key}};
+        private {{{java-client-datatype . @key ../entityName}}} {{@key}};
       {{/if}}
     {{/each}}
 
-    {{#each (filter-writeable (java-client-extended-properties schema))}}
+    {{#each (filter-writeable (propertyObject schema true))}}
       {{#if (eq type 'object')}}
         /**
           * Set `{{@key}}`. {{#if description}}See {{echo '{'}}@link {{capitalize ../name}}#{{@key}}{{echo '}'}}.{{/if}}
@@ -152,7 +152,7 @@ public class {{name}}
           * @param {{@key}} The value to set.
           * @return The builder.
           */
-        public Builder set{{capitalize @key}}({{{java-client-datatype .}}} {{@key}}) {
+        public Builder set{{capitalize @key}}({{{java-client-datatype . @key ../entityName}}} {{@key}}) {
           this.{{@key}} = {{@key}};
           return this;
         }
@@ -167,7 +167,7 @@ public class {{name}}
             * @return The builder.
             */
           public Builder set{{capitalize @../key}}({{capitalize .}} object) {
-            this.{{@../key}} = new UnionResource{{capitalize @../key}}(object);
+            this.{{@../key}} = new ExpandableField<>(new {{capitalize ../../entityName}}{{capitalize @../key}}(object));
             return this;
           }
 
@@ -178,7 +178,7 @@ public class {{name}}
             * @return The builder.
             */
           public Builder set{{capitalize @../key}}{{capitalize .}}(UnaryOperator<{{capitalize .}}.Builder> builderFunction) {
-            this.{{@../key}} = new UnionResource{{capitalize @../key}}(builderFunction.apply(new {{capitalize .}}.Builder()).build());
+            this.{{@../key}} = new ExpandableField<>(new {{capitalize ../../entityName}}{{capitalize @../key}}(builderFunction.apply(new {{capitalize .}}.Builder()).build()));
             return this;
           }
         {{/each}}
@@ -190,7 +190,7 @@ public class {{name}}
           * @param {{@key}} The element to add.
           * @return The builder.
           */
-        public Builder add{{capitalize @key}}({{{java-client-list-item-datatype .}}} {{@key}}) {
+        public Builder add{{capitalize @key}}({{{java-client-list-item-datatype . @key ../entityName}}} {{@key}}) {
           if (this.{{@key}} == null) {
             this.{{@key}} = new ArrayList<>();
           }
@@ -214,12 +214,12 @@ public class {{name}}
           }
 
           /**
-            * Add an element to the list `{{@key}}` by providing an object of type `{{java-expanded-datatype .}}`. {{#if description}}See {{echo '{'}}@link {{capitalize ../name}}#{{@key}}{{echo '}'}}.{{/if}}
+            * Add an element to the list `{{@key}}` by providing an object of type `{{java-expanded-datatype . @key ../entityName}}`. {{#if description}}See {{echo '{'}}@link {{capitalize ../name}}#{{@key}}{{echo '}'}}.{{/if}}
             *
             * @param object The object to add.
             * @return The builder.
             */
-          public Builder add{{capitalize @key}}({{java-expanded-datatype .}} object) {
+          public Builder add{{capitalize @key}}({{java-expanded-datatype . @key ../entityName}} object) {
             if (this.{{@key}} == null) {
               this.{{@key}} = new ArrayList<>();
             }
@@ -228,16 +228,16 @@ public class {{name}}
           }
 
           /**
-            * Add an element to the list `{{@key}}` by providing a builder function for the type `{{java-expanded-datatype .}}`. {{#if description}}See {{echo '{'}}@link {{capitalize ../name}}#{{@key}}{{echo '}'}}.{{/if}}
+            * Add an element to the list `{{@key}}` by providing a builder function for the type `{{java-expanded-datatype . @key ../entityName}}`. {{#if description}}See {{echo '{'}}@link {{capitalize ../name}}#{{@key}}{{echo '}'}}.{{/if}}
             *
-            * @param builderFunction A builder function for the type `{{java-expanded-datatype .}}`.
+            * @param builderFunction A builder function for the type `{{java-expanded-datatype . @key ../entityName}}`.
             * @return The builder.
             */
-          public Builder add{{capitalize @key}}(UnaryOperator<{{java-expanded-datatype .}}.Builder> builderFunction) {
+          public Builder add{{capitalize @key}}(UnaryOperator<{{java-expanded-datatype . @key ../entityName}}.Builder> builderFunction) {
             if (this.{{@key}} == null) {
               this.{{@key}} = new ArrayList<>();
             }
-            this.{{@key}}.add(new ExpandableField<>(builderFunction.apply(new {{java-expanded-datatype .}}.Builder()).build()));
+            this.{{@key}}.add(new ExpandableField<>(builderFunction.apply(new {{java-expanded-datatype . @key ../entityName}}.Builder()).build()));
             return this;
           }
         {{/if}}
@@ -256,33 +256,33 @@ public class {{name}}
           }
 
           /**
-            * Set `{{@key}}` by providing an object of type `{{java-expanded-datatype .}}`. {{#if description}}See {{echo '{'}}@link {{capitalize ../name}}#{{@key}}{{echo '}'}}.{{/if}}
+            * Set `{{@key}}` by providing an object of type `{{java-expanded-datatype . @key ../entityName}}`. {{#if description}}See {{echo '{'}}@link {{capitalize ../name}}#{{@key}}{{echo '}'}}.{{/if}}
             *
             * @param object The object to set.
             * @return The builder.
             */
-          public Builder set{{capitalize @key}}({{java-expanded-datatype .}} object) {
+          public Builder set{{capitalize @key}}({{java-expanded-datatype . @key ../entityName}} object) {
             this.{{@key}} = new ExpandableField<>(object);
             return this;
           }
           
           /**
-            * Set `{{@key}}` by providing a builder function for the type `{{java-expanded-datatype .}}`. {{#if description}}See {{echo '{'}}@link {{capitalize ../name}}#{{@key}}{{echo '}'}}.{{/if}}
+            * Set `{{@key}}` by providing a builder function for the type `{{java-expanded-datatype . @key ../entityName}}`. {{#if description}}See {{echo '{'}}@link {{capitalize ../name}}#{{@key}}{{echo '}'}}.{{/if}}
             *
-            * @param builderFunction A builder function for the type `{{java-expanded-datatype .}}`.
+            * @param builderFunction A builder function for the type `{{java-expanded-datatype . @key ../entityName}}`.
             * @return The builder.
             */
-          public Builder set{{capitalize @key}}(UnaryOperator<{{java-expanded-datatype .}}.Builder> builderFunction) {
-            this.{{@key}} = new ExpandableField<>(builderFunction.apply(new {{java-expanded-datatype .}}.Builder()).build());
+          public Builder set{{capitalize @key}}(UnaryOperator<{{java-expanded-datatype . @key ../entityName}}.Builder> builderFunction) {
+            this.{{@key}} = new ExpandableField<>(builderFunction.apply(new {{java-expanded-datatype . @key ../entityName}}.Builder()).build());
             return this;
           }
         {{/if}}
       {{/if}}
     {{/each}}
 
-    public {{name}} build() {
-      return new {{name}}(
-        {{#each (filter-writeable (java-client-extended-properties schema))}}
+    public {{className}} build() {
+      return new {{className}}(
+        {{#each (filter-writeable (propertyObject schema true))}}
           {{@key}}
           {{#unless @last}},{{/unless}}
         {{/each}}

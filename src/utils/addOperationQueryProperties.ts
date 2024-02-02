@@ -91,10 +91,10 @@ export const addOperationQueryProperties = (spec: OpenAPIObject) => {
       const { method, entityName } = parseOperation(requestMethod, operation);
 
       const entity = spec.components?.schemas?.[entityName] as SchemaObject;
-      const properties = entityQueryProperties[entityName] ?? {};
-      const queryProperties = properties[method] ?? {};
 
       if (entity) {
+        const properties = entityQueryProperties[entityName] ?? {};
+        const queryProperties = properties[method] ?? {};
         const { extendName, extendEntityName, remainingProperties } = getSuper(
           entity,
           method,
@@ -117,6 +117,9 @@ export const addOperationQueryProperties = (spec: OpenAPIObject) => {
       }
       // No entity (/search?)
       else {
+        const queryProperties = getQueryParameters(operation).map(
+          (p) => p.schema,
+        );
         const entityName = capitalize(path.split('/')[1] ?? '');
         const queryParameterList = getQueryParameters(operation);
         const queryParameters = queryParameterList.reduce(

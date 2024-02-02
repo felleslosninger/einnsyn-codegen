@@ -1,39 +1,39 @@
 // Auto-generated from our OpenAPI spec
 // https://github.com/felleslosninger/ein-openapi/
 
-package {{java-package-name}}.entities.{{lc name}};
+package {{java-server-package-name}}.entities.{{lc entityName}};
 
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-{{#each (java-controller-imports .)}}
+{{#each (java-server-controller-imports .)}}
 import {{.}};
 {{/each}}
 
 @RestController
-public class {{name}}Controller {
+public class {{entityName}}Controller {
 
-  private final {{name}}Service service;
+  private final {{entityName}}Service service;
 
-  public {{name}}Controller({{name}}Service service) {
+  public {{entityName}}Controller({{entityName}}Service service) {
     this.service = service;
   }
 
-  {{#each operationList}}
+  {{#each (entity-operation-list entityName)}}
     {{#eq (uc method) 'GET'}}@GetMapping("{{path}}"){{/eq}}
     {{#eq (uc method) 'POST'}}@PostMapping("{{path}}"){{/eq}}
     {{#eq (uc method) 'PUT'}}@PutMapping("{{path}}"){{/eq}}
     {{#eq (uc method) 'DELETE'}}@DeleteMapping("{{path}}"){{/eq}}
-    public ResponseEntity<{{{java-response-type operation}}}> {{operation-name entityName method operation}}(
-      {{#each (java-operation-parameters .)}}
+    public ResponseEntity<{{{java-server-response-type .}}}> {{operation-name entityName method operation}}(
+      {{#each (java-server-operation-parameters .)}}
         {{#each annotations}}{{{.}}} {{/each}}
         {{{datatype}}}
         {{name}}
         {{#unless @last}},{{/unless}}
       {{/each}}
     ) throws EInnsynException {
-      var responseBody = service.{{java-service-name entityName method operation}}(
-      {{#each (java-operation-parameters .)}}
+      var responseBody = service.{{operation-name entityName method operation}}(
+      {{#each (java-server-operation-parameters .)}}
         {{name}}
         {{#unless @last}},{{/unless}}
       {{/each}}
@@ -52,10 +52,10 @@ public class {{name}}Controller {
 
 
   {{! Request bodies without a resource ID should be added inline }}
-  {{#each operationList}}
+  {{#each (entity-operation-list entityName)}}
     {{#with (request-body operation)}}
       {{#unless x-resourceId}}
-        {{> modelPartial schema=. name=../operation.operationId}}
+        {{> modelPartial schema=. className=../operation.operationId entityName=../../entityName}}
       {{/unless}}
     {{/with}}
   {{/each}}

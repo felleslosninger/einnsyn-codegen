@@ -1,7 +1,7 @@
 // Auto-generated from our OpenAPI spec
 // https://github.com/felleslosninger/ein-openapi/
 
-package {{java-client-package-name}}.entities.{{lc name}};
+package {{java-client-package-name}}.entities.{{lc entityName}};
 
 import com.google.gson.reflect.TypeToken;
 import java.util.function.UnaryOperator;
@@ -15,13 +15,13 @@ import {{java-client-package-name}}.exceptions.EInnsynException;
 import {{.}};
 {{/each}}
 
-public class {{capitalize name}}Service extends ApiService {
+public class {{capitalize className}}Service extends ApiService {
 
-  public {{capitalize name}}Service(Requester requester) {
+  public {{capitalize className}}Service(Requester requester) {
     super(requester);
   }
 
-{{#each operationList}}
+{{#each (entity-operation-list entityName)}}
 
   /**
     * {{uc method}} {{path}}
@@ -31,7 +31,7 @@ public class {{capitalize name}}Service extends ApiService {
     * @param {{name}} {{description}}
     * {{/each}}
     */
-  public {{{java-client-response-type operation}}} {{operation-name entityName method operation}}(
+  public {{{java-client-response-type operation entityName}}} {{operation-name entityName method operation}}(
     {{#each (java-client-operation-parameters .)}}
       {{{datatype}}}
       {{name}}
@@ -52,7 +52,7 @@ public class {{capitalize name}}Service extends ApiService {
       {{#if operation.x-request-query.x-has-props}}, query{{/if}}
       {{#if (request-body-type operation)}}, bodyJSON{{/if}}
     );
-    TypeToken<{{{java-client-response-type operation}}}> responseTypeToken = new TypeToken<{{{java-client-response-type operation}}}>() {};
+    TypeToken<{{{java-client-response-type operation entityName}}}> responseTypeToken = new TypeToken<{{{java-client-response-type operation entityName}}}>() {};
     return this.getRequester().getGson().fromJson(responseJSON, responseTypeToken.getType());
   }
 
@@ -67,7 +67,7 @@ public class {{capitalize name}}Service extends ApiService {
       * @param {{name}} {{description}}
       * {{/each}}
       */
-    public {{{java-client-response-type operation}}} {{operation-name entityName method operation}}(
+    public {{{java-client-response-type operation entityName}}} {{operation-name entityName method operation}}(
       {{#each (java-client-operation-parameters .)}}
         {{#if (eq "body" name)}}
           UnaryOperator<{{request-body-type ../operation}}.Builder> bodyBuilderFunction
@@ -97,7 +97,7 @@ public class {{capitalize name}}Service extends ApiService {
       * @param {{name}} {{description}}
       * {{/each}}
       */
-    public {{{java-client-response-type operation}}} {{operation-name entityName method operation}}(
+    public {{{java-client-response-type operation entityName}}} {{operation-name entityName method operation}}(
       {{#each (java-client-operation-parameters . false)}}
         {{{datatype}}}
         {{name}}
@@ -124,7 +124,7 @@ public class {{capitalize name}}Service extends ApiService {
         * @param {{name}} {{description}}
         * {{/each}}
         */
-      public {{{java-client-response-type operation}}} {{operation-name entityName method operation}}(
+      public {{{java-client-response-type operation entityName}}} {{operation-name entityName method operation}}(
         {{#each (java-client-operation-parameters . false)}}
           {{#if (eq "body" name)}}
             UnaryOperator<{{request-body-type ../operation}}.Builder> bodyBuilderFunction

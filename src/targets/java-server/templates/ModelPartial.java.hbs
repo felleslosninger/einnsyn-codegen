@@ -1,8 +1,10 @@
 @Getter
 @Setter
 public
-  {{#if schema.x-isExtended}}abstract {{/if}}
-    class {{name}}DTO
+  {{#if schema.x-isExtended}}
+    abstract
+  {{/if}}
+  class {{className}}DTO
   {{#if schema.x-extends}}
     extends {{capitalize schema.x-extends}}DTO
   {{else}}
@@ -81,7 +83,7 @@ public
       {{#if (eq type 'object')}}
         {{capitalize @key}}DTO
       {{else}}
-        {{{java-datatype .}}}
+        {{{java-server-datatype . @key ../entityName}}}
       {{/if}}
 
       {{! Field name }}
@@ -138,7 +140,7 @@ public
 {{! Add objects for object properties }}
 {{#each schema.properties}}
   {{#if (eq type 'object')}}
-    {{> modelPartial schema=. name=(capitalize @key) inlineEnums=inlineEnums}}
+    {{> modelPartial schema=. entityName=../entityName className=(capitalize @key) inlineEnums=inlineEnums entityName=entityName}}
   {{/if}}
 {{/each}}
 

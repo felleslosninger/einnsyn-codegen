@@ -1,26 +1,20 @@
+import { ParameterObject, SchemaObject } from 'openapi3-ts/oas30';
+import { capitalize, lc } from '../../utils/handlebarsHelpers';
 import {
-  OpenAPIObject,
-  OperationObject,
-  ParameterObject,
-  SchemaObject,
-} from 'openapi3-ts/oas30';
-import {
-  capitalize,
-  getOperationName,
-  getRequestBodyType,
-  lc,
-} from '../../utils/handlebarsHelpers';
-import {
+  EntityMetadata,
+  OperationMetadata,
+  getEntityOperationList,
   getPathParameters,
   getRequestBody,
+  getRequestBodyType,
   getResourceIds,
   getResponseBody,
 } from '../../utils/helpers';
-import {
-  Entity,
-  EntityOperation,
-  JAVA_SERVER_PACKAGE,
-} from './javaServerGenerator';
+import { JAVA_SERVER_PACKAGE } from './javaServerGenerator';
+
+export function getJavaServerPackageName() {
+  return JAVA_SERVER_PACKAGE;
+}
 
 /**
  * Get a list of resources that needs to be imported for a entity's model class
@@ -28,15 +22,18 @@ import {
  * @param property
  * @returns
  */
-export const getJavaModelImports = (entityOrSchema: Entity | SchemaObject) => {
+export const getJavaServerModelImports = (
+  entityOrSchema: EntityMetadata | SchemaObject,
+) => {
   const resources: Record<string, boolean> = {};
   const schema =
-    (entityOrSchema as Entity).schema ?? (entityOrSchema as SchemaObject);
+    (entityOrSchema as EntityMetadata).schema ??
+    (entityOrSchema as SchemaObject);
   const properties = schema?.properties ?? {};
 
   for (const propertyName in properties) {
     const property = properties[propertyName] as SchemaObject;
-    const propertyResources = getJavaImportsForProperty(property);
+    const propertyResources = getJavaServerImportsForProperty(property);
     propertyResources.forEach((resourceId) => (resources[resourceId] = true));
   }
 
@@ -96,17 +93,20 @@ export const getJavaModelImports = (entityOrSchema: Entity | SchemaObject) => {
 
 /**
  *
- * @param entity
+ * @param entityMetadata
  * @returns
  */
-export const getJavaControllerImports = (entity: Entity) => {
+export const getJavaServerControllerImports = (
+  entityMetadata: EntityMetadata,
+) => {
   const resources: Record<string, boolean> = {};
+  const entityOperationList = getEntityOperationList(entityMetadata.entityName);
 
   resources[JAVA_SERVER_PACKAGE + '.common.exceptions.EInnsynException'] = true;
 
-  for (const operationWrapper of entity.operationList) {
+  for (const operationMetadata of entityOperationList) {
     // Add response object
-    const responseBody = getResponseBody(operationWrapper.operation);
+    const responseBody = getResponseBody(operationMetadata.operation);
     if (responseBody) {
       resources['org.springframework.http.ResponseEntity'] = true;
       const resourceIds = getResourceIds(responseBody);
@@ -119,26 +119,30 @@ export const getJavaControllerImports = (entity: Entity) => {
         resources[JAVA_SERVER_PACKAGE + '.common.resultlist.ResultList'] = true;
       }
       if (resourceIds.length > 1) {
+        const className =
+          capitalize(entityMetadata.entityName) +
+          capitalize(operationMetadata.operation.operationId) +
+          'ResponseDTO';
         resources[
           JAVA_SERVER_PACKAGE +
             '.entities.' +
-            lc(entity.name) +
-            '.models.UnionResource' +
-            operationWrapper.operation.operationId
+            lc(entityMetadata.entityName) +
+            '.models.' +
+            className
         ] = true;
       }
     }
 
     // Add request object
-    const requestBody = getRequestBody(operationWrapper.operation);
+    const requestBody = getRequestBody(operationMetadata.operation);
     if (requestBody) {
-      const modelImports = getJavaModelImports(requestBody);
+      const modelImports = getJavaServerModelImports(requestBody);
       modelImports.forEach((modelImport) => (resources[modelImport] = true));
-      if (operationWrapper.method === 'post') {
+      if (operationMetadata.method === 'post') {
         resources['org.springframework.validation.annotation.Validated'] = true;
         resources[JAVA_SERVER_PACKAGE + '.validation.validationgroups.Insert'] =
           true;
-      } else if (operationWrapper.method === 'put') {
+      } else if (operationMetadata.method === 'put') {
         resources['org.springframework.validation.annotation.Validated'] = true;
         resources[JAVA_SERVER_PACKAGE + '.validation.validationgroups.Update'] =
           true;
@@ -148,7 +152,7 @@ export const getJavaControllerImports = (entity: Entity) => {
     }
 
     // Path parameters
-    const pathParameters = getPathParameters(operationWrapper.operation);
+    const pathParameters = getPathParameters(operationMetadata.operation);
     pathParameters.forEach((pathParameter) => {
       resources['jakarta.validation.Valid'] = true;
       resources['org.springframework.web.bind.annotation.PathVariable'] = true;
@@ -172,7 +176,7 @@ export const getJavaControllerImports = (entity: Entity) => {
     });
 
     // Query parameters
-    const xRequestQuery = operationWrapper.operation['x-request-query'];
+    const xRequestQuery = operationMetadata.operation['x-request-query'];
     if (xRequestQuery) {
       const {
         'x-extend-entity': extendEntityName,
@@ -206,7 +210,7 @@ export const getJavaControllerImports = (entity: Entity) => {
     }
 
     // Add spring imports
-    switch (operationWrapper.method) {
+    switch (operationMetadata.method) {
       case 'get':
         resources['org.springframework.web.bind.annotation.GetMapping'] = true;
         break;
@@ -234,7 +238,7 @@ export const getJavaControllerImports = (entity: Entity) => {
  * @param property
  * @returns
  */
-export const getJavaImportsForProperty = (property: SchemaObject) => {
+export const getJavaServerImportsForProperty = (property: SchemaObject) => {
   const res: Record<string, boolean> = {};
 
   // If this property references a resource, it will have a resourceId
@@ -302,7 +306,7 @@ export const getJavaImportsForProperty = (property: SchemaObject) => {
   // If this is an array, check child items
   if (property.type === 'array') {
     const items = property.items as SchemaObject;
-    const itemsResources = getJavaImportsForProperty(items);
+    const itemsResources = getJavaServerImportsForProperty(items);
     itemsResources.forEach((resourceId) => (res[resourceId] = true));
   }
 
@@ -315,8 +319,10 @@ export const getJavaImportsForProperty = (property: SchemaObject) => {
  * @param property
  * @returns
  */
-export const getDataType = (
+export const getJavaServerDataType = (
   property: ParameterObject | SchemaObject,
+  propertyName: string,
+  entityName: string,
 ): string => {
   const schemaObject = ((property as ParameterObject).schema ??
     property) as SchemaObject;
@@ -339,7 +345,15 @@ export const getDataType = (
     case 'boolean':
       return 'Boolean';
     case 'array':
-      return 'List<' + getDataType(schemaObject.items as SchemaObject) + '>';
+      return (
+        'List<' +
+        getJavaServerDataType(
+          schemaObject.items as SchemaObject,
+          propertyName,
+          entityName,
+        ) +
+        '>'
+      );
     case 'object':
       return 'Object';
   }
@@ -352,9 +366,8 @@ export const getDataType = (
 
   // Expandable field with multiple possible types
   if (Object.keys(resources).length > 1) {
-    const wrapperClass =
-      'UnionResource' + capitalize(property['x-expandableField'] ?? 'unnamed');
-    return 'ExpandableField<' + wrapperClass + '>';
+    const className = capitalize(entityName) + capitalize(propertyName) + 'DTO';
+    return 'ExpandableField<' + className + '>';
   }
 
   // Expandable field with one possible type
@@ -368,50 +381,16 @@ export const getDataType = (
 };
 
 /**
- *
- * @param operation
- * @param pathParam
- * @returns
- */
-export function getPathParamValidator(
-  pathParam: string,
-  operationWrapper: EntityOperation,
-) {
-  const operation = operationWrapper.operation;
-  const parameters = operation.parameters ?? [];
-  const parameter = parameters.find(
-    (parameter) => (parameter as ParameterObject).name === pathParam,
-  ) as ParameterObject;
-
-  let string = '';
-
-  if (parameter?.required) {
-    string += '@NotNull ';
-  }
-
-  const resourceId = parameter?.['x-resourceId'];
-  if (resourceId) {
-    string +=
-      '@ExistingObject(service = ' + capitalize(resourceId) + 'Service.class) ';
-  }
-
-  return string;
-}
-
-export function getJavaPackageName() {
-  return JAVA_SERVER_PACKAGE;
-}
-
-/**
  * Get the response type for an operation
  *
- * @param operation
+ * @param operationMetadata
  * @returns
  */
-export const getResponseType = (
-  operation: OperationObject,
+export const getJavaServerResponseType = (
+  operationMetadata: OperationMetadata,
 ): string | undefined => {
   // If there is no application/json success response, skip (it might be a binary download)
+  const operation = operationMetadata.operation;
   const successResponse = getResponseBody(operation);
   if (!successResponse) {
     return 'byte[]';
@@ -430,7 +409,11 @@ export const getResponseType = (
         '>'
       );
     } else if (resourceIds.length > 1) {
-      return 'ResultList<' + 'UnionResource' + operation.operationId + '>';
+      const className =
+        capitalize(operationMetadata.entityName) +
+        capitalize(operation.operationId) +
+        'ResponseDTO';
+      return 'ResultList<' + className + '>';
     } else {
       throw new Error('Unknown response type');
     }
@@ -442,32 +425,54 @@ export const getResponseType = (
   }
   // For multiple types, return a union type
   else if (resourceIds.length > 1) {
-    return 'UnionResource' + operation.operationId;
+    const className =
+      capitalize(operationMetadata.entityName) +
+      capitalize(operation.operationId) +
+      'ResponseDTO';
+    return className;
   } else {
     throw new Error('Unknown response type');
   }
 };
 
-export const getOperationParameters = (operationWrapper: EntityOperation) => {
-  const operation = operationWrapper.operation;
+export const getJavaServerOperationParameters = (
+  operationMetadata: OperationMetadata,
+) => {
+  const operation = operationMetadata.operation;
   const parameters: {
     name: string;
     datatype: string;
     annotations: string[];
   }[] = [];
 
+  const entityName = capitalize(operationMetadata.path.split('/')[1] ?? '');
+
   // Add path parameters
   const pathParameters = getPathParameters(operation);
   pathParameters.forEach((pathParameter) => {
     if (pathParameter) {
+      const annotations = ['@Valid', '@PathVariable'];
+
+      if (pathParameter.required) {
+        annotations.push('@NotNull');
+      }
+
+      const resourceId = pathParameter?.['x-resourceId'];
+      if (resourceId) {
+        annotations.push(
+          '@ExistingObject(service = ' +
+            capitalize(resourceId) +
+            'Service.class)',
+        );
+      }
       parameters.push({
         name: pathParameter.name,
-        datatype: getDataType(pathParameter),
-        annotations: [
-          '@Valid',
-          '@PathVariable',
-          getPathParamValidator(pathParameter.name, operationWrapper),
-        ],
+        datatype: getJavaServerDataType(
+          pathParameter,
+          pathParameter.name,
+          entityName,
+        ),
+        annotations,
       });
     }
   });
@@ -493,9 +498,9 @@ export const getOperationParameters = (operationWrapper: EntityOperation) => {
   if (requestBody) {
     const requestBodyType = getRequestBodyType(operation);
     const annotations = ['@RequestBody'];
-    if (operationWrapper.method === 'post') {
+    if (operationMetadata.method === 'post') {
       annotations.push('@Validated(Insert.class)');
-    } else if (operationWrapper.method === 'put') {
+    } else if (operationMetadata.method === 'put') {
       annotations.push('@Validated(Update.class)');
     } else {
       annotations.push('@Valid');
@@ -511,37 +516,28 @@ export const getOperationParameters = (operationWrapper: EntityOperation) => {
   return parameters;
 };
 
-/**
- *
- * @param entityName
- * @param method
- * @param operation
- * @returns
- */
-export const getJavaServiceName = (
-  entityName: string,
-  method: string,
-  operation: OperationObject,
-) => {
-  const operationName = getOperationName(entityName, method, operation);
-  // Remove entityName from operationName
-  return operationName;
-};
-
 export const addJavaServerHandlebarsHelpers = (
   handlebars: typeof Handlebars,
 ) => {
-  handlebars.registerHelper('java-datatype', getDataType);
-  handlebars.registerHelper('java-model-imports', getJavaModelImports);
+  handlebars.registerHelper('java-server-datatype', getJavaServerDataType);
   handlebars.registerHelper(
-    'java-controller-imports',
-    getJavaControllerImports,
+    'java-server-model-imports',
+    getJavaServerModelImports,
   );
-  handlebars.registerHelper('java-response-type', getResponseType);
-  handlebars.registerHelper('java-package-name', getJavaPackageName);
-  handlebars.registerHelper('java-service-name', getJavaServiceName);
   handlebars.registerHelper(
-    'java-operation-parameters',
-    getOperationParameters,
+    'java-server-controller-imports',
+    getJavaServerControllerImports,
+  );
+  handlebars.registerHelper(
+    'java-server-response-type',
+    getJavaServerResponseType,
+  );
+  handlebars.registerHelper(
+    'java-server-package-name',
+    getJavaServerPackageName,
+  );
+  handlebars.registerHelper(
+    'java-server-operation-parameters',
+    getJavaServerOperationParameters,
   );
 };
