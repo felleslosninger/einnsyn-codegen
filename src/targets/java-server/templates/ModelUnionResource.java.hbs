@@ -14,7 +14,7 @@ import lombok.Setter;
   {{/if}}
 {{/each}}
 import {{java-server-package-name}}.common.hasid.HasId;
-import {{java-server-package-name}}.utils.IdGenerator;
+import {{java-server-package-name}}.utils.idgenerator.IdGenerator;
 
 @Getter
 @Setter
@@ -41,7 +41,7 @@ public class {{className}} implements HasId {
   {{#each resources}}
     public boolean is{{capitalize x-resourceId}}() {
       return {{deCapitalize x-resourceId}} != null
-        {{#if x-idPrefix}}|| id.startsWith(IdGenerator.getPrefix({{capitalize x-resourceId}}.class)){{/if}}
+        {{#if x-idPrefix}}|| id.startsWith(IdGenerator.getPrefix({{capitalize x-resourceId}}.class) + "_"){{/if}}
       ;
     }
   {{/each}}

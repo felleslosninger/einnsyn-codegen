@@ -17,7 +17,6 @@ import {
 } from '../../utils/helpers';
 import { getRenderer } from '../../utils/renderer';
 import { addJavaServerHandlebarsHelpers } from './javaServerHandlebarsHelpers';
-import { Schema } from 'js-yaml';
 
 export const JAVA_SERVER_PACKAGE = 'no.einnsyn.apiv3';
 const JAVA_SERVER_TEMPLATE_PATH = './src/targets/java-server/templates';
@@ -46,7 +45,8 @@ export const generate = async (
   hb.registerPartial('modelPartial', modelPartialTemplate);
 
   // Iterate all entities
-  for (const entityMetadata of getEntities(spec)) {
+  const entities = getEntities(spec);
+  for (const entityMetadata of entities) {
     const entityName = entityMetadata.entityName;
     if (entityName === 'ResultList') {
       continue;
@@ -214,4 +214,12 @@ export const generate = async (
       );
     }
   }
+
+  // Render ID Prefix map
+  const entitiesWithId = entities.filter(
+    (entity) => entity.schema?.['x-idPrefix'] !== undefined,
+  );
+  await render('IdPrefixMap.java.hbs', `utils/idgenerator/IdPrefix.java`, {
+    entities: entitiesWithId,
+  });
 };

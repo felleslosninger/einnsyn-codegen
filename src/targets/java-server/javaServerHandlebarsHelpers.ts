@@ -319,7 +319,7 @@ export const getJavaServerImportsForProperty = (property: SchemaObject) => {
  * @param property
  * @returns
  */
-export const getJavaServerDataType = (
+export const getJavaServerDatatype = (
   property: ParameterObject | SchemaObject,
   propertyName: string,
   entityName: string,
@@ -347,7 +347,7 @@ export const getJavaServerDataType = (
     case 'array':
       return (
         'List<' +
-        getJavaServerDataType(
+        getJavaServerDatatype(
           schemaObject.items as SchemaObject,
           propertyName,
           entityName,
@@ -367,7 +367,7 @@ export const getJavaServerDataType = (
   // Expandable field with multiple possible types
   if (Object.keys(resources).length > 1) {
     const className = capitalize(entityName) + capitalize(propertyName) + 'DTO';
-    return 'ExpandableField<' + className + '>';
+    return className;
   }
 
   // Expandable field with one possible type
@@ -467,7 +467,7 @@ export const getJavaServerOperationParameters = (
       }
       parameters.push({
         name: pathParameter.name,
-        datatype: getJavaServerDataType(
+        datatype: getJavaServerDatatype(
           pathParameter,
           pathParameter.name,
           entityName,
@@ -519,7 +519,7 @@ export const getJavaServerOperationParameters = (
 export const addJavaServerHandlebarsHelpers = (
   handlebars: typeof Handlebars,
 ) => {
-  handlebars.registerHelper('java-server-datatype', getJavaServerDataType);
+  handlebars.registerHelper('java-server-datatype', getJavaServerDatatype);
   handlebars.registerHelper(
     'java-server-model-imports',
     getJavaServerModelImports,

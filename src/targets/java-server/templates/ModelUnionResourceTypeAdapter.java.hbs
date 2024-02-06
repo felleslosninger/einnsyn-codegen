@@ -26,7 +26,7 @@ import com.google.gson.JsonSerializer;
 public class {{className}}TypeAdapter {
 
   @Bean
-  GsonBuilderCustomizer registerTypeAdapter() {
+  GsonBuilderCustomizer register{{className}}TypeAdapter() {
     return builder -> {
       builder.registerTypeAdapter({{className}}.class, new Serializer());
       builder.registerTypeAdapter({{className}}.class, new Deserializer());
