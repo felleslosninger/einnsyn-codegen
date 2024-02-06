@@ -56,7 +56,7 @@ constructor(protected client: ApiClient) {}
       body: {{request-body-type operation}},
       {{/if}}
       {{#if (ts-query-parameters operation)}}
-      query?: {{capitalize ../name}}{{capitalize (operation-name ../name method operation)}}Query,
+      query?: {{capitalize ../name}}{{capitalize (operation-name .)}}Query,
       {{/if}}
     ): Promise<{{{ts-responsetype .}}}> {
 
@@ -88,7 +88,7 @@ constructor(protected client: ApiClient) {}
 {{! Generate query types for each operation }}
 {{#each operationList}}
   {{#if (ts-query-parameters operation)}}
-  export type {{capitalize ../name}}{{capitalize (operation-name ../name method operation)}}Query = {
+  export type {{capitalize ../name}}{{capitalize (operation-name .)}}Query = {
     {{#each (ts-query-parameters operation)}}
       {{name}}{{#unless required}}?{{/unless}}: {{datatype}},
     {{/each}}

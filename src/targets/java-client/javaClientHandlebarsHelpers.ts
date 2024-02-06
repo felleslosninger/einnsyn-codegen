@@ -16,7 +16,7 @@ import {
   getResponseBody,
   isUnionResource,
 } from '../../utils/helpers';
-import { getJavaServerDataType } from '../java-server/javaServerHandlebarsHelpers';
+import { getJavaServerDatatype } from '../java-server/javaServerHandlebarsHelpers';
 import { JAVA_CLIENT_PACKAGE } from './javaClientGenerator';
 
 export const getJavaClientPackageName = () => {
@@ -431,7 +431,7 @@ export const addJavaClientHandlebarsHelpers = (
     getJavaClientListItemDatatype,
   );
   handlebars.registerHelper('get-resource-ids', getResourceIds);
-  handlebars.registerHelper('java-server-datatype', getJavaServerDataType);
+  handlebars.registerHelper('java-server-datatype', getJavaServerDatatype);
   handlebars.registerHelper(
     'java-client-response-type',
     getJavaClientResponseType,

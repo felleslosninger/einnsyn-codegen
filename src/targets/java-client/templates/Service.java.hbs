@@ -31,7 +31,7 @@ public class {{capitalize className}}Service extends ApiService {
     * @param {{name}} {{description}}
     * {{/each}}
     */
-  public {{{java-client-response-type operation entityName}}} {{operation-name entityName method operation}}(
+  public {{{java-client-response-type operation entityName}}} {{operation-name .}}(
     {{#each (java-client-operation-parameters .)}}
       {{{datatype}}}
       {{name}}
@@ -67,7 +67,7 @@ public class {{capitalize className}}Service extends ApiService {
       * @param {{name}} {{description}}
       * {{/each}}
       */
-    public {{{java-client-response-type operation entityName}}} {{operation-name entityName method operation}}(
+    public {{{java-client-response-type operation entityName}}} {{operation-name .}}(
       {{#each (java-client-operation-parameters .)}}
         {{#if (eq "body" name)}}
           UnaryOperator<{{request-body-type ../operation}}.Builder> bodyBuilderFunction
@@ -78,7 +78,7 @@ public class {{capitalize className}}Service extends ApiService {
       {{/each}}
     ) throws EInnsynException {
       {{request-body-type operation}} body = bodyBuilderFunction.apply(new {{request-body-type operation}}.Builder()).build();
-      return this.{{operation-name entityName method operation}}(
+      return this.{{operation-name .}}(
         {{#each (java-client-operation-parameters .)}}
           {{name}}
           {{#unless @last}},{{/unless}}
@@ -97,14 +97,14 @@ public class {{capitalize className}}Service extends ApiService {
       * @param {{name}} {{description}}
       * {{/each}}
       */
-    public {{{java-client-response-type operation entityName}}} {{operation-name entityName method operation}}(
+    public {{{java-client-response-type operation entityName}}} {{operation-name .}}(
       {{#each (java-client-operation-parameters . false)}}
         {{{datatype}}}
         {{name}}
         {{#unless @last}},{{/unless}}
       {{/each}}
     ) throws EInnsynException {
-      return this.{{operation-name entityName method operation}}(
+      return this.{{operation-name .}}(
         {{#each (java-client-operation-parameters .)}}
           {{#if (eq "query" name)}}null
           {{else}}{{name}}
@@ -124,7 +124,7 @@ public class {{capitalize className}}Service extends ApiService {
         * @param {{name}} {{description}}
         * {{/each}}
         */
-      public {{{java-client-response-type operation entityName}}} {{operation-name entityName method operation}}(
+      public {{{java-client-response-type operation entityName}}} {{operation-name .}}(
         {{#each (java-client-operation-parameters . false)}}
           {{#if (eq "body" name)}}
             UnaryOperator<{{request-body-type ../operation}}.Builder> bodyBuilderFunction
@@ -135,7 +135,7 @@ public class {{capitalize className}}Service extends ApiService {
         {{/each}}
       ) throws EInnsynException {
         {{request-body-type operation}} body = bodyBuilderFunction.apply(new {{request-body-type operation}}.Builder()).build();
-        return this.{{operation-name entityName method operation}}(
+        return this.{{operation-name .}}(
           {{#each (java-client-operation-parameters .)}}
             {{#if (eq "query" name)}}null
             {{else}}{{name}}

@@ -24,7 +24,7 @@ public class {{entityName}}Controller {
     {{#eq (uc method) 'POST'}}@PostMapping("{{path}}"){{/eq}}
     {{#eq (uc method) 'PUT'}}@PutMapping("{{path}}"){{/eq}}
     {{#eq (uc method) 'DELETE'}}@DeleteMapping("{{path}}"){{/eq}}
-    public ResponseEntity<{{{java-server-response-type .}}}> {{operation-name entityName method operation}}(
+    public ResponseEntity<{{{java-server-response-type .}}}> {{operation-name .}}(
       {{#each (java-server-operation-parameters .)}}
         {{#each annotations}}{{{.}}} {{/each}}
         {{{datatype}}}
@@ -32,7 +32,7 @@ public class {{entityName}}Controller {
         {{#unless @last}},{{/unless}}
       {{/each}}
     ) throws EInnsynException {
-      var responseBody = service.{{operation-name entityName method operation}}(
+      var responseBody = service.{{operation-name .}}(
       {{#each (java-server-operation-parameters .)}}
         {{name}}
         {{#unless @last}},{{/unless}}
