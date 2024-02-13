@@ -13,6 +13,7 @@ import lombok.Setter;
     import {{java-server-package-name}}.entities.{{lc x-resourceId}}.models.{{capitalize x-resourceId}}DTO;
   {{/if}}
 {{/each}}
+import {{java-server-package-name}}.common.expandablefield.ExpandableField;
 import {{java-server-package-name}}.common.hasid.HasId;
 import {{java-server-package-name}}.utils.idgenerator.IdGenerator;
 
@@ -29,6 +30,16 @@ public class {{className}} implements HasId {
 
   public {{className}}(String id) {
     this.id = id;
+  }
+
+  public {{className}}(ExpandableField<?> expandableField) {
+    this.id = expandableField.getId();
+    HasId obj = expandableField.getExpandedObject();
+    {{#each resources}}
+      if (obj instanceof {{capitalize x-resourceId}}DTO typedObj) {
+        this.{{deCapitalize x-resourceId}} = typedObj;
+      }
+    {{/each}}
   }
 
   {{#each resources}}

@@ -6,7 +6,7 @@ import {
   SchemaObject,
 } from 'openapi3-ts/oas30';
 import { capitalize } from './handlebarsHelpers';
-import { getQueryParameters } from './helpers';
+import { getPathParameters, getQueryParameters } from './helpers';
 
 export const addOperationQueryProperties = (spec: OpenAPIObject) => {
   // Create query parameter objects for each operation. We want paths like
@@ -47,7 +47,7 @@ export const addOperationQueryProperties = (spec: OpenAPIObject) => {
     },
   };
 
-  // First, create a index of all operations query properties by their return entity
+  // First, create an index of all operations query properties by their return entity
   // and method
   for (const path in spec.paths) {
     const pathItem = spec.paths[path];
@@ -239,10 +239,7 @@ const isDifferent = (propA?: any, propB?: any): boolean => {
  */
 const parseOperation = (requestMethod: string, operation: OperationObject) => {
   // Get the query parameters from the path
-  const operationParameters = operation.parameters as ParameterObject[];
-  const operationQueryParameters = operationParameters?.filter(
-    (p) => p.in === 'query',
-  );
+  const operationQueryParameters = getQueryParameters(operation);
   const queryProperties = operationQueryParameters?.reduce(
     (acc, p) => {
       acc[p.name] = p.schema as SchemaObject;
@@ -250,9 +247,15 @@ const parseOperation = (requestMethod: string, operation: OperationObject) => {
     },
     {} as { [key: string]: SchemaObject },
   );
-  const queryPropertiesSchema = {
-    properties: queryProperties,
-  } as SchemaObject;
+
+  const operationPathParameters = getPathParameters(operation);
+  const pathProperties = operationPathParameters?.reduce(
+    (acc, p) => {
+      acc[p.name] = p.schema as SchemaObject;
+      return acc;
+    },
+    {} as { [key: string]: SchemaObject },
+  );
 
   const response = operation.responses?.['200'] as ResponseObject;
   const responseBody = response?.content?.['application/json']
@@ -270,7 +273,7 @@ const parseOperation = (requestMethod: string, operation: OperationObject) => {
 
   return {
     queryProperties,
-    queryPropertiesSchema,
+    pathProperties,
     response,
     entity,
     isList,

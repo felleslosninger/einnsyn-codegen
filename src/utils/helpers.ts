@@ -230,29 +230,18 @@ export const getResourceIds = (schema: SchemaObject) => {
 
 export const getPathParameters = (operation: OperationObject) => {
   const parameters = operation.parameters ?? [];
-  return parameters
-    .map((parameter) => {
-      const parameterObject = parameter as ParameterObject;
-      if (parameterObject.in !== 'path') {
-        return undefined;
-      }
-      return parameterObject;
-    })
-    .filter((x) => x !== undefined);
+  return parameters.filter((parameter) => {
+    const parameterObject = parameter as ParameterObject;
+    return parameterObject.in === 'path';
+  }) as ParameterObject[];
 };
 
 export const getQueryParameters = (operation: OperationObject) => {
   const parameters = operation.parameters ?? [];
-  return parameters
-    .map((parameter) => {
-      const parameterObject = parameter as ParameterObject;
-      if (parameterObject.in !== 'query') {
-        return undefined;
-      }
-
-      return parameterObject;
-    })
-    .filter((x) => x !== undefined) as ParameterObject[];
+  return parameters.filter((parameter) => {
+    const parameterObject = parameter as ParameterObject;
+    return parameterObject.in === 'query';
+  }) as ParameterObject[];
 };
 
 export const isUnionResource = (schema: SchemaObject) => {
