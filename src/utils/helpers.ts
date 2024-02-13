@@ -6,7 +6,7 @@ import {
   RequestBodyObject,
   SchemaObject,
 } from 'openapi3-ts/oas30';
-import { capitalize, deCapitalize, lc } from './handlebarsHelpers';
+import { capitalize, deCapitalize } from './handlebarsHelpers';
 
 // Ugly, but necessary(?).
 let spec: OpenAPIObject;

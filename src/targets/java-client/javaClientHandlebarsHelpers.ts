@@ -286,6 +286,13 @@ export const javaClientHasId = (schema: SchemaObject) => {
   return properties.id !== undefined;
 };
 
+export const javaClientGetRootId = (operationMetadata: OperationMetadata) => {
+  return operationMetadata.path
+    ?.split('/')
+    .find((p) => /\{.+\}/.test(p))
+    ?.replace(/\{|\}/g, '');
+};
+
 export const javaClientGeneratePathString = (
   operationMetadata: OperationMetadata,
 ) => {
@@ -307,6 +314,7 @@ export const javaClientGeneratePathString = (
 export const getJavaClientOperationParameters = (
   operationMetadata: OperationMetadata,
   withQueryParameters = true,
+  withRootId = true,
 ) => {
   const operation = operationMetadata.operation;
   const parameters: {
@@ -314,10 +322,12 @@ export const getJavaClientOperationParameters = (
     datatype: string;
   }[] = [];
 
+  const rootId = javaClientGetRootId(operationMetadata);
+
   // Add path parameters
   const pathParameters = getPathParameters(operation);
   pathParameters.forEach((pathParameter) => {
-    if (pathParameter) {
+    if (pathParameter && (withRootId || pathParameter.name !== rootId)) {
       parameters.push({
         name: pathParameter.name,
         datatype: getJavaClientDatatype(
@@ -431,6 +441,7 @@ export const addJavaClientHandlebarsHelpers = (
     getJavaClientListItemDatatype,
   );
   handlebars.registerHelper('get-resource-ids', getResourceIds);
+  handlebars.registerHelper('java-client-root-id', javaClientGetRootId);
   handlebars.registerHelper('java-server-datatype', getJavaServerDatatype);
   handlebars.registerHelper(
     'java-client-response-type',

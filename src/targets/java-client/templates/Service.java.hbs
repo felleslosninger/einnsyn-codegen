@@ -25,7 +25,7 @@ public class {{capitalize className}}Service extends ApiService {
 
   /**
     * {{uc method}} {{path}}
-    * {{operation.description}}
+    * <p>{{operation.description}}
     *
     * {{#each (java-client-operation-parameters .)}}
     * @param {{name}} {{description}}
@@ -61,7 +61,7 @@ public class {{capitalize className}}Service extends ApiService {
   {{#if (request-body-type operation)}}
     /**
       * {{uc method}} {{path}}
-      * {{operation.description}}
+      * <p>{{operation.description}}
       *
       * {{#each (java-client-operation-parameters .)}}
       * @param {{name}} {{description}}
@@ -91,7 +91,7 @@ public class {{capitalize className}}Service extends ApiService {
   {{#if operation.x-request-query.x-has-props}}
     /**
       * {{uc method}} {{path}}
-      * {{operation.description}}
+      * <p>{{operation.description}}
       *
       * {{#each (java-client-operation-parameters . false)}}
       * @param {{name}} {{description}}
@@ -118,7 +118,7 @@ public class {{capitalize className}}Service extends ApiService {
     {{#if (request-body-type operation)}}
       /**
         * {{uc method}} {{path}}
-        * {{operation.description}}
+        * <p>{{operation.description}}
         *
         * {{#each (java-client-operation-parameters . false)}}
         * @param {{name}} {{description}}

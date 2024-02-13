@@ -5,10 +5,13 @@ package {{java-client-package-name}};
 
 {{#each entityMetadataList}}
   {{#if (has-operations entityName)}}
+    import {{java-client-package-name}}.entities.{{lc entityName}}.{{capitalize entityName}};
     import {{java-client-package-name}}.entities.{{lc entityName}}.{{capitalize entityName}}Service;
   {{/if}}
 {{/each}}
 
+import java.util.function.UnaryOperator;
+import {{java-client-package-name}}.exceptions.EInnsynException;
 import {{java-client-package-name}}.net.Requester;
 
 public class EInnsynClientBase {
@@ -22,12 +25,68 @@ public class EInnsynClientBase {
     this.requester = requester;
   }
 
-  {{#each entityMetadataList}}
-    {{! Extended schemas are abstract, and cannot be instantiated }}
-    {{#if (has-operations entityName)}}
-      public {{capitalize entityName}}Service {{deCapitalize entityName}}() {
-        return new {{capitalize entityName}}Service(this.getRequester());
-      }
-    {{/if}}
-  {{/each}}
+{{#each entityMetadataList}}
+  {{! Extended schemas are abstract, and cannot be instantiated }}
+  {{#if (has-operations entityName)}}
+    public {{capitalize entityName}}Service {{deCapitalize entityName}}() {
+      return new {{capitalize entityName}}Service(this.getRequester());
+    }
+
+    {{#each (entity-operation-list entityName)}}
+      {{! Get }}
+      {{#if (eq (operation-name .) "get")}}
+        public {{capitalize entityName}} get{{capitalize entityName}}(String id) throws EInnsynException {
+          return this.{{deCapitalize entityName}}().get(id);
+        }
+      {{/if}}
+
+      {{! Add }}
+      {{#if (eq (operation-name .) "add")}}
+        public {{java-client-response-type operation entityName}} add{{capitalize entityName}}(
+          {{#each (java-client-operation-parameters .)}}
+            {{{datatype}}}
+            {{name}}
+            {{#unless @last}},{{/unless}}
+          {{/each}}
+        ) throws EInnsynException {
+          return this.{{deCapitalize entityName}}().add(
+          {{#each (java-client-operation-parameters .)}}
+            {{name}}
+            {{#unless @last}},{{/unless}}
+          {{/each}}
+          );
+        }
+
+        {{! Overloader, replace Body with Body.Builder function }}
+        /**
+          * <p>{{operation.description}}
+          *
+          * {{#each (java-client-operation-parameters .)}}
+          * @param {{name}} {{description}}
+          * {{/each}}
+          */
+        public {{{java-client-response-type operation entityName}}} add{{capitalize entityName}}(
+          {{#each (java-client-operation-parameters .)}}
+            {{#if (eq "body" name)}}
+              UnaryOperator<{{request-body-type ../operation}}.Builder> body
+            {{else}}
+              {{{datatype}}} {{name}}
+            {{/if}}
+            {{#unless @last}},{{/unless}}
+          {{/each}}
+        ) throws EInnsynException {
+          return this.{{deCapitalize entityName}}().add(
+            {{#each (java-client-operation-parameters .)}}
+              {{name}}
+              {{#unless @last}},{{/unless}}
+            {{/each}}
+          );
+        }
+
+        {{/if}}
+      {{! List? }}
+    {{/each}}
+  {{/if}}
+
+{{/each}}
 }

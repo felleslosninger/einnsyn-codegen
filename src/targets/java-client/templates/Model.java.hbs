@@ -6,5 +6,15 @@ package {{java-client-package-name}}.entities.{{lc entityName}};
 {{#each (java-client-model-imports .)}}
 import {{.}};
 {{/each}}
+{{#each (java-client-service-imports .)}}
+import {{.}};
+{{/each}}
+
+import {{java-client-package-name}}.common.apiresource.ApiResource;
+import {{java-client-package-name}}.exceptions.EInnsynException;
+import {{java-client-package-name}}.net.Requester.RequestMethod;
+
+import java.util.function.UnaryOperator;
+import com.google.gson.reflect.TypeToken;
 
 {{> modelPartial this }}
