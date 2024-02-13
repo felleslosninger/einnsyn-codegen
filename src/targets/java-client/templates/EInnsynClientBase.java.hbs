@@ -42,8 +42,8 @@ public class EInnsynClientBase {
 
       {{! Delete }}
       {{#if (eq (operation-name .) "delete")}}
-        public void delete{{capitalize entityName}}(String id) throws EInnsynException {
-          this.{{deCapitalize entityName}}().delete(id);
+        public {{capitalize entityName}} delete{{capitalize entityName}}(String id) throws EInnsynException {
+          return this.{{deCapitalize entityName}}().delete(id);
         }
       {{/if}}
 
