@@ -57,35 +57,40 @@ public class {{capitalize className}}Service extends ApiService {
   }
 
 
-  {{! Overloader, replace Body with Body.Builder function }}
-  {{#if (request-body-type operation)}}
+  {{! Overloaders, replace `body` and `query` with Builder functions }}
+  {{#each (java-client-operation-builder-overloads .)}}
     /**
-      * {{uc method}} {{path}}
-      * <p>{{operation.description}}
+      * {{uc ../method}} {{../path}}
+      * <p>Overload</p>
+      * <p>{{../operation.description}}
       *
-      * {{#each (java-client-operation-parameters .)}}
+      * {{#each .}}
       * @param {{name}} {{description}}
       * {{/each}}
       */
-    public {{{java-client-response-type operation entityName}}} {{operation-name .}}(
-      {{#each (java-client-operation-parameters .)}}
-        {{#if (eq "body" name)}}
-          UnaryOperator<{{request-body-type ../operation}}.Builder> bodyBuilderFunction
+    public {{{java-client-response-type ../operation ../entityName}}} {{operation-name ..}}(
+      {{#each .}}
+        {{#if overload}}
+          UnaryOperator<{{datatype}}.Builder> {{name}}BuilderFunction
         {{else}}
           {{{datatype}}} {{name}}
         {{/if}}
         {{#unless @last}},{{/unless}}
       {{/each}}
     ) throws EInnsynException {
-      {{request-body-type operation}} body = bodyBuilderFunction.apply(new {{request-body-type operation}}.Builder()).build();
-      return this.{{operation-name .}}(
-        {{#each (java-client-operation-parameters .)}}
+      {{#each .}}
+        {{#if overload}}
+          {{datatype}} {{name}} = {{name}}BuilderFunction.apply(new {{datatype}}.Builder()).build();
+        {{/if}}
+      {{/each}}
+      return this.{{operation-name ..}}(
+        {{#each .}}
           {{name}}
           {{#unless @last}},{{/unless}}
         {{/each}}
       );
     }
-  {{/if}}
+  {{/each}}
 
   {{! Overloaders, no query param}}
   {{#if operation.x-request-query.x-has-props}}
@@ -106,7 +111,7 @@ public class {{capitalize className}}Service extends ApiService {
     ) throws EInnsynException {
       return this.{{operation-name .}}(
         {{#each (java-client-operation-parameters .)}}
-          {{#if (eq "query" name)}}null
+          {{#if (eq "query" name)}}({{datatype}}) null
           {{else}}{{name}}
           {{/if}}
           {{#unless @last}},{{/unless}}
@@ -115,36 +120,40 @@ public class {{capitalize className}}Service extends ApiService {
     }
 
     {{! Overloader, replace Body with Body.Builder function }}
-    {{#if (request-body-type operation)}}
+    {{#each (java-client-operation-builder-overloads . false)}}
       /**
-        * {{uc method}} {{path}}
-        * <p>{{operation.description}}
+        * {{uc ../method}} {{../path}}
+        * <p>{{../operation.description}}
         *
-        * {{#each (java-client-operation-parameters . false)}}
+        * {{#each .}}
         * @param {{name}} {{description}}
         * {{/each}}
         */
-      public {{{java-client-response-type operation entityName}}} {{operation-name .}}(
-        {{#each (java-client-operation-parameters . false)}}
-          {{#if (eq "body" name)}}
-            UnaryOperator<{{request-body-type ../operation}}.Builder> bodyBuilderFunction
+      public {{{java-client-response-type ../operation ../entityName}}} {{operation-name ..}}(
+        {{#each .}}
+          {{#if overload}}
+            UnaryOperator<{{datatype}}.Builder> {{name}}BuilderFunction
           {{else}}
             {{{datatype}}} {{name}}
           {{/if}}
           {{#unless @last}},{{/unless}}
         {{/each}}
       ) throws EInnsynException {
-        {{request-body-type operation}} body = bodyBuilderFunction.apply(new {{request-body-type operation}}.Builder()).build();
-        return this.{{operation-name .}}(
-          {{#each (java-client-operation-parameters .)}}
-            {{#if (eq "query" name)}}null
+        {{#each .}}
+          {{#if overload}}
+            {{datatype}} {{name}} = {{name}}BuilderFunction.apply(new {{datatype}}.Builder()).build();
+          {{/if}}
+        {{/each}}
+        return this.{{operation-name ..}}(
+          {{#each (java-client-operation-parameters ..)}}
+            {{#if (eq "query" name)}}({{datatype}}) null
             {{else}}{{name}}
             {{/if}}
             {{#unless @last}},{{/unless}}
           {{/each}}
         );
       }
-    {{/if}}
+    {{/each}}
 
   {{/if}}
 

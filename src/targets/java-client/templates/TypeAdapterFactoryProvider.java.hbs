@@ -21,7 +21,7 @@ public class TypeAdapterFactoryProvider {
         {{! Request bodies }}
         {{#each (propertyObject schema true)}}
           {{#if (is-union-resource .)}}
-            typeAdapterFactories.add(new {{java-client-package-name}}.entities.{{lc ../entityName}}.{{capitalize ../entityName}}{{capitalize @key}}TypeAdapterFactory(requester));
+            typeAdapterFactories.add(new {{java-client-package-name}}.entities.{{lc ../entityName}}.{{capitalize ../entityName}}{{capitalize @key}}TypeAdapterFactory());
           {{/if}}
         {{/each}}
 
@@ -30,14 +30,14 @@ public class TypeAdapterFactoryProvider {
 
           {{! Single elements}}
           {{#if (is-union-resource (response-body operation))}}
-            typeAdapterFactories.add(new {{java-client-package-name}}.entities.{{lc entityName}}.{{capitalize entityName}}ResponseTypeAdapterFactory(requester));
+            typeAdapterFactories.add(new {{java-client-package-name}}.entities.{{lc entityName}}.{{capitalize entityName}}ResponseTypeAdapterFactory());
           {{/if}}
 
           {{! Lists }}
           {{#with (response-body operation)}}
             {{#if properties.data.items}}
               {{#if (is-union-resource properties.data.items)}}
-                typeAdapterFactories.add(new {{java-client-package-name}}.entities.{{lc ../entityName}}.{{capitalize ../entityName}}{{capitalize ../operation.operationId}}ResponseTypeAdapterFactory(requester));
+                typeAdapterFactories.add(new {{java-client-package-name}}.entities.{{lc ../entityName}}.{{capitalize ../entityName}}{{capitalize ../operation.operationId}}ResponseTypeAdapterFactory());
               {{/if}}
             {{/if}}
           {{/with}}

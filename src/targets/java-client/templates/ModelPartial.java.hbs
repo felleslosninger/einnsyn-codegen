@@ -45,11 +45,60 @@ public class {{className}}
       public {{capitalize @key}} get{{capitalize @key}}() {
         return {{@key}};
       }
-    {{else}}
+
+    {{else if (is-union-resource .)}}
       public {{{java-client-datatype . @key ../entityName}}} get{{capitalize @key}}() {
         return {{@key}};
       }
+
+    {{else if (is-expandable-field-list .)}}
+      public List<{{resource-ids .}}> get{{capitalize @key}}() throws EInnsynException {
+        if ({{@key}} == null) {
+          return Collections.emptyList();;
+        }
+        if (!{{@key}}.stream().allMatch(ExpandableField::isExpanded)) {
+          {{! Create requester, send GET request }}
+          {{capitalize ../entityName}} expandedParent = get(
+            {{capitalize ../entityName}}GetQuery
+              .builder()
+              .setExpand(Arrays.asList("{{@key}}"))
+              .build()
+          );
+          this.{{deCapitalize @key}} = expandedParent
+            .get{{capitalize @key}}()
+            .stream()
+            .map((obj) -> new ExpandableField<>(obj))
+            .collect(Collectors.toList());
+        }
+        return this.{{@key}}.stream().map(ExpandableField::getExpandedObject).collect(Collectors.toList());
+      }
+      public List<String> get{{capitalize @key}}Ids() {
+        return {{@key}}.stream().map(ExpandableField::getId).collect(Collectors.toList());
+      }
+    
+    {{else if (is-expandable-field .)}}
+      public {{resource-ids .}} get{{capitalize @key}}() throws EInnsynException {
+        if ({{@key}} == null) {
+          return null;
+        }
+        {{! Create a service to fetch the expandable object}}
+        if ({{@key}}.getExpandedObject() == null) {
+          {{@key}}.setExpandedObject(
+            (new {{resource-ids .}}Service(getRequester())).get({{@key}}.getId())
+          );
+        }
+        return {{@key}}.getExpandedObject();
+      }
+      public String get{{capitalize @key}}Id() {
+        return {{@key}}.getId();
+      }
+
+    {{else}}
+    public {{{java-client-datatype . @key ../entityName}}} get{{capitalize @key}}() {
+        return {{@key}};
+    }
     {{/if}}
+
   {{/each}}
 
   {{! Constructor }}
@@ -169,7 +218,7 @@ public class {{className}}
             * @return The builder.
             */
           public Builder set{{capitalize @../key}}({{capitalize .}} object) {
-            this.{{@../key}} = new ExpandableField<>(new {{capitalize ../../entityName}}{{capitalize @../key}}(object));
+            this.{{@../key}} = new {{capitalize ../../entityName}}{{capitalize @../key}}(object);
             return this;
           }
 
@@ -180,7 +229,7 @@ public class {{className}}
             * @return The builder.
             */
           public Builder set{{capitalize @../key}}{{capitalize .}}(UnaryOperator<{{capitalize .}}.Builder> builderFunction) {
-            this.{{@../key}} = new ExpandableField<>(new {{capitalize ../../entityName}}{{capitalize @../key}}(builderFunction.apply(new {{capitalize .}}.Builder()).build()));
+            this.{{@../key}} = new {{capitalize ../../entityName}}{{capitalize @../key}}(builderFunction.apply(new {{capitalize .}}.Builder()).build());
             return this;
           }
         {{/each}}

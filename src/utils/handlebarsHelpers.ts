@@ -6,6 +6,7 @@ import {
   getPropertyObject,
   getRequestBody,
   getRequestBodyType,
+  getResourceIds,
   getResponseBody,
   hasOperations,
   isExpandableField,
@@ -103,4 +104,5 @@ export const addHandlebarsHelpers = (handlebars: typeof Handlebars) => {
   handlebars.registerHelper('response-body', getResponseBody);
   handlebars.registerHelper('entity-operation-list', getEntityOperationList);
   handlebars.registerHelper('has-operations', hasOperations);
+  handlebars.registerHelper('resource-ids', getResourceIds);
 };

@@ -67,7 +67,7 @@ public class {{className}}TypeAdapter {
         switch (entity) {
           {{#each resources}}
             case "{{capitalize x-resourceId}}":
-              {{capitalize x-resourceId}}DTO {{deCapitalize x-resourceId}} = ({{capitalize x-resourceId}}DTO) context.deserialize(json, {{capitalize x-resourceId}}DTO.class);
+              {{capitalize x-resourceId}}DTO {{deCapitalize x-resourceId}} = context.deserialize(json, {{capitalize x-resourceId}}DTO.class);
               return new {{../className}}({{deCapitalize x-resourceId}});
           {{/each}}
             default:

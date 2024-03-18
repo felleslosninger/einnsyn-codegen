@@ -102,7 +102,7 @@ export const getJavaServerControllerImports = (
   const resources: Record<string, boolean> = {};
   const entityOperationList = getEntityOperationList(entityMetadata.entityName);
 
-  resources[JAVA_SERVER_PACKAGE + '.common.exceptions.EInnsynException'] = true;
+  resources[JAVA_SERVER_PACKAGE + '.error.exceptions.EInnsynException'] = true;
 
   for (const operationMetadata of entityOperationList) {
     // Add response object
@@ -129,6 +129,16 @@ export const getJavaServerControllerImports = (
             lc(entityMetadata.entityName) +
             '.models.' +
             className
+        ] = true;
+      }
+      if (resourceIds.length === 1) {
+        resources[
+          JAVA_SERVER_PACKAGE +
+            '.entities.' +
+            lc(resourceIds[0]) +
+            '.models.' +
+            capitalize(resourceIds[0]) +
+            'DTO'
         ] = true;
       }
     }
@@ -270,7 +280,11 @@ export const getJavaServerImportsForProperty = (property: SchemaObject) => {
     res[JAVA_SERVER_PACKAGE + '.validation.validationgroups.Insert'] = true;
     res[JAVA_SERVER_PACKAGE + '.validation.validationgroups.Update'] = true;
   } else if (property['x-required']) {
-    res['jakarta.validation.constraints.NotNull'] = true;
+    if (property.type === 'string') {
+      res['jakarta.validation.constraints.NotBlank'] = true;
+    } else {
+      res['jakarta.validation.constraints.NotNull'] = true;
+    }
     res[JAVA_SERVER_PACKAGE + '.validation.validationgroups.Insert'] = true;
   }
 
@@ -279,7 +293,7 @@ export const getJavaServerImportsForProperty = (property: SchemaObject) => {
     switch (property.format) {
       case 'date-time':
       case 'date':
-        res['org.springframework.format.annotation.DateTimeFormat'] = true;
+        res[JAVA_SERVER_PACKAGE + '.validation.isodatetime.IsoDateTime'] = true;
         break;
       case 'email':
         res['jakarta.validation.constraints.Email'] = true;

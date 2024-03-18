@@ -53,6 +53,15 @@ export const getJavaClientServiceImports = (entityMetadata: EntityMetadata) => {
             'Response'
         ] = true;
       }
+      if (resourceIds.length === 1) {
+        resources[
+          JAVA_CLIENT_PACKAGE +
+            '.entities.' +
+            lc(resourceIds[0]) +
+            '.' +
+            capitalize(resourceIds[0])
+        ] = true;
+      }
     }
 
     // Add request object
@@ -100,7 +109,7 @@ export const getJavaClientModelImports = (
   const properties = getPropertyObject(schema, true) ?? {};
 
   for (const propertyName in properties) {
-    const property = properties[propertyName] as SchemaObject;
+    const property = properties[propertyName];
     const propertyResources = getJavaClientImportsForProperty(property);
     propertyResources.forEach((resourceId) => (resources[resourceId] = true));
   }
@@ -124,13 +133,23 @@ export const getJavaClientModelImports = (
   }
 
   resourceIds.forEach((resourceId) => {
-    const resourcePath =
+    // Model
+    resources[
       JAVA_CLIENT_PACKAGE +
-      '.entities.' +
-      lc(resourceId) +
-      '.' +
-      capitalize(resourceId);
-    resources[resourcePath] = true;
+        '.entities.' +
+        lc(resourceId) +
+        '.' +
+        capitalize(resourceId)
+    ] = true;
+    // ModelService
+    resources[
+      JAVA_CLIENT_PACKAGE +
+        '.entities.' +
+        lc(resourceId) +
+        '.' +
+        capitalize(resourceId) +
+        'Service'
+    ] = true;
   });
 
   // Import HasId if this doesn't extend anything and has an ID property
@@ -153,13 +172,21 @@ export const getJavaClientImportsForProperty = (property: SchemaObject) => {
   // If this property references a resource, it will have a resourceId
   // ExpandableFields are always anyOf, since it's anyOf the resource or a string
   getResourceIds(property).forEach((resourceId) => {
-    const resourcePath =
+    res[
       JAVA_CLIENT_PACKAGE +
-      '.entities.' +
-      lc(resourceId) +
-      '.' +
-      capitalize(resourceId);
-    res[resourcePath] = true;
+        '.entities.' +
+        lc(resourceId) +
+        '.' +
+        capitalize(resourceId)
+    ] = true;
+    res[
+      JAVA_CLIENT_PACKAGE +
+        '.entities.' +
+        lc(resourceId) +
+        '.' +
+        capitalize(resourceId) +
+        'Service'
+    ] = true;
     if (!property.readOnly) {
       res[JAVA_CLIENT_PACKAGE + '.common.expandablefield.ExpandableField'] =
         true;
@@ -263,12 +290,7 @@ export const getJavaClientDatatype = (
 
   // Expandable field with multiple possible types
   if (Object.keys(resources).length > 1) {
-    return (
-      'ExpandableField<' +
-      capitalize(entityName) +
-      capitalize(propertyName) +
-      '>'
-    );
+    return capitalize(entityName) + capitalize(propertyName);
   }
 
   // Expandable field with one possible type
@@ -320,6 +342,7 @@ export const getJavaClientOperationParameters = (
   const parameters: {
     name: string;
     datatype: string;
+    description?: string;
   }[] = [];
 
   const rootId = javaClientGetRootId(operationMetadata);
@@ -335,6 +358,7 @@ export const getJavaClientOperationParameters = (
           pathParameter.name,
           operationMetadata.entityName ?? '',
         ),
+        description: pathParameter.description,
       });
     }
   });
@@ -364,6 +388,66 @@ export const getJavaClientOperationParameters = (
   }
 
   return parameters;
+};
+
+/**
+ * Get overloads for operation parameters. For instance, the paraters:
+ * String id, QueryParameter query, Body body
+ * will generate the overloads:
+ * String id, QueryParameter query, Body body
+ * String id, UnaryOperator<QueryParameter.Builder> query, Body body
+ * String id, QueryParameter query, UnaryOperator<Body.Builder> body
+ * String id, UnaryOperator<QueryParameter.Builder> query, UnaryOperator<Body.Builder> body
+ *
+ * @param operationMetadata
+ * @param withQueryParameters
+ * @param withRootId
+ * @returns
+ */
+export const getJavaClientOperationBuilderOverloads = (
+  operationMetadata: OperationMetadata,
+  withQueryParameters = true,
+  withRootId = true,
+) => {
+  const parameters: {
+    name: string;
+    datatype: string;
+    description?: string;
+    overload?: boolean;
+  }[] = getJavaClientOperationParameters(
+    operationMetadata,
+    withQueryParameters,
+    withRootId,
+  );
+
+  // Add an overload for each combination of parameters
+  const overloads = parameters.reduce(
+    (acc, parameter, index) => {
+      if (parameter.name === 'query' || parameter.name === 'body') {
+        var accClone = acc.slice();
+        for (const overload of accClone) {
+          var newCombination = [
+            ...overload.slice(0, index),
+            {
+              name: parameter.name,
+              datatype: parameter.datatype,
+              description: parameter.description,
+              overload: true,
+            },
+            ...overload.slice(index + 1),
+          ];
+          acc.push(newCombination);
+        }
+      }
+      return acc;
+    },
+    [parameters],
+  );
+
+  // Remove the first overload, as it is the same as the input parameters
+  overloads.shift();
+
+  return overloads;
 };
 
 /**
@@ -450,6 +534,10 @@ export const addJavaClientHandlebarsHelpers = (
   handlebars.registerHelper(
     'java-client-operation-parameters',
     getJavaClientOperationParameters,
+  );
+  handlebars.registerHelper(
+    'java-client-operation-builder-overloads',
+    getJavaClientOperationBuilderOverloads,
   );
   handlebars.registerHelper(
     'java-client-service-imports',

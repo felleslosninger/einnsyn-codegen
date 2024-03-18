@@ -18,7 +18,7 @@ export const addOperationQueryProperties = (spec: OpenAPIObject) => {
     [key: string]: Record<string, Record<string, SchemaObject>>;
   } = {};
 
-  // Add base query parameters
+  // Add base query parameters (QueryParameters / ListQueryParameters)
   const baseQueryParameters = spec.components?.schemas
     ?.QueryParameters as SchemaObject;
   const baseListQueryParameters = spec.components?.schemas

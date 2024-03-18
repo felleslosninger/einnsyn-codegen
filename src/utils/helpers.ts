@@ -70,6 +70,15 @@ export type EntityMetadata = {
   schema?: SchemaObject;
 };
 
+const findEntityName = (entityNames: string[], path: string) => {
+  const firstPath = path.split('/')[1] ?? '';
+  return (
+    entityNames.find(
+      (entityName) => entityName.toLowerCase() === firstPath.toLowerCase(),
+    ) ?? capitalize(firstPath)
+  );
+};
+
 /**
  *
  * @param spec
@@ -93,9 +102,10 @@ export const getEntities = (spec: OpenAPIObject) => {
   }
 
   // Add operations to each entity
+  const entityNames = Object.keys(schemas);
   for (const operation of operationList) {
-    const pathName = operation.path;
-    const entityName = capitalize(pathName.split('/')[1] ?? '');
+    const entityName = findEntityName(entityNames, operation.path);
+    console.log('Found entity name', entityName, operation.path);
     if (entityName) {
       let entityMetadata = entityMap[entityName];
       if (!entityMetadata) {
@@ -278,6 +288,10 @@ export const getOperationName = (operationMetadata: OperationMetadata) => {
   // GetSaksmappeList should be named "list"
   else if (operationId === 'Get' + entityName + 'List') {
     return 'list';
+  }
+  // Lookup
+  else if (operationId === 'Lookup' + entityName) {
+    return 'lookup';
   }
   // PostSaksmappeJournalpost (add journalpost to Saksmappe) should be named postJournalpost
   else {

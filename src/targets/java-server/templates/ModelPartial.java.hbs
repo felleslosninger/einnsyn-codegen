@@ -32,20 +32,19 @@ public
       @Email
 
       {{else if (eq format 'date-time')}}
-      @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+      @IsoDateTime(format = IsoDateTime.Format.ISO_DATE_TIME)
 
       {{else if (eq format 'date')}}
-      @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+      @IsoDateTime(format = IsoDateTime.Format.ISO_DATE)
 
       {{else if (eq format 'url')}}
       @URL
 
       {{else if (eq format 'password')}}
       @Password
-      {{! Currently noop, avoid setting NoSSN }}
 
       {{else if enum}}
-      {{! Currently noop, avoid setting NoSSN }}
+        {{! Currently noop, avoid setting NoSSN }}
 
       {{else}}
       @NoSSN
@@ -53,9 +52,17 @@ public
       {{/if}}
 
       {{#if (and enum (ne (length enum) 1) (ne (length enum) 0))}}
-      @ValidEnum(enumClass = {{capitalize @key}}Enum.class)
+        @ValidEnum(enumClass = {{capitalize @key}}Enum.class)
       {{/if}}
     {{/eq}}
+
+    {{#if x-resourceId}}
+      //{{x-resourceId}}
+      @IdOrNewObject(
+        service = {{capitalize resourceId}}Service.class,
+        groups = {Insert.class, Update.class}
+      )
+    {{/if}}
 
     {{#if readOnly}}
       {{#unless (and enum (eq (length enum) 1))}}
@@ -63,7 +70,11 @@ public
       {{/unless}}
     {{else}}
       {{#if x-required}}
-        @NotNull(groups = {Insert.class})
+        {{#eq type 'string'}}
+          @NotBlank(groups = {Insert.class})
+        {{else}}
+          @NotNull(groups = {Insert.class})
+        {{/eq}}
       {{/if}}
     {{/if}}
 
