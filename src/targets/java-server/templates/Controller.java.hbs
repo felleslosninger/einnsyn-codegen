@@ -41,7 +41,7 @@ public class {{entityName}}Controller {
       );
       {{! POST operations should return 201 Created, with a Location header }}
       {{#if (eq (uc method) 'POST')}}
-        var location = URI.create("/{{lc (request-body-type operation)}}/" + responseBody.getId());
+        var location = URI.create("/{{deCapitalize (request-body-type operation)}}/" + responseBody.getId());
         return ResponseEntity
           .created(location)
           .body(responseBody);
