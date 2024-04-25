@@ -4,11 +4,12 @@ import {
   getOperationName,
   getPropertyList,
   getPropertyObject,
-  getRequestBody,
-  getRequestBodyType,
+  getRequestBodyResource,
+  getRequestBodyResourceId,
   getResourceIds,
   getResponseBody,
   hasOperations,
+  hasRequestBodyId,
   isExpandableField,
   isExpandableFieldList,
   isList,
@@ -92,9 +93,12 @@ export const addHandlebarsHelpers = (handlebars: typeof Handlebars) => {
   handlebars.registerHelper('echo', echo);
   handlebars.registerHelper('fallback', fallback);
   handlebars.registerHelper('operation-name', getOperationName);
-  handlebars.registerHelper('request-body-type', getRequestBodyType);
+  handlebars.registerHelper(
+    'request-body-resource-id',
+    getRequestBodyResourceId,
+  );
   handlebars.registerHelper('const-var-name', constVarName);
-  handlebars.registerHelper('request-body', getRequestBody);
+  handlebars.registerHelper('request-body-resource', getRequestBodyResource);
   handlebars.registerHelper('is-union-resource', isUnionResource);
   handlebars.registerHelper('is-list', isList);
   handlebars.registerHelper('is-expandable-field', isExpandableField);
@@ -105,4 +109,5 @@ export const addHandlebarsHelpers = (handlebars: typeof Handlebars) => {
   handlebars.registerHelper('entity-operation-list', getEntityOperationList);
   handlebars.registerHelper('has-operations', hasOperations);
   handlebars.registerHelper('resource-ids', getResourceIds);
+  handlebars.registerHelper('has-request-body-id', hasRequestBodyId);
 };

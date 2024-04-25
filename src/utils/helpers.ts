@@ -196,21 +196,43 @@ export const getResponseBody = (operation: OperationObject) => {
   return response;
 };
 
-export const getRequestBody = (
-  operation: OperationObject,
-): Record<string, any> | undefined => {
-  const requestBody = (operation.requestBody as RequestBodyObject)?.content?.[
-    'application/json'
-  ]?.schema;
-  return requestBody as Record<string, any>;
+export const getRequestBodies = (operation: OperationObject) => {
+  const requestBodyObject = operation.requestBody as RequestBodyObject;
+  const content = requestBodyObject?.content;
+  const schema = content?.['application/json']?.schema as SchemaObject;
+  const anyOf = schema?.anyOf ?? [schema];
+  return anyOf;
 };
 
-export const getRequestBodyType = (
+export const getRequestBodyResource = (operation: OperationObject) => {
+  const requestBodies = getRequestBodies(operation);
+  let resource: SchemaObject | undefined;
+  for (const anyOfPropertyUntyped of requestBodies) {
+    const anyOfProperty = anyOfPropertyUntyped as SchemaObject;
+    if (!resource || anyOfProperty?.['x-resourceId']) {
+      resource = anyOfProperty;
+    }
+  }
+  return resource;
+};
+
+export const hasRequestBodyId = (operation: OperationObject) => {
+  const requestBodies = getRequestBodies(operation);
+  for (const anyOfPropertyUntyped of requestBodies) {
+    const anyOfProperty = anyOfPropertyUntyped as SchemaObject;
+    if (anyOfProperty?.type === 'string') {
+      return true;
+    }
+  }
+  return false;
+};
+
+export const getRequestBodyResourceId = (
   operation: OperationObject,
 ): string | undefined => {
-  const requestBody = getRequestBody(operation);
+  const requestBody = getRequestBodyResource(operation);
   if (requestBody) {
-    return requestBody['x-resourceId'] ?? operation.operationId;
+    return requestBody['x-resourceId'];
   }
   return undefined;
 };
