@@ -39,9 +39,14 @@ public class {{capitalize className}}Service extends ApiService {
     {{/each}}
   ) throws EInnsynException {
     String path = {{{java-client-generate-path-string .}}};
-    {{#if (request-body-type operation)}}
-      TypeToken<{{{request-body-type operation}}}> requestTypeToken = new TypeToken<{{{request-body-type operation}}}>() {};
-      String bodyJSON = this.getRequester().getGson().toJson(body, requestTypeToken.getType());
+    {{#if (request-body-resource-id operation)}}
+      TypeToken<{{{request-body-resource-id operation}}}> requestTypeToken = new TypeToken<{{{request-body-resource-id operation}}}>() {};
+      {{! If this operation accepts an ID, and we have an existing object, send the ID instead of the object }}
+      {{#if (has-request-body-id operation)}}
+        String bodyJSON = body.getId() != null ? this.getRequester().getGson().toJson(body.getId()) : this.getRequester().getGson().toJson(body, requestTypeToken.getType());
+      {{else}}
+        String bodyJSON = this.getRequester().getGson().toJson(body, requestTypeToken.getType());
+      {{/if}}
     {{/if}}
     String responseJSON = this.getRequester().request(
       {{#if (eq (uc method) 'GET')}}RequestMethod.GET{{/if}}
@@ -50,7 +55,7 @@ public class {{capitalize className}}Service extends ApiService {
       {{#if (eq (uc method) 'DELETE')}}RequestMethod.DELETE{{/if}}
       , path
       {{#if operation.x-request-query.x-has-props}}, query{{/if}}
-      {{#if (request-body-type operation)}}, bodyJSON{{/if}}
+      {{#if (request-body-resource-id operation)}}, bodyJSON{{/if}}
     );
     TypeToken<{{{java-client-response-type operation entityName}}}> responseTypeToken = new TypeToken<{{{java-client-response-type operation entityName}}}>() {};
     return this.getRequester().getGson().fromJson(responseJSON, responseTypeToken.getType());

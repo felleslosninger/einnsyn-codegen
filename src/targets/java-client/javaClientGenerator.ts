@@ -1,11 +1,6 @@
 import fs from 'fs';
 import Handlebars from 'handlebars';
-import {
-  OpenAPIObject,
-  OperationObject,
-  SchemaObject,
-} from 'openapi3-ts/oas30';
-import * as prettier from 'prettier';
+import { OpenAPIObject, SchemaObject } from 'openapi3-ts/oas30';
 import {
   addHandlebarsHelpers,
   capitalize,
@@ -15,15 +10,15 @@ import {
   getEntities,
   getEntityOperationList,
   getPropertyList,
-  getRequestBody,
-  getRequestBodyType,
+  getRequestBodyResource,
+  getRequestBodyResourceId,
   getResourceIds,
   getResources,
   getResponseBody,
   setSpec,
 } from '../../utils/helpers';
-import { addJavaClientHandlebarsHelpers } from './javaClientHandlebarsHelpers';
 import { getRenderer } from '../../utils/renderer';
+import { addJavaClientHandlebarsHelpers } from './javaClientHandlebarsHelpers';
 
 export const JAVA_CLIENT_PACKAGE = 'no.einnsyn.apiclient';
 const JAVA_CLIENT_TEMPLATE_PATH = './src/targets/java-client/templates';
@@ -107,15 +102,17 @@ export const generate = async (
 
     // Render body for POST/PUT operations with non-entity bodies
     for (const operation of entityOperationList) {
-      const requestBody = getRequestBody(operation.operation);
+      const requestBody = getRequestBodyResource(operation.operation);
       if (requestBody && !requestBody['x-resourceId']) {
-        const requestBodyType = getRequestBodyType(operation.operation);
+        const requestBodyResourceId = getRequestBodyResourceId(
+          operation.operation,
+        );
         await render(
           'Model.java.hbs',
-          `${modelPathName}/${capitalize(requestBodyType)}.java`,
+          `${modelPathName}/${capitalize(requestBodyResourceId)}.java`,
           {
             entityName,
-            className: capitalize(requestBodyType),
+            className: capitalize(requestBodyResourceId),
             schema: requestBody,
             inlineEnums: true,
           },

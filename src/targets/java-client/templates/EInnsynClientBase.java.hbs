@@ -75,7 +75,7 @@ public class EInnsynClientBase {
         public {{{java-client-response-type operation entityName}}} add{{capitalize entityName}}(
           {{#each (java-client-operation-parameters .)}}
             {{#if (eq "body" name)}}
-              UnaryOperator<{{request-body-type ../operation}}.Builder> body
+              UnaryOperator<{{request-body-resource-id ../operation}}.Builder> body
             {{else}}
               {{{datatype}}} {{name}}
             {{/if}}

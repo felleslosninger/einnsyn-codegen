@@ -10,8 +10,8 @@ import {
   getEntityOperationList,
   getPathParameters,
   getPropertyObject,
-  getRequestBody,
-  getRequestBodyType,
+  getRequestBodyResource,
+  getRequestBodyResourceId,
   getResourceIds,
   getResponseBody,
   isUnionResource,
@@ -65,7 +65,7 @@ export const getJavaClientServiceImports = (entityMetadata: EntityMetadata) => {
     }
 
     // Add request object
-    const requestBody = getRequestBody(operationWrapper.operation);
+    const requestBody = getRequestBodyResource(operationWrapper.operation);
     if (requestBody) {
       const modelImports = getJavaClientModelImports(requestBody);
       modelImports.forEach((modelImport) => (resources[modelImport] = true));
@@ -378,12 +378,12 @@ export const getJavaClientOperationParameters = (
   }
 
   // Add request body
-  const requestBody = getRequestBody(operation);
+  const requestBody = getRequestBodyResource(operation);
   if (requestBody) {
-    const requestBodyType = getRequestBodyType(operation);
+    const requestBodyResourceId = getRequestBodyResourceId(operation);
     parameters.push({
       name: 'body',
-      datatype: requestBodyType ?? '',
+      datatype: requestBodyResourceId ?? '',
     });
   }
 
