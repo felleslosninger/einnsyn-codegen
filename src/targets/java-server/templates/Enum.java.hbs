@@ -24,8 +24,9 @@ public enum {{name}} {
   }
 
   public static {{name}} fromValue(String value) {
+    value = value.toLowerCase();
     for ({{name}} val : values()) {
-      if (val.value.equals(value)) {
+      if (val.value.toLowerCase().equals(value)) {
           return val;
       }
     }
