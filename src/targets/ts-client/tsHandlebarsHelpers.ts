@@ -1,12 +1,11 @@
 import {
   OperationObject,
   ParameterObject,
-  RequestBodyObject,
   SchemaObject,
 } from 'openapi3-ts/oas30';
-import { Entity, EntityOperation } from './tsGenerator';
 import { capitalize, deCapitalize } from '../../utils/handlebarsHelpers';
-import { getRequestBodyType } from '../../utils/helpers';
+import { getRequestBodyResourceId } from '../../utils/helpers';
+import { Entity, EntityOperation } from './tsGenerator';
 
 /**
  * Get TypeScript datatype for a property or parameter object
@@ -105,7 +104,7 @@ export const getTsResourceImports = (entity: Entity) => {
 
   for (const operation of entity.operationList) {
     let responseType = getResponseType(operation)?.replace(/\[\]$/, '');
-    let bodyType = getRequestBodyType(operation.operation)?.replace(
+    let bodyType = getRequestBodyResourceId(operation.operation)?.replace(
       /\[\]$/,
       '',
     );

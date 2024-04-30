@@ -52,8 +52,8 @@ constructor(protected client: ApiClient) {}
       {{#each (ts-path-parameters operation)}}
       {{name}}: {{datatype}},
       {{/each}}
-      {{#if (request-body-type operation)}}
-      body: {{request-body-type operation}},
+      {{#if (request-body-resource-id operation)}}
+      body: {{request-body-resource-id operation}},
       {{/if}}
       {{#if (ts-query-parameters operation)}}
       query?: {{capitalize ../name}}{{capitalize (operation-name .)}}Query,
@@ -64,7 +64,7 @@ constructor(protected client: ApiClient) {}
       const responseData = await this.client.request({
         path,
         method: '{{method}}',
-        {{#if (request-body-type operation)}}
+        {{#if (request-body-resource-id operation)}}
         body,
         {{/if}}
         {{#if (ts-query-parameters operation)}}

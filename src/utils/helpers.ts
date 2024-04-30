@@ -232,7 +232,7 @@ export const getRequestBodyResourceId = (
 ): string | undefined => {
   const requestBody = getRequestBodyResource(operation);
   if (requestBody) {
-    return requestBody['x-resourceId'];
+    return requestBody['x-resourceId'] ?? operation.operationId;
   }
   return undefined;
 };

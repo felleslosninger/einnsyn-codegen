@@ -5,10 +5,11 @@ import {
   OperationMetadata,
   getEntityOperationList,
   getPathParameters,
-  getRequestBody,
-  getRequestBodyType,
+  getRequestBodyResource,
+  getRequestBodyResourceId,
   getResourceIds,
   getResponseBody,
+  hasRequestBodyId,
 } from '../../utils/helpers';
 import { JAVA_SERVER_PACKAGE } from './javaServerGenerator';
 
@@ -144,7 +145,7 @@ export const getJavaServerControllerImports = (
     }
 
     // Add request object
-    const requestBody = getRequestBody(operationMetadata.operation);
+    const requestBody = getRequestBodyResource(operationMetadata.operation);
     if (requestBody) {
       const modelImports = getJavaServerModelImports(requestBody);
       modelImports.forEach((modelImport) => (resources[modelImport] = true));
@@ -508,9 +509,9 @@ export const getJavaServerOperationParameters = (
   }
 
   // Add request body
-  const requestBody = getRequestBody(operation);
+  const requestBody = getRequestBodyResource(operation);
   if (requestBody) {
-    const requestBodyType = getRequestBodyType(operation);
+    const requestBodyResourceId = getRequestBodyResourceId(operation);
     const annotations = ['@RequestBody'];
     if (operationMetadata.method === 'post') {
       annotations.push('@Validated(Insert.class)');
@@ -520,9 +521,14 @@ export const getJavaServerOperationParameters = (
       annotations.push('@Valid');
     }
 
+    // If we allow an ID in the request body, wrap the object in an ExpandableField
+    const datatype = hasRequestBodyId(operation)
+      ? 'ExpandableField<' + requestBodyResourceId + 'DTO>'
+      : (requestBodyResourceId ?? operation.operationId ?? 'unnamed') + 'DTO';
+
     parameters.push({
       name: 'body',
-      datatype: requestBodyType + 'DTO',
+      datatype: datatype,
       annotations,
     });
   }
