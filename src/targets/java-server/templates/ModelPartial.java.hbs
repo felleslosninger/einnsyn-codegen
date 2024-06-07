@@ -47,8 +47,12 @@ public
         {{! Currently noop, avoid setting NoSSN }}
 
       {{else}}
-      @NoSSN
-
+        {{#if (eq @key 'systemId')}}
+        {{else if (eq @key 'externalId')}}
+        {{else if (eq @key 'id')}}
+        {{else}}
+          @NoSSN
+        {{/if}}
       {{/if}}
 
       {{#if (and enum (ne (length enum) 1) (ne (length enum) 0))}}
