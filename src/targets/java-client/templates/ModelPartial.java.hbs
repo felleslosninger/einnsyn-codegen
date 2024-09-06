@@ -211,16 +211,16 @@ public class {{className}}
 
       {{#if (is-union-resource .)}}
           /**
-            * Set `{{@../key}}` by providing an ID. {{#if description}}See {{echo '{'}}@link {{capitalize ../name}}#{{@../key}}{{echo '}'}}.{{/if}}
+            * Set `{{@key}}` by providing an ID.{{/if}}
             *
             * @param id The ID of the element to set.
             * @return The builder.
             */
-          public Builder set{{capitalize @../key}}(String id) {
-            this.{{@../key}} = new {{capitalize ../../entityName}}{{capitalize @../key}}(id);
+          public Builder set{{capitalize @key}}(String id) {
+            this.{{@key}} = new {{capitalize ../entityName}}{{capitalize @key}}(id);
             return this;
           }
-          
+
         {{#each (get-resource-ids .)}}
           /**
             * Set `{{@../key}}` by providing an object. {{#if description}}See {{echo '{'}}@link {{capitalize ../name}}#{{@../key}}{{echo '}'}}.{{/if}}
