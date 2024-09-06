@@ -210,7 +210,6 @@ public class {{className}}
       {{/if}}
 
       {{#if (is-union-resource .)}}
-        {{#each (get-resource-ids .)}}
           /**
             * Set `{{@../key}}` by providing an ID. {{#if description}}See {{echo '{'}}@link {{capitalize ../name}}#{{@../key}}{{echo '}'}}.{{/if}}
             *
@@ -221,7 +220,8 @@ public class {{className}}
             this.{{@../key}} = new {{capitalize ../../entityName}}{{capitalize @../key}}(id);
             return this;
           }
-
+          
+        {{#each (get-resource-ids .)}}
           /**
             * Set `{{@../key}}` by providing an object. {{#if description}}See {{echo '{'}}@link {{capitalize ../name}}#{{@../key}}{{echo '}'}}.{{/if}}
             *
