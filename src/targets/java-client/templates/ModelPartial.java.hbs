@@ -217,6 +217,17 @@ public class {{className}}
             * @param id The ID of the element to set.
             * @return The builder.
             */
+          public Builder set{{capitalize @../key}}(String id) {
+            this.{{@../key}} = new {{capitalize ../../entityName}}{{capitalize @../key}}(id);
+            return this;
+          }
+
+          /**
+            * Set `{{@../key}}` by providing an object. {{#if description}}See {{echo '{'}}@link {{capitalize ../name}}#{{@../key}}{{echo '}'}}.{{/if}}
+            *
+            * @param object The element to set.
+            * @return The builder.
+            */
           public Builder set{{capitalize @../key}}({{capitalize .}} object) {
             this.{{@../key}} = new {{capitalize ../../entityName}}{{capitalize @../key}}(object);
             return this;
