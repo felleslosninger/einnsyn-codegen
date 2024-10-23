@@ -160,6 +160,17 @@ export const getJavaServerControllerImports = (
       } else {
         resources['jakarta.validation.Valid'] = true;
       }
+      const requestResourceId = requestBody['x-resourceId'];
+      if (requestResourceId !== undefined) {
+        resources[
+          JAVA_SERVER_PACKAGE +
+            '.entities.' +
+            lc(requestResourceId) +
+            '.' +
+            capitalize(requestResourceId) +
+            'Service'
+        ] = true;
+      }
     }
 
     // Path parameters
@@ -172,9 +183,9 @@ export const getJavaServerControllerImports = (
       }
       const resourceId = pathParameter?.['x-resourceId'];
       if (resourceId) {
-        const existingObjectPath =
-          JAVA_SERVER_PACKAGE + '.validation.existingobject.ExistingObject';
-        resources[existingObjectPath] = true;
+        const expandableObjectPath =
+          JAVA_SERVER_PACKAGE + '.validation.expandableobject.ExpandableObject';
+        resources[expandableObjectPath] = true;
         const servicePath =
           JAVA_SERVER_PACKAGE +
           '.entities.' +
@@ -263,9 +274,20 @@ export const getJavaServerImportsForProperty = (property: SchemaObject) => {
       capitalize(resourceId) +
       'DTO';
     res[resourcePath] = true;
+    const servicePath =
+      JAVA_SERVER_PACKAGE +
+      '.entities.' +
+      lc(resourceId) +
+      '.' +
+      capitalize(resourceId) +
+      'Service';
+    res[servicePath] = true;
     const expandablePath =
       JAVA_SERVER_PACKAGE + '.common.expandablefield.ExpandableField';
     res[expandablePath] = true;
+    const expandableObjectPath =
+      JAVA_SERVER_PACKAGE + '.validation.expandableobject.ExpandableObject';
+    res[expandableObjectPath] = true;
   });
 
   if (property.type === 'array') res['java.util.List'] = true;
@@ -316,7 +338,11 @@ export const getJavaServerImportsForProperty = (property: SchemaObject) => {
     }
   }
 
-  if (property['x-expandableField']) res['jakarta.validation.Valid'] = true;
+  if (property['x-resourceId']) {
+    res[JAVA_SERVER_PACKAGE + '.validation.validationgroups.Insert'] = true;
+    res[JAVA_SERVER_PACKAGE + '.validation.validationgroups.Update'] = true;
+    res['jakarta.validation.Valid'] = true;
+  }
 
   // If this is an array, check child items
   if (property.type === 'array') {
@@ -475,9 +501,9 @@ export const getJavaServerOperationParameters = (
       const resourceId = pathParameter?.['x-resourceId'];
       if (resourceId) {
         annotations.push(
-          '@ExistingObject(service = ' +
+          '@ExpandableObject(service = ' +
             capitalize(resourceId) +
-            'Service.class)',
+            'Service.class, mustExist = true)',
         );
       }
       parameters.push({
@@ -519,6 +545,14 @@ export const getJavaServerOperationParameters = (
       annotations.push('@Validated(Update.class)');
     } else {
       annotations.push('@Valid');
+    }
+
+    if (requestBody['x-resourceId'] != undefined) {
+      annotations.push(
+        '@ExpandableObject(service = ' +
+          capitalize(requestBody['x-resourceId']) +
+          'Service.class)',
+      );
     }
 
     // If we allow an ID in the request body, wrap the object in an ExpandableField

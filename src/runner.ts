@@ -60,13 +60,22 @@ const run = async (args: ParsedArgs) => {
       }
     });
 
-    // Mark properties as expandable fields for quick lookup
-    schema['x-expandableFields']?.forEach(async (expandableField: string) => {
-      let property = schema.properties?.[expandableField] as SchemaObject;
-      if (property) {
-        property['x-expandableField'] = expandableField;
+    // Find all properties that are expandable fields
+    for (const propertyName in schema.properties ?? {}) {
+      const property = schema.properties?.[propertyName] as SchemaObject;
+      const anyOf =
+        property.anyOf ?? (property.items as SchemaObject)?.anyOf ?? [];
+      if (
+        anyOf.length === 2 &&
+        (anyOf[0] as SchemaObject).type === 'string' &&
+        (anyOf[1] as SchemaObject).type === 'object'
+      ) {
+        const resourceId = (anyOf[1] as SchemaObject)['x-resourceId'];
+        if (resourceId) {
+          property['x-resourceId'] = resourceId;
+        }
       }
-    });
+    }
   }
 
   // Add query properties

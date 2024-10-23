@@ -62,9 +62,8 @@ public
     {{/eq}}
 
     {{#if x-resourceId}}
-      //{{x-resourceId}}
-      @IdOrNewObject(
-        service = {{capitalize resourceId}}Service.class,
+      @ExpandableObject(
+        service = {{capitalize x-resourceId}}Service.class,
         groups = {Insert.class, Update.class}
       )
     {{/if}}
@@ -83,7 +82,7 @@ public
       {{/if}}
     {{/if}}
 
-    {{#if x-expandableField}}
+    {{#if x-resourceId}}
     @Valid
     {{/if}}
 

@@ -53,7 +53,7 @@ export const validate = (
       {{/unless}}
 
       {{! Expandable fields }}
-      {{#if x-expandableField}}
+      {{#if x-resourceId}}
         {{! Unexpanded field}}
         (!expand['{{@key}}'] &&
           {{#eq type 'array'}}
