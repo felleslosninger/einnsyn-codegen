@@ -44,7 +44,7 @@ export const getOperations = (spec: OpenAPIObject) => {
     const entityName = capitalize(path.split('/')[1] ?? '');
     return [
       ...acc,
-      ...(['get', 'put', 'post', 'delete']
+      ...(['get', 'patch', 'post', 'delete']
         .map((requestMethodUntyped) => {
           const requestMethod = requestMethodUntyped as keyof PathItemObject;
           if (pathItemObject[requestMethod]) {
@@ -301,7 +301,7 @@ export const getOperationName = (operationMetadata: OperationMetadata) => {
   }
 
   const methodAlias =
-    method === 'post' ? 'add' : method === 'put' ? 'update' : method;
+    method === 'post' ? 'add' : method === 'patch' ? 'update' : method;
 
   // GetSaksmappe, PostSaksmappe operations should be named "get", "post"
   if (operationId === capitalize(method) + entityName) {
@@ -324,7 +324,7 @@ export const getOperationName = (operationMetadata: OperationMetadata) => {
       operationId.replace(stripPrefixRE, capitalize(methodAlias) + '$2'),
     );
     operationName = operationName.replace(/^post/, 'add');
-    operationName = operationName.replace(/^put/, 'update');
+    operationName = operationName.replace(/^patch/, 'update');
     return operationName;
   }
 };

@@ -23,7 +23,7 @@ public class {{entityName}}Controller {
   {{#each (entity-operation-list entityName)}}
     {{#eq (uc method) 'GET'}}@GetMapping("{{path}}"){{/eq}}
     {{#eq (uc method) 'POST'}}@PostMapping("{{path}}"){{/eq}}
-    {{#eq (uc method) 'PUT'}}@PutMapping("{{path}}"){{/eq}}
+    {{#eq (uc method) 'PATCH'}}@PatchMapping("{{path}}"){{/eq}}
     {{#eq (uc method) 'DELETE'}}@DeleteMapping("{{path}}"){{/eq}}
     public ResponseEntity<{{{java-server-response-type .}}}> {{operation-name .}}(
       {{#each (java-server-operation-parameters .)}}

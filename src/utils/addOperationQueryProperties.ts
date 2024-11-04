@@ -52,7 +52,7 @@ export const addOperationQueryProperties = (spec: OpenAPIObject) => {
   for (const path in spec.paths) {
     const pathItem = spec.paths[path];
     for (const requestMethod in pathItem) {
-      if (!['get', 'post', 'put', 'delete'].includes(requestMethod)) {
+      if (!['get', 'post', 'patch', 'delete'].includes(requestMethod)) {
         continue;
       }
 

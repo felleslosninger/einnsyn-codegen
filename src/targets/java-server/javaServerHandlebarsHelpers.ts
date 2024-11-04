@@ -153,7 +153,7 @@ export const getJavaServerControllerImports = (
         resources['org.springframework.validation.annotation.Validated'] = true;
         resources[JAVA_SERVER_PACKAGE + '.validation.validationgroups.Insert'] =
           true;
-      } else if (operationMetadata.method === 'put') {
+      } else if (operationMetadata.method === 'patch') {
         resources['org.springframework.validation.annotation.Validated'] = true;
         resources[JAVA_SERVER_PACKAGE + '.validation.validationgroups.Update'] =
           true;
@@ -241,8 +241,9 @@ export const getJavaServerControllerImports = (
         resources['org.springframework.web.bind.annotation.PostMapping'] = true;
         resources['org.springframework.web.bind.annotation.RequestBody'] = true;
         break;
-      case 'put':
-        resources['org.springframework.web.bind.annotation.PutMapping'] = true;
+      case 'patch':
+        resources['org.springframework.web.bind.annotation.PatchMapping'] =
+          true;
         resources['org.springframework.web.bind.annotation.RequestBody'] = true;
         break;
       case 'delete':
@@ -541,7 +542,7 @@ export const getJavaServerOperationParameters = (
     const annotations = ['@RequestBody'];
     if (operationMetadata.method === 'post') {
       annotations.push('@Validated(Insert.class)');
-    } else if (operationMetadata.method === 'put') {
+    } else if (operationMetadata.method === 'patch') {
       annotations.push('@Validated(Update.class)');
     } else {
       annotations.push('@Valid');

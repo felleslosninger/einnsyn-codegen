@@ -100,7 +100,7 @@ export const generate = async (
       }
     }
 
-    // Render body for POST/PUT operations with non-entity bodies
+    // Render body for POST/PATCH operations with non-entity bodies
     for (const operation of entityOperationList) {
       const requestBody = getRequestBodyResource(operation.operation);
       if (requestBody && !requestBody['x-resourceId']) {

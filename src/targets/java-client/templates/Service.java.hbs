@@ -51,7 +51,7 @@ public class {{capitalize className}}Service extends ApiService {
     String responseJSON = this.getRequester().request(
       {{#if (eq (uc method) 'GET')}}RequestMethod.GET{{/if}}
       {{#if (eq (uc method) 'POST')}}RequestMethod.POST{{/if}}
-      {{#if (eq (uc method) 'PUT')}}RequestMethod.PUT{{/if}}
+      {{#if (eq (uc method) 'PATCH')}}RequestMethod.PATCH{{/if}}
       {{#if (eq (uc method) 'DELETE')}}RequestMethod.DELETE{{/if}}
       , path
       {{#if operation.x-request-query.x-has-props}}, query{{/if}}
