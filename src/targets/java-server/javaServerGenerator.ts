@@ -18,9 +18,10 @@ import {
 import { getRenderer } from '../../utils/renderer';
 import { addJavaServerHandlebarsHelpers } from './javaServerHandlebarsHelpers';
 
-export const JAVA_SERVER_PACKAGE = 'no.einnsyn.apiv3';
+export const JAVA_SERVER_PACKAGE = 'no.einnsyn.backend';
 const JAVA_SERVER_TEMPLATE_PATH = './src/targets/java-server/templates';
-const JAVA_SERVER_OUT_PATH = './out/java-server/src/main/java/no/einnsyn/apiv3';
+const JAVA_SERVER_OUT_PATH =
+  './out/java-server/src/main/java/no/einnsyn/backend';
 
 export const generate = async (
   spec: OpenAPIObject,
