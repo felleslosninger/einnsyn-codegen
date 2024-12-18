@@ -17,6 +17,8 @@ export default class Parameter extends JavaPrimitive {
   }
 
   toString(): string {
-    return [this.printAnnotations(), `${this.type} ${this.name}`].join('\n');
+    return [this.printAnnotations(), `${this.type} ${this.name}`]
+      .filter((s) => s !== undefined)
+      .join('\n');
   }
 }

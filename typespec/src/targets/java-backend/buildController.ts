@@ -1,19 +1,17 @@
-import { EmitContext } from '@typespec/compiler';
+import { EmitContext, getDoc } from '@typespec/compiler';
 import { HttpOperation } from '@typespec/http';
 import { addAnnotations } from '../../languages/java/helpers/addAnnotations.js';
-import {
-  getDefaultValue,
-  getJavaType,
-  isFinal,
-} from '../../languages/java/helpers/modelPropertyHelpers.js';
+import { getJavaType } from '../../languages/java/helpers/javaHelpers.js';
 import Class from '../../languages/java/primitives/class.js';
 import Field from '../../languages/java/primitives/field.js';
 import JavaPrimitive from '../../languages/java/primitives/javaprimitive.js';
 import Method from '../../languages/java/primitives/method.js';
 import Parameter from '../../languages/java/primitives/parameter.js';
 import { getExtendedParameterModel } from '../../utils/controllerParameters.js';
-import { camelCase, getBodyProperty, pascalCase } from '../../utils/utils.js';
 import { buildModel } from './buildModel.js';
+import { camelCase, pascalCase } from '../../utils/stringutils.js';
+import { getDefaultValue } from '../../utils/getters.js';
+import { isFinal } from '../../utils/typecheckers.js';
 
 const requestMappingMap = {
   get: 'GetMapping',
@@ -27,10 +25,11 @@ const requestMappingMap = {
 export function buildController(
   context: EmitContext,
   parent: JavaPrimitive | undefined,
-  name: string,
+  entityName: string,
   httpOperations: HttpOperation[],
 ): Class {
-  const modelClass = new Class(context, parent, name + 'Controller');
+  const className = entityName + 'Controller';
+  const modelClass = new Class(context, parent, className);
   modelClass.addAnnotation(
     'org.springframework.web.bind.annotation.RestController',
   );
@@ -40,11 +39,19 @@ export function buildController(
     context,
     modelClass,
     'service',
-    name + 'Service',
+    entityName + 'Service',
   );
   serviceField.setFinal(true);
   serviceField.setVisibility('private');
   modelClass.addField(serviceField);
+
+  // Add constructor
+  const constructor = new Method(context, modelClass, className);
+  constructor.addParameter(
+    new Parameter(context, modelClass, 'service', entityName + 'Service'),
+  );
+  constructor.setBody(`this.service = service;`);
+  modelClass.addMethod(constructor);
 
   for (const httpOperation of httpOperations) {
     const { verb, path } = httpOperation;
@@ -53,13 +60,18 @@ export function buildController(
     const response = httpOperation.responses[0];
 
     // Create method
-    const returnType = getJavaType(response?.type, methodName + 'Response');
+    const returnType = getJavaType(
+      response?.type,
+      methodName + 'Response',
+      entityName,
+    );
     const method = new Method(
       context,
       modelClass,
-      methodName,
       'ResponseEntity<' + returnType + '>',
+      methodName,
     );
+    method.setDocumentation(getDoc(context.program, httpOperation.operation));
     modelClass.addMethod(method);
 
     // Add request mapping
@@ -79,7 +91,7 @@ export function buildController(
         context,
         method,
         parameterModel.name,
-        getJavaType(type, parameterModel.name),
+        getJavaType(type, parameterModel.name, entityName),
       );
       parameter.addAnnotation(
         'org.springframework.web.bind.annotation.PathVariable',
@@ -124,7 +136,7 @@ export function buildController(
             context,
             queryParameterModel,
             param.name,
-            getJavaType(param.type, param.name),
+            getJavaType(param.type, param.name, entityName),
           );
           addAnnotations(context, field, param, {
             required: operationParameter.type === 'path',
@@ -150,7 +162,7 @@ export function buildController(
         context,
         modelClass,
         'requestBody',
-        getJavaType(requestBody.type, requestBodyType),
+        getJavaType(requestBody.type, requestBodyType, entityName),
       );
       parameter.addAnnotation('jakarta.validation.Valid');
       parameter.addAnnotation('jakarta.validation.constraints.NotNull');
@@ -183,12 +195,12 @@ export function buildController(
     }
 
     let body = ``;
-    body += `var responseBody = service.${methodName}(${serviceParameters.join(', ')});`;
+    body += `var responseBody = service.${methodName}(${serviceParameters.join(', ')});\n`;
     if (verb === 'post') {
-      body += `URI uri = URI.create("/" + responseBody.getId());`;
-      body += `return ResponseEntity.created(uri).body(responseBody);`;
+      body += `URI uri = URI.create("/" + responseBody.getId());\n`;
+      body += `return ResponseEntity.created(uri).body(responseBody);\n`;
     } else {
-      body += `return ResponseEntity.ok(responseBody);`;
+      body += `return ResponseEntity.ok(responseBody);\n`;
     }
     method.setBody(body);
   }

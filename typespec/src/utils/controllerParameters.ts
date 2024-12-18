@@ -1,6 +1,5 @@
 import { Model } from '@typespec/compiler';
-import { HttpOperation, HttpOperationParameter } from '@typespec/http';
-import { pascalCase } from './utils.js';
+import { HttpOperationParameter } from '@typespec/http';
 
 /**
  * A parameter model represents a model (class) with multiple parameters, i.e. ListParameters, GetParameters etc.

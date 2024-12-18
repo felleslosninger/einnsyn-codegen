@@ -1,10 +1,11 @@
 import {
-  ArrayLiteralNode,
   BooleanLiteral,
   EmitContext,
   getFormat,
   getPattern,
   Model,
+  ModelProperty,
+  Namespace,
   NumericLiteral,
   Scalar,
   StringLiteral,
@@ -127,4 +128,69 @@ export function isBoolean(type: Type): type is BooleanLiteral {
     (type.kind === 'Scalar' && type.name === 'boolean') ||
     type.kind === 'Boolean'
   );
+}
+
+export function isEInnsynEntity(obj: Type): boolean {
+  return (
+    obj !== undefined &&
+    obj.kind === 'Model' &&
+    (obj.name === 'Base' ||
+      (obj.baseModel !== undefined && isEInnsynEntity(obj.baseModel)))
+  );
+}
+
+export function isEInnsynEntityNamespace(
+  namespace: Namespace | undefined,
+): boolean {
+  if (!namespace) {
+    return false;
+  }
+  for (const [key, model] of namespace.models) {
+    if (isEInnsynEntity(model)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Check if this is a union type with only eInnsyn entities
+ *
+ * @param type
+ * @returns
+ */
+export function isEInnsynEntityUnion(type: Type): boolean {
+  if (type.kind !== 'Union') {
+    return false;
+  }
+
+  if (type.variants.size < 2) {
+    return false;
+  }
+
+  // Check if there are any types that are not eInnsyn entities
+  for (const variant of type.variants.values()) {
+    if (variant.type.kind !== 'Model' || !isEInnsynEntity(variant.type)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+/**
+ * Check if the model property is a final constant
+ *
+ * @param modelProperty
+ * @returns
+ */
+export function isFinal(modelProperty: ModelProperty): boolean {
+  switch (modelProperty.type.kind) {
+    case 'String':
+    case 'Number':
+    case 'Boolean':
+      return true;
+    default:
+      return false;
+  }
 }

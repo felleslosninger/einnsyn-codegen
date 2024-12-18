@@ -1,17 +1,15 @@
-import { EmitContext, Model, ModelProperty } from '@typespec/compiler';
+import { EmitContext, Model } from '@typespec/compiler';
 import { Visibility } from '../../../types.js';
-import Field from './field.js';
-import Method from './method.js';
-import JavaPrimitive from './javaprimitive.js';
 import Enum from './enum.js';
-import { getJavaPackageName } from '../helpers/modelPropertyHelpers.js';
-import { isEInnsynEntity } from '../../../utils/utils.js';
+import Field from './field.js';
+import JavaPrimitive from './javaprimitive.js';
+import Method from './method.js';
+import { isEInnsynEntity } from '../../../utils/typecheckers.js';
 
 export default class Class extends JavaPrimitive {
   private abstract = false;
   private visibility: Visibility = 'public';
   private name: string;
-  private extendModel?: Model;
   private extends?: string;
   private implements: string[] = [];
   private fields: Field[] = [];
@@ -33,7 +31,6 @@ export default class Class extends JavaPrimitive {
       const extendClassName = isEInnsynEntity(extendModel)
         ? extendModel.name + 'DTO'
         : extendModel.name;
-      this.extendModel = extendModel;
       this.extends = extendClassName;
       this.addImport(extendModel);
     }
@@ -43,8 +40,17 @@ export default class Class extends JavaPrimitive {
     this.abstract = abstract;
   }
 
+  /**
+   * Add "implements" to the class. Generics are stripped and must be imported manually. If the class name starts with `@`, it is not imported.
+   *
+   * @param i
+   */
   addImplements(i: string) {
-    this.addImport(i);
+    if (!i.startsWith('@')) {
+      const withoutGenerics = i.split('<')[0];
+      this.addImport(withoutGenerics);
+    }
+
     const className = i.split('.').slice(-1)[0];
     this.implements.push(className);
   }
@@ -73,6 +79,7 @@ export default class Class extends JavaPrimitive {
 
   toString(): string {
     return [
+      this.printDocumentation(),
       this.printAnnotations(),
 
       // Write class + extends + implements

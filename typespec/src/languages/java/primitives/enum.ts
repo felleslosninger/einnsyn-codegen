@@ -1,7 +1,7 @@
 import { EmitContext } from '@typespec/compiler';
 import { Visibility } from '../../../types.js';
 import JavaPrimitive from './javaprimitive.js';
-import { constVarName } from '../../../utils/utils.js';
+import { constVarName } from '../../../utils/stringutils.js';
 
 export default class Enum extends JavaPrimitive {
   private visibility: Visibility = 'public';
@@ -27,6 +27,7 @@ export default class Enum extends JavaPrimitive {
 
   toString(): string {
     return [
+      this.printDocumentation(),
       `${this.visibility} enum ${this.name} {`,
       this.values.map((v) => `${constVarName(v)}("${v}")`).join(',\n') + ';',
       '',
@@ -46,6 +47,8 @@ export default class Enum extends JavaPrimitive {
       `    throw new IllegalArgumentException("Unknown value: " + value);`,
       `  }`,
       '}',
-    ].join('\n');
+    ]
+      .filter((s) => s !== undefined)
+      .join('\n');
   }
 }

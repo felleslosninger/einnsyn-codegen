@@ -19,10 +19,11 @@ import {
   isNumberUnion,
   isStringUnion,
   isUrl,
-} from '../../../utils/typeHelpers.js';
+} from '../../../utils/typecheckers.js';
 import JavaPrimitive from '../primitives/javaprimitive.js';
-import { getEInnsynEntityFromType, pascalCase } from '../../../utils/utils.js';
-import { getJavaPackageName } from './modelPropertyHelpers.js';
+import { getExpandableEntity } from '../../../utils/getters.js';
+import { getJavaPackageName } from './javaHelpers.js';
+import { pascalCase } from '../../../utils/stringutils.js';
 
 type ExcludeAnnotations = {
   validate?: boolean;
@@ -127,7 +128,7 @@ export function addAnnotations(
       );
     }
 
-    const entity = getEInnsynEntityFromType(modelProperty.type);
+    const entity = getExpandableEntity(modelProperty.type);
     if (entity) {
       const serviceName = pascalCase(entity.name) + 'Service';
       javaPrimitive.addImport(getJavaPackageName(entity) + '.' + serviceName);

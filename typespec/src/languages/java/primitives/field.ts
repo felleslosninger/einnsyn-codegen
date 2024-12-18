@@ -43,6 +43,7 @@ export default class Field extends JavaPrimitive {
 
   toString(): string {
     return [
+      this.printDocumentation(),
       this.printAnnotations() || undefined,
       `${this.visibility ? `${this.visibility} ` : ''}${
         this.isFinal ? 'final ' : ''

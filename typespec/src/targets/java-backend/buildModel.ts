@@ -1,20 +1,23 @@
-import { EmitContext, isTemplateDeclaration, Model } from '@typespec/compiler';
-import { addAnnotations } from '../../languages/java/helpers/addAnnotations.js';
 import {
-  getDefaultValue,
-  getJavaType,
-  isFinal,
-} from '../../languages/java/helpers/modelPropertyHelpers.js';
+  EmitContext,
+  getDoc,
+  isTemplateDeclaration,
+  Model,
+} from '@typespec/compiler';
+import { addAnnotations } from '../../languages/java/helpers/addAnnotations.js';
+import { getJavaType } from '../../languages/java/helpers/javaHelpers.js';
 import Class from '../../languages/java/primitives/class.js';
 import Enum from '../../languages/java/primitives/enum.js';
 import Field from '../../languages/java/primitives/field.js';
 import JavaPrimitive from '../../languages/java/primitives/javaprimitive.js';
-import { isNumberUnion, isStringUnion } from '../../utils/typeHelpers.js';
 import {
-  getBodyProperty,
   isEInnsynEntity,
-  pascalCase,
-} from '../../utils/utils.js';
+  isFinal,
+  isNumberUnion,
+  isStringUnion,
+} from '../../utils/typecheckers.js';
+import { getBodyPropertyModel, getDefaultValue } from '../../utils/getters.js';
+import { pascalCase } from '../../utils/stringutils.js';
 
 export function buildModel(
   context: EmitContext,
@@ -24,6 +27,8 @@ export function buildModel(
 ): Class {
   const isEntityModel = isEInnsynEntity(model);
   const modelClass = new Class(context, parent, className, model.baseModel);
+  const entityName = model.name;
+  modelClass.setDocumentation(getDoc(context.program, model));
   modelClass.addAnnotation('lombok.Getter');
 
   // Add import for base model (if any)
@@ -33,19 +38,16 @@ export function buildModel(
   }
 
   // Get properties from @body property if there is one
-  const bodyProperty = getBodyProperty(model);
-  const properties =
-    bodyProperty?.type.kind === 'Model'
-      ? bodyProperty.type.properties
-      : model.properties;
+  const targetModel = getBodyPropertyModel(model) ?? model;
+  const properties = targetModel.properties;
 
   // The base entity model should implement HasId
   if (isEntityModel && !model.baseModel) {
     modelClass.addImplements('no.einnsyn.backend.common.hasid.HasId');
-    modelClass.addAnnotation('lombok.Setter');
   }
 
   // Add generics if this is a template declaration
+  // (currently not supported by TypeSpec?)
   if (isTemplateDeclaration(model)) {
     // console.log(className);
     // console.log(model.templateMapper);
@@ -56,22 +58,23 @@ export function buildModel(
     }
   }
 
-  // Make class abstract if this model has derived models
-  if (model.derivedModels.length > 0) {
-    modelClass.setAbstract(true);
-  }
-
   // Add fields
   for (const modelProperty of properties.values()) {
+    const rawType = getJavaType(
+      modelProperty.type,
+      modelProperty.name,
+      entityName,
+    );
+    const propertyType = isEInnsynEntity(modelProperty.type)
+      ? `ExpandableField<${rawType}>`
+      : rawType;
     const field = new Field(
       context,
       modelClass,
       modelProperty.name,
-      getJavaType(modelProperty.type, modelProperty.name),
+      propertyType,
     );
-    if (modelProperty.name === 'items') {
-      //console.log(modelProperty);
-    }
+    field.setDocumentation(getDoc(context.program, modelProperty));
     addAnnotations(context, field, modelProperty);
     field.setFinal(isFinal(modelProperty));
     field.setValue(getDefaultValue(modelProperty));
@@ -104,6 +107,7 @@ export function buildModel(
         ? modelProperty.type.indexer.value
         : modelProperty.type;
 
+    // Create sub model if this is a model without a name
     if (targetModel.kind === 'Model' && !targetModel.name) {
       const subModel = buildModel(
         context,
@@ -113,8 +117,6 @@ export function buildModel(
       );
       modelClass.addClass(subModel);
     }
-
-    // TODO: Add potential sub-model
   }
 
   return modelClass;

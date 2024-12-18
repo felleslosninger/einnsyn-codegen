@@ -4,8 +4,8 @@ import JavaPrimitive from './javaprimitive.js';
 
 export class JavaFile extends JavaPrimitive {
   private header = `
-// Auto-generated from our OpenAPI spec
-// https://github.com/felleslosninger/ein-openapi/
+// Auto-generated from our API specification
+// https://github.com/felleslosninger/einnsyn-api
   `.trim();
 
   private packageName: string;

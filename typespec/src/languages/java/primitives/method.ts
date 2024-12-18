@@ -4,7 +4,7 @@ import JavaPrimitive from './javaprimitive.js';
 import Parameter from './parameter.js';
 
 export default class Method extends JavaPrimitive {
-  private name: string;
+  private name?: string;
   private visibility: Visibility = 'public';
   private parameters: Parameter[];
   private returnType: string;
@@ -13,8 +13,8 @@ export default class Method extends JavaPrimitive {
   constructor(
     context: EmitContext,
     parent: JavaPrimitive | undefined,
-    name: string,
     returnType: string,
+    name?: string,
   ) {
     super(context, parent);
     this.name = name;
@@ -33,12 +33,15 @@ export default class Method extends JavaPrimitive {
 
   toString(): string {
     return [
+      this.printDocumentation(),
       this.printAnnotations(),
-      `${this.visibility ? `${this.visibility} ` : ''}${this.returnType} ${this.name}(${this.parameters
+      `${this.visibility ? `${this.visibility} ` : ''}${this.returnType} ${this.name || ''}(${this.parameters
         .map((p) => `${p.toString()}`)
         .join(', ')}) {`,
       ` ${this.body}`,
       '}',
-    ].join('\n');
+    ]
+      .filter((s) => s !== undefined)
+      .join('\n');
   }
 }
