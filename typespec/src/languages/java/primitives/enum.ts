@@ -1,7 +1,7 @@
 import { EmitContext } from '@typespec/compiler';
 import { Visibility } from '../../../types.js';
-import JavaPrimitive from './javaprimitive.js';
 import { constVarName } from '../../../utils/stringutils.js';
+import JavaPrimitive from './javaprimitive.js';
 
 export default class Enum extends JavaPrimitive {
   private visibility: Visibility = 'public';

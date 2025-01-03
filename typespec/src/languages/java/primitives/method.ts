@@ -9,6 +9,7 @@ export default class Method extends JavaPrimitive {
   private parameters: Parameter[];
   private returnType: string;
   private body: string;
+  private throws: string[] = [];
 
   constructor(
     context: EmitContext,
@@ -27,6 +28,15 @@ export default class Method extends JavaPrimitive {
     this.parameters.push(parameter);
   }
 
+  addThrows(exception: string) {
+    this.addImport(exception);
+    this.throws.push(exception.split('.').slice(-1)[0]);
+  }
+
+  printThrows() {
+    return this.throws.length > 0 ? `throws ${this.throws.join(', ')}` : '';
+  }
+
   setBody(body: string) {
     this.body = body;
   }
@@ -37,7 +47,7 @@ export default class Method extends JavaPrimitive {
       this.printAnnotations(),
       `${this.visibility ? `${this.visibility} ` : ''}${this.returnType} ${this.name || ''}(${this.parameters
         .map((p) => `${p.toString()}`)
-        .join(', ')}) {`,
+        .join(', ')})${this.printThrows()} {`,
       ` ${this.body}`,
       '}',
     ]

@@ -1,10 +1,10 @@
 import { EmitContext, Model } from '@typespec/compiler';
 import { Visibility } from '../../../types.js';
+import { getJavaType } from '../helpers/javaHelpers.js';
 import Enum from './enum.js';
 import Field from './field.js';
 import JavaPrimitive from './javaprimitive.js';
 import Method from './method.js';
-import { isEInnsynEntity } from '../../../utils/typecheckers.js';
 
 export default class Class extends JavaPrimitive {
   private abstract = false;
@@ -28,10 +28,7 @@ export default class Class extends JavaPrimitive {
     this.name = name;
 
     if (extendModel) {
-      const extendClassName = isEInnsynEntity(extendModel)
-        ? extendModel.name + 'DTO'
-        : extendModel.name;
-      this.extends = extendClassName;
+      this.extends = getJavaType(extendModel);
       this.addImport(extendModel);
     }
   }

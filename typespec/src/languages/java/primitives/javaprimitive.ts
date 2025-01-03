@@ -1,8 +1,10 @@
 import { EmitContext, Model } from '@typespec/compiler';
-import { JavaFile } from './javafile.js';
+import { getDependentModels } from '../../../utils/getters.js';
 import { Primitive } from '../../common/primitive.js';
-import { getJavaPackageName } from '../helpers/javaHelpers.js';
-import { pascalCase } from '../../../utils/stringutils.js';
+import {
+  getJavaModelPackageName,
+  getJavaType,
+} from '../helpers/javaHelpers.js';
 
 export default abstract class JavaPrimitive implements Primitive {
   context: EmitContext;
@@ -18,19 +20,26 @@ export default abstract class JavaPrimitive implements Primitive {
 
   addImport(...models: Model[]): void;
   addImport(...packageNames: string[]): void;
-  addImport(...args: string[] | Model[]): void {
+  addImport(...args: (string | Model)[]): void {
     for (const packageNameOrModel of args) {
-      const packageName =
-        typeof packageNameOrModel === 'string'
-          ? packageNameOrModel
-          : getJavaPackageName(packageNameOrModel) +
-            '.' +
-            pascalCase(packageNameOrModel.name + 'DTO');
+      // Resolve required package names from model
+      if (typeof packageNameOrModel !== 'string') {
+        const models = getDependentModels(packageNameOrModel);
+        const packageNames = models
+          .filter((model) => !!model.name)
+          .map(
+            (model) =>
+              getJavaModelPackageName(model) +
+              '.' +
+              getJavaType(model).split('<')[0],
+          );
+        return this.addImport(...packageNames);
+      }
 
       if (this.parent === undefined) {
-        this.imports[packageName] = true;
+        this.imports[packageNameOrModel] = true;
       } else {
-        this.parent.addImport(packageName);
+        this.parent.addImport(packageNameOrModel);
       }
     }
   }

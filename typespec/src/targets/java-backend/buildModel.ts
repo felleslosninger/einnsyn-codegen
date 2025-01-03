@@ -10,14 +10,14 @@ import Class from '../../languages/java/primitives/class.js';
 import Enum from '../../languages/java/primitives/enum.js';
 import Field from '../../languages/java/primitives/field.js';
 import JavaPrimitive from '../../languages/java/primitives/javaprimitive.js';
+import { getBodyPropertyModel, getDefaultValue } from '../../utils/getters.js';
+import { pascalCase } from '../../utils/stringutils.js';
 import {
   isEInnsynEntity,
   isFinal,
   isNumberUnion,
   isStringUnion,
 } from '../../utils/typecheckers.js';
-import { getBodyPropertyModel, getDefaultValue } from '../../utils/getters.js';
-import { pascalCase } from '../../utils/stringutils.js';
 
 export function buildModel(
   context: EmitContext,
@@ -30,6 +30,7 @@ export function buildModel(
   const entityName = model.name;
   modelClass.setDocumentation(getDoc(context.program, model));
   modelClass.addAnnotation('lombok.Getter');
+  modelClass.addAnnotation('lombok.Setter');
 
   // Add import for base model (if any)
   const baseModel = model.baseModel;
@@ -49,10 +50,6 @@ export function buildModel(
   // Add generics if this is a template declaration
   // (currently not supported by TypeSpec?)
   if (isTemplateDeclaration(model)) {
-    // console.log(className);
-    // console.log(model.templateMapper);
-    // console.log(model.templateNode);
-    // console.log(model.node.templateParameters);
     for (const templateParameter of model.node.templateParameters) {
       modelClass.addGeneric(templateParameter.symbol?.name);
     }

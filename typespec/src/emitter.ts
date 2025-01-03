@@ -1,15 +1,5 @@
-import {
-  EmitContext,
-  ignoreDiagnostics,
-  Model,
-  Namespace,
-  Program,
-} from '@typespec/compiler';
-import {
-  getAllHttpServices,
-  getHttpOperation,
-  HttpOperation,
-} from '@typespec/http';
+import { EmitContext, ignoreDiagnostics } from '@typespec/compiler';
+import { getAllHttpServices } from '@typespec/http';
 import javaBackendEmitter from './targets/java-backend/emit.js';
 
 export async function $onEmit(context: EmitContext) {

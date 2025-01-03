@@ -51,7 +51,6 @@ export function getJavaType(
       );
     }
     // This is a generic alias. Not yet supported by TypeSpec
-    //console.log(type.templateNode?.templateParameters);
     return 'List<unknown>';
   }
 
@@ -100,16 +99,25 @@ export function getJavaType(
   return 'unknown';
 }
 
-export function getJavaPackageName(obj: Model | Namespace): string {
-  const path = getJavaPathArray(obj);
+export function getJavaEntityPackageName(obj: Model | Namespace): string {
+  const path = getJavaEntityPathArray(obj);
   return path.join('.').toLowerCase();
 }
 
-export function getJavaPathName(obj: Model | Namespace): string {
-  return getJavaPathArray(obj).join('/').toLowerCase();
+export function getJavaModelPackageName(model: Model | Namespace): string {
+  const path = getJavaModelPathArray(model);
+  return path.join('.').toLowerCase();
 }
 
-export function getJavaPathArray(obj: Model | Namespace): string[] {
+export function getJavaEntityPathName(obj: Model | Namespace): string {
+  return getJavaEntityPathArray(obj).join('/').toLowerCase();
+}
+
+export function getJavaModelPathName(model: Model | Namespace): string {
+  return getJavaModelPathArray(model).join('/').toLowerCase();
+}
+
+export function getJavaEntityPathArray(obj: Model | Namespace): string[] {
   const path = ['no', 'einnsyn', 'backend'];
   const namespace = obj.kind === 'Model' ? obj.namespace : obj;
 
@@ -126,4 +134,10 @@ export function getJavaPathArray(obj: Model | Namespace): string[] {
   }
 
   return path;
+}
+
+export function getJavaModelPathArray(model: Model | Namespace): string[] {
+  const pathArray = getJavaEntityPathArray(model);
+  pathArray.push('models');
+  return pathArray;
 }

@@ -1,5 +1,8 @@
 import { EmitContext, Union } from '@typespec/compiler';
-import { getJavaType } from '../../languages/java/helpers/javaHelpers.js';
+import {
+  getJavaModelPackageName,
+  getJavaType,
+} from '../../languages/java/helpers/javaHelpers.js';
 import Class from '../../languages/java/primitives/class.js';
 import Field from '../../languages/java/primitives/field.js';
 import JavaPrimitive from '../../languages/java/primitives/javaprimitive.js';
@@ -19,16 +22,17 @@ export function buildUnionModel(
   modelClass.addImplements('no.einnsyn.backend.common.hasid.HasId');
 
   // Add id field
-  const allFields = [{ name: 'id', type: 'String' }];
+  const unionFields: { name: string; type: string }[] = [];
   for (const [a, unionVariant] of model.variants) {
     const type = unionVariant.type;
     if (type.kind === 'Model') {
-      allFields.push({
+      unionFields.push({
         name: camelCase(type.name.toString()),
         type: getJavaType(type, '', entityName),
       });
     }
   }
+  const allFields = [{ name: 'id', type: 'String' }, ...unionFields];
 
   for (const { name, type } of allFields) {
     // Add field variable
@@ -42,6 +46,37 @@ export function buildUnionModel(
     constructor.setBody(`this.${name} = ${name};`);
     modelClass.addMethod(constructor);
   }
+
+  // Add expandable field constructor
+  const expandableFieldConstructor = new Method(
+    context,
+    modelClass,
+    entityName,
+  );
+  modelClass.addMethod(expandableFieldConstructor);
+  modelClass.addImport(
+    'no.einnsyn.backend.common.expandablefield.ExpandableField',
+  );
+  expandableFieldConstructor.addParameter(
+    new Parameter(context, modelClass, 'expandableField', 'ExpandableField<?>'),
+  );
+  let expandableConstructorBody: string[] = [];
+  expandableConstructorBody.push('this.id = expandableField.getId();');
+  expandableConstructorBody.push(
+    'var obj = expandableField.getExpandedObject();',
+  );
+  expandableConstructorBody.push('if (obj == null) return;');
+  expandableConstructorBody.push('switch (obj) {');
+  for (const { name, type } of unionFields) {
+    expandableConstructorBody.push(
+      `case ${type} typedObj -> this.${name} = typedObj;`,
+    );
+  }
+  expandableConstructorBody.push(
+    'default -> throw new IllegalArgumentException("Unsupported object type: " + obj.getClass().getName());',
+  );
+  expandableConstructorBody.push('}');
+  expandableFieldConstructor.setBody(expandableConstructorBody.join('\n'));
 
   // Add checkers for each type
   for (const [, unionVariant] of model.variants) {
@@ -57,6 +92,7 @@ export function buildUnionModel(
       modelClass.addMethod(method);
       modelClass.addImport(type);
       modelClass.addImport('no.einnsyn.backend.utils.idgenerator.IdGenerator');
+      modelClass.addImport(getJavaModelPackageName(type) + '.' + className);
     }
   }
 

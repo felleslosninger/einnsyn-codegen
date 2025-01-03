@@ -14,38 +14,67 @@ import {
 } from '@typespec/compiler';
 
 export type UrlType = Scalar;
-export function isUrl(context: EmitContext, type: Type): type is UrlType {
+export function isUrlProperty(
+  context: EmitContext,
+  type: Type,
+): type is UrlType {
   return (
-    type.kind === 'Scalar' &&
-    (type.name === 'url' || getFormat(context.program, type) === 'url')
+    (type.kind === 'ModelProperty' &&
+      (getFormat(context.program, type) === 'url' ||
+        (type.type.kind === 'Scalar' && type.type.name === 'url'))) ||
+    (type.kind === 'Scalar' && type.name === 'url')
   );
 }
 
 export type EmailType = Scalar;
-export function isEmail(context: EmitContext, type: Type): type is EmailType {
+export function isEmailProperty(
+  context: EmitContext,
+  type: Type,
+): type is EmailType {
   return (
-    type.kind === 'Scalar' &&
-    (type.name === 'email' || getFormat(context.program, type) === 'email')
+    (type.kind === 'ModelProperty' &&
+      (getFormat(context.program, type) === 'email' ||
+        (type.type.kind === 'Scalar' && type.type.name === 'email'))) ||
+    (type.kind === 'Scalar' && type.name === 'email')
   );
 }
 
 export type DateType = Scalar;
-export function isDate(context: EmitContext, type: Type): type is DateType {
+export function isDateProperty(
+  context: EmitContext,
+  type: Type,
+): type is DateType {
   return (
-    type.kind === 'Scalar' &&
-    (type.name === 'plainDate' || getFormat(context.program, type) === 'date')
+    (type.kind === 'ModelProperty' &&
+      (getFormat(context.program, type) === 'date' ||
+        (type.type.kind === 'Scalar' && type.type.name === 'plainDate'))) ||
+    (type.kind === 'Scalar' && type.name === 'plainDate')
   );
 }
 
 export type DateTimeType = Scalar;
-export function isDateTime(
+export function isDateTimeProperty(
   context: EmitContext,
   type: Type,
 ): type is DateTimeType {
   return (
-    type.kind === 'Scalar' &&
-    (type.name === 'utcDateTime' ||
-      getFormat(context.program, type) === 'date-time')
+    (type.kind === 'ModelProperty' &&
+      (getFormat(context.program, type) === 'date-time' ||
+        (type.type.kind === 'Scalar' && type.type.name === 'utcDateTime'))) ||
+    (type.kind === 'Scalar' && type.name === 'utcDateTime')
+  );
+}
+
+export type PasswordType = Scalar;
+export function isPasswordProperty(
+  context: EmitContext,
+  type: Type,
+): type is PasswordType {
+  return (
+    (type.kind === 'ModelProperty' &&
+      (getFormat(context.program, type) === 'password' ||
+        (type.type.kind === 'Scalar' && type.type.name === 'password'))) ||
+    (type.kind === 'Scalar' && type.name === 'password')
   );
 }
 
@@ -85,12 +114,13 @@ export function isNumberUnion(type: Type): type is NumberUnionType {
   return true;
 }
 
-export function isDefaultString(context: EmitContext, type: Type) {
+export function isDefaultString(context: EmitContext, modelProperty: Type) {
   return (
-    type.kind === 'Scalar' &&
-    type.name === 'string' &&
-    !getFormat(context.program, type) &&
-    !getPattern(context.program, type)
+    modelProperty.kind === 'ModelProperty' &&
+    modelProperty.type.kind === 'Scalar' &&
+    modelProperty.type.name === 'string' &&
+    !getFormat(context.program, modelProperty) &&
+    !getPattern(context.program, modelProperty)
   );
 }
 
@@ -130,13 +160,38 @@ export function isBoolean(type: Type): type is BooleanLiteral {
   );
 }
 
-export function isEInnsynEntity(obj: Type): boolean {
+export function isEInnsynEntity(type?: Type): boolean {
   return (
-    obj !== undefined &&
-    obj.kind === 'Model' &&
-    (obj.name === 'Base' ||
-      (obj.baseModel !== undefined && isEInnsynEntity(obj.baseModel)))
+    type !== undefined &&
+    type.kind === 'Model' &&
+    (type.name === 'Base' ||
+      (type.baseModel !== undefined && isEInnsynEntity(type.baseModel)))
   );
+}
+
+export function isExpandableField(type?: Type): boolean {
+  if (type === undefined) {
+    return false;
+  }
+
+  if (type.kind !== 'Union') {
+    return false;
+  }
+
+  if (type.variants.size !== 2) {
+    return false;
+  }
+
+  const variants = Array.from(type.variants.values());
+  if (!variants.find((variant) => isEInnsynId(variant.type))) {
+    return false; // No eInnsynId
+  }
+
+  if (!variants.find((variant) => isEInnsynEntity(variant.type))) {
+    return false; // No eInnsynEntity
+  }
+
+  return true;
 }
 
 export function isEInnsynEntityNamespace(
@@ -159,7 +214,11 @@ export function isEInnsynEntityNamespace(
  * @param type
  * @returns
  */
-export function isEInnsynEntityUnion(type: Type): boolean {
+export function isEInnsynEntityUnion(type?: Type): boolean {
+  if (type === undefined) {
+    return false;
+  }
+
   if (type.kind !== 'Union') {
     return false;
   }

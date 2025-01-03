@@ -1,6 +1,7 @@
 import {
   EmitContext,
   getMaxLength,
+  getMaxValue,
   getMinLength,
   getMinValue,
   getPattern,
@@ -10,20 +11,23 @@ import {
 } from '@typespec/compiler';
 import { isReadonlyProperty } from '@typespec/openapi';
 import {
-  isDate,
-  isDateTime,
+  getDefaultValue,
+  getExpandableEntity,
+} from '../../../utils/getters.js';
+import { pascalCase } from '../../../utils/stringutils.js';
+import {
+  isDateProperty,
+  isDateTimeProperty,
   isDefaultString,
-  isEInnsynId,
-  isEmail,
+  isEmailProperty,
   isList,
   isNumberUnion,
+  isPasswordProperty,
   isStringUnion,
-  isUrl,
+  isUrlProperty,
 } from '../../../utils/typecheckers.js';
 import JavaPrimitive from '../primitives/javaprimitive.js';
-import { getExpandableEntity } from '../../../utils/getters.js';
-import { getJavaPackageName } from './javaHelpers.js';
-import { pascalCase } from '../../../utils/stringutils.js';
+import { getJavaEntityPackageName } from './javaHelpers.js';
 
 type ExcludeAnnotations = {
   validate?: boolean;
@@ -39,43 +43,32 @@ export function addAnnotations(
   type: Type = modelProperty.type,
 ) {
   if (!exclude.validate) {
-    if (isUrl(context, type)) {
+    if (isUrlProperty(context, modelProperty ?? type)) {
       javaPrimitive.addAnnotation('org.hibernate.validator.constraints.URL');
     }
 
-    if (isEmail(context, type)) {
+    if (isEmailProperty(context, modelProperty ?? type)) {
       javaPrimitive.addAnnotation('jakarta.validation.constraints.Email');
     }
 
-    if (isDate(context, type)) {
+    if (isDateProperty(context, modelProperty ?? type)) {
       javaPrimitive.addAnnotation(
-        'no.einnsyn.backend.validation.isodatetime.IsoDate',
-        'format = IsoDate.Format.ISO_DATE',
+        'no.einnsyn.backend.validation.isodatetime.IsoDateTime',
+        'format = IsoDateTime.Format.ISO_DATE',
       );
     }
 
-    if (isDateTime(context, type)) {
+    if (isDateTimeProperty(context, modelProperty ?? type)) {
       javaPrimitive.addAnnotation(
         'no.einnsyn.backend.validation.isodatetime.IsoDateTime',
         'format = IsoDateTime.Format.ISO_DATE_TIME',
       );
     }
 
-    if (isEInnsynId(type)) {
-      // Detect entity type from template argument
-      const generic = type.templateMapper?.args[0];
-      const entityModel =
-        generic?.entityKind === 'Type' && generic.kind === 'Model' && generic;
-      if (entityModel) {
-        const serviceName = pascalCase(entityModel.name) + 'Service';
-        javaPrimitive.addImport(
-          getJavaPackageName(entityModel) + '.' + serviceName,
-        );
-        javaPrimitive.addAnnotation(
-          'no.einnsyn.backend.validation.expandableobject.ExpandableObject',
-          `service = ${serviceName}.class, mustExist = true`,
-        );
-      }
+    if (isPasswordProperty(context, modelProperty ?? type)) {
+      javaPrimitive.addAnnotation(
+        'no.einnsyn.backend.validation.password.Password',
+      );
     }
 
     const pattern = getPattern(context.program, modelProperty);
@@ -113,7 +106,7 @@ export function addAnnotations(
       );
     }
 
-    const maxValue = getMaxLength(context.program, modelProperty);
+    const maxValue = getMaxValue(context.program, modelProperty);
     if (maxValue !== undefined) {
       javaPrimitive.addAnnotation(
         'jakarta.validation.constraints.Max',
@@ -124,28 +117,34 @@ export function addAnnotations(
     if (isStringUnion(type) || isNumberUnion(type)) {
       javaPrimitive.addAnnotation(
         'no.einnsyn.backend.validation.validenum.ValidEnum',
-        `enumClass = {${pascalCase(modelProperty.name)}Enum.class}`,
+        `enumClass = ${pascalCase(modelProperty.name)}Enum.class`,
       );
     }
 
-    const entity = getExpandableEntity(modelProperty.type);
+    const entity = getExpandableEntity(type);
     if (entity) {
       const serviceName = pascalCase(entity.name) + 'Service';
-      javaPrimitive.addImport(getJavaPackageName(entity) + '.' + serviceName);
+      javaPrimitive.addImport(entity);
+      javaPrimitive.addImport(
+        getJavaEntityPackageName(entity) + '.' + serviceName,
+      );
       javaPrimitive.addImport(
         'no.einnsyn.backend.validation.validationgroups.Insert',
       );
       javaPrimitive.addImport(
         'no.einnsyn.backend.validation.validationgroups.Update',
       );
-      javaPrimitive.addAnnotation('jakarta.validation.Valid');
+      javaPrimitive.addImport(
+        'no.einnsyn.backend.common.expandablefield.ExpandableField',
+      );
       javaPrimitive.addAnnotation(
         'no.einnsyn.backend.validation.expandableobject.ExpandableObject',
         `service = ${serviceName}.class, groups = {Insert.class, Update.class}`,
       );
+      javaPrimitive.addAnnotation('jakarta.validation.Valid');
     }
 
-    if (isDefaultString(context, type)) {
+    if (isDefaultString(context, modelProperty)) {
       javaPrimitive.addAnnotation('no.einnsyn.backend.validation.nossn.NoSSN');
       if (maxLength === undefined && minLength === undefined) {
         javaPrimitive.addAnnotation(
@@ -158,6 +157,7 @@ export function addAnnotations(
 
   if (isList(type) && type.kind === 'Model') {
     if (type.indexer !== undefined) {
+      javaPrimitive.addImport('java.util.List');
       addAnnotations(
         context,
         javaPrimitive,
@@ -170,7 +170,8 @@ export function addAnnotations(
   }
 
   const isReadOnly = isReadonlyProperty(context.program, modelProperty);
-  if (!exclude.readOnly && isReadOnly) {
+  const value = getDefaultValue(modelProperty);
+  if (!exclude.readOnly && isReadOnly && value === undefined) {
     javaPrimitive.addImport(
       'no.einnsyn.backend.validation.validationgroups.Insert',
     );

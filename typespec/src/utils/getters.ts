@@ -1,5 +1,6 @@
 import {
   ignoreDiagnostics,
+  isType,
   Model,
   ModelProperty,
   Namespace,
@@ -9,7 +10,11 @@ import {
 import { getHttpOperation, HttpOperation } from '@typespec/http';
 import { isEInnsynEntity } from './typecheckers.js';
 
-export function getExpandableEntity(type: Type): Model | undefined {
+export function getExpandableEntity(type?: Type): Model | undefined {
+  if (type === undefined) {
+    return;
+  }
+
   if (type.kind !== 'Union') {
     return;
   }
@@ -51,18 +56,18 @@ export function getNamespacePath(namespace: Namespace): string[] {
   return path;
 }
 
-export function getBodyPropertyModel(model: Model): Model | undefined {
+export function getBodyPropertyType(model: Model): Type | undefined {
   for (const [key, value] of model.properties) {
-    if (
-      value?.decorators.find(
-        (d) => d.definition?.name === '@body' && value.type.kind === 'Model',
-      )
-    ) {
-      // This is already checked, but we need to satisfy the type checker
-      if (value.type.kind === 'Model') {
-        return value.type;
-      }
+    if (value?.decorators.find((d) => d.definition?.name === '@body')) {
+      return value.type;
     }
+  }
+}
+
+export function getBodyPropertyModel(model: Model): Model | undefined {
+  const bodyPropertyType = getBodyPropertyType(model);
+  if (bodyPropertyType?.kind === 'Model') {
+    return bodyPropertyType;
   }
 }
 
@@ -123,12 +128,48 @@ export function getOperationsByNamespace(
   }
 
   if (httpOperations.length > 0) {
+    httpOperations.sort((a, b) => {
+      if (a.path === b.path) {
+        return a.verb.localeCompare(b.verb);
+      }
+      return a.path.localeCompare(b.path);
+    });
     result.push([namespace, httpOperations]);
   }
 
   // Recurse namespaces
   for (const [nsName, ns] of namespace.namespaces) {
     result.push(...getOperationsByNamespace(program, ns));
+  }
+
+  return result;
+}
+
+/**
+ * Return the URI root for an entity
+ *
+ * @param entity
+ * @returns
+ */
+export function getEntityURI(entity: Model): string {
+  return entity.name ? `/${entity.name.toLowerCase()}` : '';
+}
+
+/**
+ *
+ * @param type
+ * @returns
+ */
+export function getDependentModels(type: Type): Model[] {
+  if (type.kind !== 'Model') {
+    return [];
+  }
+  const result: Model[] = [type];
+
+  for (const template of type.templateMapper?.args ?? []) {
+    if (isType(template)) {
+      result.push(...getDependentModels(template));
+    }
   }
 
   return result;

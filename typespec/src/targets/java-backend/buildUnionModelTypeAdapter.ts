@@ -1,10 +1,9 @@
 import { EmitContext, Union } from '@typespec/compiler';
+import { getJavaType } from '../../languages/java/helpers/javaHelpers.js';
 import Class from '../../languages/java/primitives/class.js';
 import JavaPrimitive from '../../languages/java/primitives/javaprimitive.js';
 import Method from '../../languages/java/primitives/method.js';
 import Parameter from '../../languages/java/primitives/parameter.js';
-import { camelCase } from '../../utils/stringutils.js';
-import { getJavaType } from '../../languages/java/helpers/javaHelpers.js';
 
 export function buildUnionModelTypeAdapter(
   context: EmitContext,
