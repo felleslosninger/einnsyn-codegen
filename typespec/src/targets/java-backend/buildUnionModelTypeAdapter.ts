@@ -4,9 +4,10 @@ import Class from '../../languages/java/primitives/class.js';
 import JavaPrimitive from '../../languages/java/primitives/javaprimitive.js';
 import Method from '../../languages/java/primitives/method.js';
 import Parameter from '../../languages/java/primitives/parameter.js';
+import { EmitterOptions } from '../../types.js';
 
 export function buildUnionModelTypeAdapter(
-  context: EmitContext,
+  context: EmitContext<EmitterOptions>,
   parent: JavaPrimitive | undefined,
   model: Union,
   entityName = model.name ?? 'Unnamed',

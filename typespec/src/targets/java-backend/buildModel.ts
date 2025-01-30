@@ -10,17 +10,24 @@ import Class from '../../languages/java/primitives/class.js';
 import Enum from '../../languages/java/primitives/enum.js';
 import Field from '../../languages/java/primitives/field.js';
 import JavaPrimitive from '../../languages/java/primitives/javaprimitive.js';
-import { getBodyPropertyModel, getDefaultValue } from '../../utils/getters.js';
+import {
+  getBodyPropertyModel,
+  getDefaultValue,
+  getListType,
+} from '../../utils/getters.js';
 import { pascalCase } from '../../utils/stringutils.js';
 import {
   isEInnsynEntity,
   isFinal,
+  isList,
   isNumberUnion,
   isStringUnion,
 } from '../../utils/typecheckers.js';
+import { PACKAGE_NAME } from './variables.js';
+import { EmitterOptions } from '../../types.js';
 
 export function buildModel(
-  context: EmitContext,
+  context: EmitContext<EmitterOptions>,
   parent: JavaPrimitive | undefined,
   model: Model,
   className = model.name,
@@ -77,17 +84,18 @@ export function buildModel(
     field.setValue(getDefaultValue(modelProperty));
     modelClass.addField(field);
 
+    const possibleUnionType = isList(modelProperty.type)
+      ? getListType(modelProperty.type)
+      : modelProperty.type;
+
     // Add enum if this is a union of strings or numbers
-    if (
-      isStringUnion(modelProperty.type) ||
-      isNumberUnion(modelProperty.type)
-    ) {
+    if (isStringUnion(possibleUnionType) || isNumberUnion(possibleUnionType)) {
       const enumObj = new Enum(
         context,
         modelClass,
         pascalCase(modelProperty.name + 'Enum'),
       );
-      for (const [key, variant] of modelProperty.type.variants) {
+      for (const [key, variant] of possibleUnionType.variants) {
         if (variant.type.kind === 'String') {
           enumObj.addValue(variant.type.value);
         }
@@ -113,6 +121,11 @@ export function buildModel(
         pascalCase(modelProperty.name),
       );
       modelClass.addClass(subModel);
+    }
+
+    // Import sub-model if this is a model with a name
+    if (targetModel.kind === 'Model' && targetModel.name) {
+      modelClass.addImport(targetModel);
     }
   }
 

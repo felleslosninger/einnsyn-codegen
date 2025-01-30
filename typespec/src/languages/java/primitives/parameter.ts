@@ -1,12 +1,13 @@
 import { EmitContext } from '@typespec/compiler';
 import JavaPrimitive from './javaprimitive.js';
+import { EmitterOptions } from '../../../types.js';
 
 export default class Parameter extends JavaPrimitive {
   private name: string;
   private type: string;
 
   constructor(
-    context: EmitContext,
+    context: EmitContext<EmitterOptions>,
     parent: JavaPrimitive | undefined,
     name: string,
     type: string,

@@ -1,18 +1,19 @@
 import { EmitContext } from '@typespec/compiler';
-import { Visibility } from '../../../types.js';
+import { EmitterOptions, Visibility } from '../../../types.js';
 import JavaPrimitive from './javaprimitive.js';
 import Parameter from './parameter.js';
 
 export default class Method extends JavaPrimitive {
   private name?: string;
   private visibility: Visibility = 'public';
+  private static: boolean = false;
   private parameters: Parameter[];
   private returnType: string;
   private body: string;
   private throws: string[] = [];
 
   constructor(
-    context: EmitContext,
+    context: EmitContext<EmitterOptions>,
     parent: JavaPrimitive | undefined,
     returnType: string,
     name?: string,
@@ -22,6 +23,14 @@ export default class Method extends JavaPrimitive {
     this.parameters = [];
     this.returnType = returnType;
     this.body = '';
+  }
+
+  setVisibility(visibility: Visibility) {
+    this.visibility = visibility;
+  }
+
+  setStatic(isStatic: boolean) {
+    this.static = isStatic;
   }
 
   addParameter(parameter: Parameter) {
@@ -45,7 +54,7 @@ export default class Method extends JavaPrimitive {
     return [
       this.printDocumentation(),
       this.printAnnotations(),
-      `${this.visibility ? `${this.visibility} ` : ''}${this.returnType} ${this.name || ''}(${this.parameters
+      `${this.visibility ? `${this.visibility} ` : ''}${this.static ? `static ` : ''}${this.returnType} ${this.name || ''}(${this.parameters
         .map((p) => `${p.toString()}`)
         .join(', ')})${this.printThrows()} {`,
       ` ${this.body}`,

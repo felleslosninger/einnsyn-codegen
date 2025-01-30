@@ -1,5 +1,5 @@
 import { EmitContext } from '@typespec/compiler';
-import { Visibility } from '../../../types.js';
+import { EmitterOptions, Visibility } from '../../../types.js';
 import { constVarName } from '../../../utils/stringutils.js';
 import JavaPrimitive from './javaprimitive.js';
 
@@ -9,7 +9,7 @@ export default class Enum extends JavaPrimitive {
   private values: string[] = [];
 
   constructor(
-    context: EmitContext,
+    context: EmitContext<EmitterOptions>,
     parent: JavaPrimitive | undefined,
     name: string,
   ) {

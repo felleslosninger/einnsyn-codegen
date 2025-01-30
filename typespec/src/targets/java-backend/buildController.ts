@@ -25,6 +25,8 @@ import {
   isFinal,
 } from '../../utils/typecheckers.js';
 import { buildModel } from './buildModel.js';
+import { PACKAGE_NAME } from './variables.js';
+import { EmitterOptions } from '../../types.js';
 
 const requestMappingMap = {
   get: 'GetMapping',
@@ -36,7 +38,7 @@ const requestMappingMap = {
 };
 
 export function buildController(
-  context: EmitContext,
+  context: EmitContext<EmitterOptions>,
   parent: JavaPrimitive | undefined,
   entityName: string,
   httpOperations: HttpOperation[],
@@ -89,7 +91,12 @@ export function buildController(
     method.addImport('org.springframework.http.ResponseEntity');
     method.addThrows('no.einnsyn.backend.error.exceptions.EInnsynException');
     if (response?.type.kind === 'Model') {
-      method.addImport(getBodyPropertyModel(response.type) ?? response.type);
+      const bodyPropertyModel = getBodyPropertyModel(response.type);
+      if (bodyPropertyModel?.name) {
+        method.addImport(bodyPropertyModel);
+      } else {
+        method.addImport(response.type);
+      }
     }
     method.setDocumentation(getDoc(context.program, httpOperation.operation));
     modelClass.addMethod(method);
@@ -128,7 +135,9 @@ export function buildController(
             'no.einnsyn.backend.validation.expandableobject.ExpandableObject',
           );
           parameter.addImport(
-            getJavaEntityPackageName(entityModel) + '.' + serviceName,
+            getJavaEntityPackageName(PACKAGE_NAME, entityModel) +
+              '.' +
+              serviceName,
           );
           parameter.addAnnotation(
             'no.einnsyn.backend.validation.expandableobject.ExpandableObject',
@@ -233,7 +242,9 @@ export function buildController(
           'no.einnsyn.backend.validation.expandableobject.ExpandableObject',
         );
         parameter.addImport(
-          getJavaEntityPackageName(requestBody.type) + '.' + serviceName,
+          getJavaEntityPackageName(PACKAGE_NAME, requestBody.type) +
+            '.' +
+            serviceName,
         );
 
         if (isInsert) {

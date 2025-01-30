@@ -28,6 +28,8 @@ import { buildIdPrefixMap } from './buildIdPrefixMap.js';
 import { buildModel } from './buildModel.js';
 import { buildUnionModel } from './buildUnionModel.js';
 import { buildUnionModelTypeAdapter } from './buildUnionModelTypeAdapter.js';
+import { PACKAGE_NAME } from './variables.js';
+import { EmitterOptions } from '../../types.js';
 
 /**
  * Emit DTO models, and controllers for the given namespace
@@ -36,9 +38,11 @@ import { buildUnionModelTypeAdapter } from './buildUnionModelTypeAdapter.js';
  * @param eInnsynNamespace
  */
 export default async function emit(
-  context: EmitContext,
+  context: EmitContext<EmitterOptions>,
   eInnsynNamespace: Namespace,
 ) {
+  context.options.packageName = PACKAGE_NAME;
+
   // Emit models
   const models = recursivelyGetModels(eInnsynNamespace);
   for (const model of models) {
@@ -58,8 +62,8 @@ export default async function emit(
     }
 
     // Put entities in their own package, common models in common package
-    const modelPackageName = getJavaModelPackageName(model);
-    const modelPathName = getJavaModelPathName(model);
+    const modelPackageName = getJavaModelPackageName(PACKAGE_NAME, model);
+    const modelPathName = getJavaModelPathName(PACKAGE_NAME, model);
     const modelFile = new JavaFile(context, modelPackageName);
     const className = getJavaType(model);
     modelFile.addClass(buildModel(context, modelFile, model, className));
@@ -118,8 +122,8 @@ export default async function emit(
     eInnsynNamespace,
   );
   for (const [namespace, operations] of operationsByNamespace) {
-    const packageName = getJavaEntityPackageName(namespace);
-    const pathName = getJavaEntityPathName(namespace);
+    const packageName = getJavaEntityPackageName(PACKAGE_NAME, namespace);
+    const pathName = getJavaEntityPathName(PACKAGE_NAME, namespace);
 
     const controllerFile = new JavaFile(context, packageName);
     controllerFile.addClass(

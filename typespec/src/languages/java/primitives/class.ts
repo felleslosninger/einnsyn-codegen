@@ -1,5 +1,5 @@
 import { EmitContext, Model } from '@typespec/compiler';
-import { Visibility } from '../../../types.js';
+import { EmitterOptions, Visibility } from '../../../types.js';
 import { getJavaType } from '../helpers/javaHelpers.js';
 import Enum from './enum.js';
 import Field from './field.js';
@@ -19,14 +19,13 @@ export default class Class extends JavaPrimitive {
   private generics: string[] = [];
 
   constructor(
-    context: EmitContext,
+    context: EmitContext<EmitterOptions>,
     parent: JavaPrimitive | undefined,
     name: string,
     extendModel?: Model,
   ) {
     super(context, parent);
     this.name = name;
-
     if (extendModel) {
       this.extends = getJavaType(extendModel);
       this.addImport(extendModel);

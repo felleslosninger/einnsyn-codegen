@@ -5,15 +5,19 @@ import {
   getJavaModelPackageName,
   getJavaType,
 } from '../helpers/javaHelpers.js';
+import { EmitterOptions } from '../../../types.js';
 
 export default abstract class JavaPrimitive implements Primitive {
-  context: EmitContext;
+  context: EmitContext<EmitterOptions>;
   parent?: JavaPrimitive;
   annotations: { [key: string]: string } = {};
   imports: { [key: string]: boolean } = {};
   documentation: string | undefined;
 
-  constructor(context: EmitContext, parent: JavaPrimitive | undefined) {
+  constructor(
+    context: EmitContext<EmitterOptions>,
+    parent: JavaPrimitive | undefined,
+  ) {
     this.context = context;
     this.parent = parent;
   }
@@ -29,7 +33,7 @@ export default abstract class JavaPrimitive implements Primitive {
           .filter((model) => !!model.name)
           .map(
             (model) =>
-              getJavaModelPackageName(model) +
+              getJavaModelPackageName(this.context.options.packageName, model) +
               '.' +
               getJavaType(model).split('<')[0],
           );

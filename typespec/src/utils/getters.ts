@@ -8,7 +8,7 @@ import {
   Type,
 } from '@typespec/compiler';
 import { getHttpOperation, HttpOperation } from '@typespec/http';
-import { isEInnsynEntity } from './typecheckers.js';
+import { isEInnsynEntity, isList } from './typecheckers.js';
 
 export function getExpandableEntity(type?: Type): Model | undefined {
   if (type === undefined) {
@@ -86,6 +86,8 @@ export function recursivelyGetModels(namespace: Namespace) {
   for (const [nsName, ns] of namespace.namespaces) {
     models.push(...recursivelyGetModels(ns));
   }
+
+  models.sort((a, b) => a.name.localeCompare(b.name));
 
   return models;
 }
@@ -173,6 +175,21 @@ export function getDependentModels(type: Type): Model[] {
   }
 
   return result;
+}
+
+/**
+ *
+ * @param type
+ * @returns
+ */
+export function getListType(type: Type): Type | undefined {
+  if (
+    type.kind === 'Model' &&
+    type.name === 'Array' &&
+    type.templateMapper?.args[0]?.entityKind === 'Type'
+  ) {
+    return type.templateMapper?.args[0];
+  }
 }
 
 /**

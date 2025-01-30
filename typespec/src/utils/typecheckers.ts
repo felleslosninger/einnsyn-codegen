@@ -12,10 +12,11 @@ import {
   Type,
   Union,
 } from '@typespec/compiler';
+import { EmitterOptions } from '../types.js';
 
 export type UrlType = Scalar;
 export function isUrlProperty(
-  context: EmitContext,
+  context: EmitContext<EmitterOptions>,
   type: Type,
 ): type is UrlType {
   return (
@@ -28,7 +29,7 @@ export function isUrlProperty(
 
 export type EmailType = Scalar;
 export function isEmailProperty(
-  context: EmitContext,
+  context: EmitContext<EmitterOptions>,
   type: Type,
 ): type is EmailType {
   return (
@@ -41,7 +42,7 @@ export function isEmailProperty(
 
 export type DateType = Scalar;
 export function isDateProperty(
-  context: EmitContext,
+  context: EmitContext<EmitterOptions>,
   type: Type,
 ): type is DateType {
   return (
@@ -54,7 +55,7 @@ export function isDateProperty(
 
 export type DateTimeType = Scalar;
 export function isDateTimeProperty(
-  context: EmitContext,
+  context: EmitContext<EmitterOptions>,
   type: Type,
 ): type is DateTimeType {
   return (
@@ -67,7 +68,7 @@ export function isDateTimeProperty(
 
 export type PasswordType = Scalar;
 export function isPasswordProperty(
-  context: EmitContext,
+  context: EmitContext<EmitterOptions>,
   type: Type,
 ): type is PasswordType {
   return (
@@ -89,7 +90,10 @@ export function isList(type: Type) {
 }
 
 export type StringUnionType = Union;
-export function isStringUnion(type: Type): type is StringUnionType {
+export function isStringUnion(type?: Type): type is StringUnionType {
+  if (type === undefined) {
+    return false;
+  }
   if (type.kind !== 'Union') {
     return false;
   }
@@ -102,7 +106,10 @@ export function isStringUnion(type: Type): type is StringUnionType {
 }
 
 export type NumberUnionType = Union;
-export function isNumberUnion(type: Type): type is NumberUnionType {
+export function isNumberUnion(type?: Type): type is NumberUnionType {
+  if (type === undefined) {
+    return false;
+  }
   if (type.kind !== 'Union') {
     return false;
   }
@@ -114,7 +121,10 @@ export function isNumberUnion(type: Type): type is NumberUnionType {
   return true;
 }
 
-export function isDefaultString(context: EmitContext, modelProperty: Type) {
+export function isDefaultString(
+  context: EmitContext<EmitterOptions>,
+  modelProperty: Type,
+) {
   return (
     modelProperty.kind === 'ModelProperty' &&
     modelProperty.type.kind === 'Scalar' &&

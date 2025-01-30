@@ -1,4 +1,4 @@
-import { Model, Namespace, Type } from '@typespec/compiler';
+import { Entity, isType, Model, Namespace, Type } from '@typespec/compiler';
 import {
   getBodyPropertyModel,
   getExpandableEntity,
@@ -17,11 +17,37 @@ import {
   isString,
 } from '../../../utils/typecheckers.js';
 
+export type JavaTypeOptions = {
+  entitySuffix?: string;
+  wrapExpandableFields?: boolean;
+};
+
+export function getJavaType(
+  options: JavaTypeOptions,
+  type: Type,
+  propertyName?: string,
+  parentName?: string,
+): string;
 export function getJavaType(
   type: Type,
-  propertyName = '',
-  parentName = '',
+  propertyName?: string,
+  parentName?: string,
+): string;
+export function getJavaType(
+  ...args: (JavaTypeOptions | Type | string | undefined)[]
 ): string {
+  let i = 0;
+  const options =
+    typeof args[i] === 'object' && !isType(args[i] as Entity)
+      ? (args[i++] as JavaTypeOptions)
+      : {
+          entitySuffix: 'DTO',
+          wrapExpandableFields: true,
+        };
+  const type = args[i++] as Type;
+  const propertyName = (args[i++] as string) ?? '';
+  const parentName = (args[i++] as string) ?? '';
+
   if (type === undefined) {
     return 'unknown';
   }
@@ -46,7 +72,7 @@ export function getJavaType(
     if (type.kind === 'Model' && type.indexer !== undefined) {
       return (
         'List<' +
-        getJavaType(type.indexer.value, propertyName, parentName) +
+        getJavaType(options, type.indexer.value, propertyName, parentName) +
         '>'
       );
     }
@@ -56,19 +82,26 @@ export function getJavaType(
 
   const expandableEntity = getExpandableEntity(type);
   if (expandableEntity) {
-    return 'ExpandableField<' + getJavaType(expandableEntity) + '>';
+    if (options.wrapExpandableFields) {
+      return 'ExpandableField<' + getJavaType(options, expandableEntity) + '>';
+    } else {
+      return getJavaType(options, expandableEntity);
+    }
   }
 
   // Recurse for models that have a @body property
   if (type.kind === 'Model') {
     const bodyPropertyModel = getBodyPropertyModel(type);
-    if (bodyPropertyModel) {
-      return getJavaType(bodyPropertyModel, propertyName, parentName);
+    if (bodyPropertyModel && bodyPropertyModel.name) {
+      return getJavaType(options, bodyPropertyModel, propertyName, parentName);
     }
   }
 
   if (type.kind === 'Model' && type.name) {
-    const className = isEInnsynEntity(type) ? type.name + 'DTO' : type.name;
+    const className =
+      isEInnsynEntity(type) && options.entitySuffix
+        ? type.name + options.entitySuffix
+        : type.name;
 
     // If there are template arguments, add them to the generic base type
     if (type.kind === 'Model' && type.templateMapper?.args) {
@@ -77,7 +110,7 @@ export function getJavaType(
           template.entityKind === 'Type' &&
           (template.kind === 'Model' || template.kind === 'Union')
         ) {
-          return getJavaType(template, propertyName, parentName);
+          return getJavaType(options, template, propertyName, parentName);
         }
       });
       return pascalCase(className) + '<' + generics + '>';
@@ -99,26 +132,41 @@ export function getJavaType(
   return 'unknown';
 }
 
-export function getJavaEntityPackageName(obj: Model | Namespace): string {
-  const path = getJavaEntityPathArray(obj);
+export function getJavaEntityPackageName(
+  packageName: string,
+  obj: Model | Namespace,
+): string {
+  const path = getJavaEntityPathArray(packageName, obj);
   return path.join('.').toLowerCase();
 }
 
-export function getJavaModelPackageName(model: Model | Namespace): string {
-  const path = getJavaModelPathArray(model);
+export function getJavaModelPackageName(
+  packageName: string,
+  model: Model | Namespace,
+): string {
+  const path = getJavaModelPathArray(packageName, model);
   return path.join('.').toLowerCase();
 }
 
-export function getJavaEntityPathName(obj: Model | Namespace): string {
-  return getJavaEntityPathArray(obj).join('/').toLowerCase();
+export function getJavaEntityPathName(
+  packageName: string,
+  obj: Model | Namespace,
+): string {
+  return getJavaEntityPathArray(packageName, obj).join('/').toLowerCase();
 }
 
-export function getJavaModelPathName(model: Model | Namespace): string {
-  return getJavaModelPathArray(model).join('/').toLowerCase();
+export function getJavaModelPathName(
+  packageName: string,
+  model: Model | Namespace,
+): string {
+  return getJavaModelPathArray(packageName, model).join('/').toLowerCase();
 }
 
-export function getJavaEntityPathArray(obj: Model | Namespace): string[] {
-  const path = ['no', 'einnsyn', 'backend'];
+export function getJavaEntityPathArray(
+  packageName: string,
+  obj: Model | Namespace,
+): string[] {
+  const path = packageName.split('.');
   const namespace = obj.kind === 'Model' ? obj.namespace : obj;
 
   if (isEInnsynEntityNamespace(namespace)) {
@@ -136,8 +184,11 @@ export function getJavaEntityPathArray(obj: Model | Namespace): string[] {
   return path;
 }
 
-export function getJavaModelPathArray(model: Model | Namespace): string[] {
-  const pathArray = getJavaEntityPathArray(model);
+export function getJavaModelPathArray(
+  packageName: string,
+  model: Model | Namespace,
+): string[] {
+  const pathArray = getJavaEntityPathArray(packageName, model);
   pathArray.push('models');
   return pathArray;
 }

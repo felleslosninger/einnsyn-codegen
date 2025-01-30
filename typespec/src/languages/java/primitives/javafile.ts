@@ -1,6 +1,7 @@
 import { EmitContext } from '@typespec/compiler';
 import Class from './class.js';
 import JavaPrimitive from './javaprimitive.js';
+import { EmitterOptions } from '../../../types.js';
 
 export class JavaFile extends JavaPrimitive {
   private header = `
@@ -11,7 +12,7 @@ export class JavaFile extends JavaPrimitive {
   private packageName: string;
   private classes: Class[] = [];
 
-  constructor(context: EmitContext, packageName: string) {
+  constructor(context: EmitContext<EmitterOptions>, packageName: string) {
     super(context, undefined);
     this.packageName = packageName;
   }

@@ -28,6 +28,7 @@ import {
 } from '../../../utils/typecheckers.js';
 import JavaPrimitive from '../primitives/javaprimitive.js';
 import { getJavaEntityPackageName } from './javaHelpers.js';
+import { EmitterOptions } from '../../../types.js';
 
 type ExcludeAnnotations = {
   validate?: boolean;
@@ -36,7 +37,7 @@ type ExcludeAnnotations = {
 };
 
 export function addAnnotations(
-  context: EmitContext,
+  context: EmitContext<EmitterOptions>,
   javaPrimitive: JavaPrimitive,
   modelProperty: ModelProperty,
   exclude: ExcludeAnnotations = {},
@@ -126,7 +127,9 @@ export function addAnnotations(
       const serviceName = pascalCase(entity.name) + 'Service';
       javaPrimitive.addImport(entity);
       javaPrimitive.addImport(
-        getJavaEntityPackageName(entity) + '.' + serviceName,
+        getJavaEntityPackageName(context.options.packageName, entity) +
+          '.' +
+          serviceName,
       );
       javaPrimitive.addImport(
         'no.einnsyn.backend.validation.validationgroups.Insert',

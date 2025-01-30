@@ -9,9 +9,11 @@ import JavaPrimitive from '../../languages/java/primitives/javaprimitive.js';
 import Method from '../../languages/java/primitives/method.js';
 import Parameter from '../../languages/java/primitives/parameter.js';
 import { camelCase, pascalCase } from '../../utils/stringutils.js';
+import { PACKAGE_NAME } from './variables.js';
+import { EmitterOptions } from '../../types.js';
 
 export function buildUnionModel(
-  context: EmitContext,
+  context: EmitContext<EmitterOptions>,
   parent: JavaPrimitive | undefined,
   model: Union,
   entityName = model.name ?? 'Unnamed',
@@ -92,7 +94,9 @@ export function buildUnionModel(
       modelClass.addMethod(method);
       modelClass.addImport(type);
       modelClass.addImport('no.einnsyn.backend.utils.idgenerator.IdGenerator');
-      modelClass.addImport(getJavaModelPackageName(type) + '.' + className);
+      modelClass.addImport(
+        getJavaModelPackageName(PACKAGE_NAME, type) + '.' + className,
+      );
     }
   }
 

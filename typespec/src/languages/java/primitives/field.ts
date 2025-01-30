@@ -1,5 +1,5 @@
 import { EmitContext } from '@typespec/compiler';
-import { Visibility } from '../../../types.js';
+import { EmitterOptions, Visibility } from '../../../types.js';
 import JavaPrimitive from './javaprimitive.js';
 
 export default class Field extends JavaPrimitive {
@@ -10,7 +10,7 @@ export default class Field extends JavaPrimitive {
   private rawValue?: string;
 
   constructor(
-    context: EmitContext,
+    context: EmitContext<EmitterOptions>,
     parent: JavaPrimitive | undefined,
     private fieldName: string,
     private javaType: string,

@@ -3,9 +3,10 @@ import { getExtensions } from '@typespec/openapi';
 import Class from '../../languages/java/primitives/class.js';
 import Field from '../../languages/java/primitives/field.js';
 import JavaPrimitive from '../../languages/java/primitives/javaprimitive.js';
+import { EmitterOptions } from '../../types.js';
 
 export function buildIdPrefixMap(
-  context: EmitContext,
+  context: EmitContext<EmitterOptions>,
   parent: JavaPrimitive | undefined,
   models: Model[],
 ) {
