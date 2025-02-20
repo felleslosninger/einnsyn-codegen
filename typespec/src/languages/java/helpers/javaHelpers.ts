@@ -1,7 +1,8 @@
-import { Entity, isType, Model, Namespace, Type } from '@typespec/compiler';
+import { Model, Namespace, Type } from '@typespec/compiler';
 import {
   getBodyPropertyModel,
   getExpandableEntity,
+  getListType,
   getModelPath,
   getNamespacePath,
 } from '../../../utils/getters.js';
@@ -11,81 +12,67 @@ import {
   isDouble,
   isEInnsynEntity,
   isEInnsynEntityNamespace,
-  isEInnsynEntityUnion,
   isInteger,
   isList,
   isString,
 } from '../../../utils/typecheckers.js';
+import { BuildModelProps, BuildProps } from './builders.js';
+import { getImports } from './getImports.js';
 
-export type JavaTypeOptions = {
+export type JavaTypeProps = BuildProps & {
+  type?: Type;
+  propertyName?: string;
+  parentName?: string;
   entitySuffix?: string;
-  wrapExpandableFields?: boolean;
 };
 
-export function getJavaType(
-  options: JavaTypeOptions,
-  type: Type,
-  propertyName?: string,
-  parentName?: string,
-): string;
-export function getJavaType(
-  type: Type,
-  propertyName?: string,
-  parentName?: string,
-): string;
-export function getJavaType(
-  ...args: (JavaTypeOptions | Type | string | undefined)[]
-): string {
-  let i = 0;
-  const options =
-    typeof args[i] === 'object' && !isType(args[i] as Entity)
-      ? (args[i++] as JavaTypeOptions)
-      : {
-          entitySuffix: 'DTO',
-          wrapExpandableFields: true,
-        };
-  const type = args[i++] as Type;
-  const propertyName = (args[i++] as string) ?? '';
-  const parentName = (args[i++] as string) ?? '';
-
+export function getJavaType(props: JavaTypeProps): [string, string[]] {
+  const { type, propertyName = '', wrapExpandableFields = true } = props;
   if (type === undefined) {
-    return 'unknown';
+    return ['unknown', []];
   }
 
   if (isString(type)) {
-    return 'String';
+    return ['String', []];
   }
 
   if (isDouble(type)) {
-    return 'Double';
+    return ['Double', []];
   }
 
   if (isInteger(type)) {
-    return 'Integer';
+    return ['Integer', []];
   }
 
   if (isBoolean(type)) {
-    return 'Boolean';
+    return ['Boolean', []];
   }
 
+  // For lists, recurse on the list type
   if (isList(type) && type.kind === 'Model') {
     if (type.kind === 'Model' && type.indexer !== undefined) {
-      return (
-        'List<' +
-        getJavaType(options, type.indexer.value, propertyName, parentName) +
-        '>'
-      );
+      const listType = getListType(type);
+      const [listJavaType, imports] = getJavaType({
+        ...props,
+        type: listType,
+      });
+      return ['List<' + listJavaType + '>', imports];
     }
     // This is a generic alias. Not yet supported by TypeSpec
-    return 'List<unknown>';
+    return ['List<unknown>', []];
   }
 
+  // Expandable fields
   const expandableEntity = getExpandableEntity(type);
   if (expandableEntity) {
-    if (options.wrapExpandableFields) {
-      return 'ExpandableField<' + getJavaType(options, expandableEntity) + '>';
+    const [returnType, imports] = getJavaType({
+      ...props,
+      type: expandableEntity,
+    });
+    if (wrapExpandableFields) {
+      return [`ExpandableField<${returnType}>`, imports];
     } else {
-      return getJavaType(options, expandableEntity);
+      return [returnType, imports];
     }
   }
 
@@ -93,43 +80,41 @@ export function getJavaType(
   if (type.kind === 'Model') {
     const bodyPropertyModel = getBodyPropertyModel(type);
     if (bodyPropertyModel && bodyPropertyModel.name) {
-      return getJavaType(options, bodyPropertyModel, propertyName, parentName);
+      return getJavaType({ ...props, type: bodyPropertyModel });
     }
   }
 
+  // An object with a given name (entity, queryparameters etc.)
   if (type.kind === 'Model' && type.name) {
-    const className =
-      isEInnsynEntity(type) && options.entitySuffix
-        ? type.name + options.entitySuffix
-        : type.name;
+    const className = getModelClassName({ ...props, model: type });
+    const imports = getImports({ ...props, model: type });
 
-    // If there are template arguments, add them to the generic base type
-    if (type.kind === 'Model' && type.templateMapper?.args) {
-      const generics = type.templateMapper.args.map((template) => {
-        if (
-          template.entityKind === 'Type' &&
-          (template.kind === 'Model' || template.kind === 'Union')
-        ) {
-          return getJavaType(options, template, propertyName, parentName);
-        }
-      });
-      return pascalCase(className) + '<' + generics + '>';
-    }
+    // Find generics
+    const generics: string[] = [];
+    type.templateMapper?.args.map((arg) => {
+      if (arg.entityKind === 'Type') {
+        // TODO: This might cause an infinite loop for some data sets
+        const [templateType, templateTypeImports] = getJavaType({
+          ...props,
+          type: arg,
+        });
+        generics.push(templateType);
+        imports.push(...templateTypeImports);
+      }
+    });
 
-    // Return base type
-    return pascalCase(className || propertyName);
-  }
-
-  if (isEInnsynEntityUnion(type)) {
-    return pascalCase(parentName, propertyName);
+    const javaType = pascalCase(className || propertyName);
+    const javaTypeWithGenerics =
+      generics.length > 0 ? `${javaType}<${generics.join(', ')}>` : javaType;
+    return [javaTypeWithGenerics, imports];
   }
 
   // Inline model, generate name from property name
   if (type.kind === 'Model') {
-    return pascalCase(propertyName);
+    return [pascalCase(propertyName), getImports({ ...props, model: type })];
   }
 
-  return 'unknown';
+  return ['unknown', []];
 }
 
 export function getJavaEntityPackageName(
@@ -191,4 +176,9 @@ export function getJavaModelPathArray(
   const pathArray = getJavaEntityPathArray(packageName, model);
   pathArray.push('models');
   return pathArray;
+}
+
+export function getModelClassName(props: BuildModelProps) {
+  const { model, entitySuffix = '' } = props;
+  return isEInnsynEntity(model) ? model.name + entitySuffix : model.name;
 }

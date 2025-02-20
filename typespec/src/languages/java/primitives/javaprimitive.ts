@@ -1,50 +1,29 @@
-import { EmitContext, Model } from '@typespec/compiler';
+import { EmitContext, isType, Model, Type } from '@typespec/compiler';
+import { EmitterOptions } from '../../../types.js';
 import { getDependentModels } from '../../../utils/getters.js';
 import { Primitive } from '../../common/primitive.js';
 import {
   getJavaModelPackageName,
   getJavaType,
+  JavaTypeProps,
 } from '../helpers/javaHelpers.js';
-import { EmitterOptions } from '../../../types.js';
-
 export default abstract class JavaPrimitive implements Primitive {
-  context: EmitContext<EmitterOptions>;
   parent?: JavaPrimitive;
   annotations: { [key: string]: string } = {};
   imports: { [key: string]: boolean } = {};
   documentation: string | undefined;
 
-  constructor(
-    context: EmitContext<EmitterOptions>,
-    parent: JavaPrimitive | undefined,
-  ) {
-    this.context = context;
+  constructor(parent: JavaPrimitive | undefined) {
     this.parent = parent;
   }
 
-  addImport(...models: Model[]): void;
-  addImport(...packageNames: string[]): void;
-  addImport(...args: (string | Model)[]): void {
-    for (const packageNameOrModel of args) {
-      // Resolve required package names from model
-      if (typeof packageNameOrModel !== 'string') {
-        const models = getDependentModels(packageNameOrModel);
-        const packageNames = models
-          .filter((model) => !!model.name)
-          .map(
-            (model) =>
-              getJavaModelPackageName(this.context.options.packageName, model) +
-              '.' +
-              getJavaType(model).split('<')[0],
-          );
-        return this.addImport(...packageNames);
+  addImport(...imports: string[]): void {
+    if (this.parent === undefined) {
+      for (const imp of imports) {
+        this.imports[imp] = true;
       }
-
-      if (this.parent === undefined) {
-        this.imports[packageNameOrModel] = true;
-      } else {
-        this.parent.addImport(packageNameOrModel);
-      }
+    } else {
+      this.parent.addImport(...imports);
     }
   }
 

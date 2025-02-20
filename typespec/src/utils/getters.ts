@@ -8,7 +8,7 @@ import {
   Type,
 } from '@typespec/compiler';
 import { getHttpOperation, HttpOperation } from '@typespec/http';
-import { isEInnsynEntity, isList } from './typecheckers.js';
+import { isEInnsynEntity, isEInnsynId } from './typecheckers.js';
 
 export function getExpandableEntity(type?: Type): Model | undefined {
   if (type === undefined) {
@@ -19,23 +19,18 @@ export function getExpandableEntity(type?: Type): Model | undefined {
     return;
   }
 
-  const variants = type.variants;
-  if (variants.size !== 2) {
+  if (type.variants.size !== 2) {
     return;
   }
 
-  const variantList = Array.from(variants.values());
-  const idVariant = variantList[0].type;
-  if (idVariant.kind !== 'Scalar') {
-    return;
+  const variants = Array.from(type.variants.values());
+  if (!variants.find((variant) => isEInnsynId(variant.type))) {
+    return; // No eInnsynId
   }
 
-  const entityVariant = variantList[1].type;
-  if (entityVariant.kind != 'Model' || !isEInnsynEntity(entityVariant)) {
-    return;
-  }
-
-  return entityVariant;
+  return variants.find((variant) => isEInnsynEntity(variant.type))?.type as
+    | Model
+    | undefined;
 }
 
 export function getModelPath(model: Model): string[] {
@@ -69,6 +64,31 @@ export function getBodyPropertyModel(model: Model): Model | undefined {
   if (bodyPropertyType?.kind === 'Model') {
     return bodyPropertyType;
   }
+}
+
+export function getBodyProperties(model: Model): ModelProperty[] {
+  const propertyModel = getBodyPropertyModel(model) ?? model;
+  return Array.from(propertyModel.properties.values());
+}
+
+/**
+ *
+ */
+export function getInheritedProperties(model: Model): ModelProperty[] {
+  const properties: ModelProperty[] = [];
+  const ancestors: Model[] = [];
+  let parent: Model | undefined = model.baseModel;
+  // Get all ancestors first, we want to iterate from the top down
+  while (parent) {
+    ancestors.unshift(parent);
+    parent = parent.baseModel;
+  }
+  for (const ancestor of ancestors) {
+    for (const [, property] of ancestor.properties) {
+      properties.push(property);
+    }
+  }
+  return properties;
 }
 
 /**

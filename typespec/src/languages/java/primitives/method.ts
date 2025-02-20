@@ -1,5 +1,4 @@
-import { EmitContext } from '@typespec/compiler';
-import { EmitterOptions, Visibility } from '../../../types.js';
+import { Visibility } from '../../../types.js';
 import JavaPrimitive from './javaprimitive.js';
 import Parameter from './parameter.js';
 
@@ -9,20 +8,18 @@ export default class Method extends JavaPrimitive {
   private static: boolean = false;
   private parameters: Parameter[];
   private returnType: string;
-  private body: string;
+  private body: string[] = [];
   private throws: string[] = [];
 
   constructor(
-    context: EmitContext<EmitterOptions>,
     parent: JavaPrimitive | undefined,
     returnType: string,
     name?: string,
   ) {
-    super(context, parent);
+    super(parent);
     this.name = name;
     this.parameters = [];
     this.returnType = returnType;
-    this.body = '';
   }
 
   setVisibility(visibility: Visibility) {
@@ -33,21 +30,29 @@ export default class Method extends JavaPrimitive {
     this.static = isStatic;
   }
 
-  addParameter(parameter: Parameter) {
-    this.parameters.push(parameter);
+  addParameter(...parameters: Parameter[]) {
+    for (const parameter of parameters) {
+      this.parameters.push(parameter);
+    }
+    return this;
   }
 
-  addThrows(exception: string) {
-    this.addImport(exception);
-    this.throws.push(exception.split('.').slice(-1)[0]);
+  addThrows(...exceptions: string[]) {
+    for (const exception of exceptions) {
+      this.addImport(exception);
+      this.throws.push(exception.split('.').slice(-1)[0]);
+    }
   }
 
   printThrows() {
-    return this.throws.length > 0 ? `throws ${this.throws.join(', ')}` : '';
+    return this.throws.length > 0 ? ` throws ${this.throws.join(', ')}` : '';
   }
 
-  setBody(body: string) {
-    this.body = body;
+  addBody(...bodyLines: string[]) {
+    for (const body of bodyLines) {
+      this.body.push(body);
+    }
+    return this;
   }
 
   toString(): string {
@@ -57,7 +62,7 @@ export default class Method extends JavaPrimitive {
       `${this.visibility ? `${this.visibility} ` : ''}${this.static ? `static ` : ''}${this.returnType} ${this.name || ''}(${this.parameters
         .map((p) => `${p.toString()}`)
         .join(', ')})${this.printThrows()} {`,
-      ` ${this.body}`,
+      ` ${this.body.join('\n')}`,
       '}',
     ]
       .filter((s) => s !== undefined)

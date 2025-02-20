@@ -13,6 +13,7 @@ import {
   Union,
 } from '@typespec/compiler';
 import { EmitterOptions } from '../types.js';
+import { getExpandableEntity } from './getters.js';
 
 export type UrlType = Scalar;
 export function isUrlProperty(
@@ -180,28 +181,7 @@ export function isEInnsynEntity(type?: Type): boolean {
 }
 
 export function isExpandableField(type?: Type): boolean {
-  if (type === undefined) {
-    return false;
-  }
-
-  if (type.kind !== 'Union') {
-    return false;
-  }
-
-  if (type.variants.size !== 2) {
-    return false;
-  }
-
-  const variants = Array.from(type.variants.values());
-  if (!variants.find((variant) => isEInnsynId(variant.type))) {
-    return false; // No eInnsynId
-  }
-
-  if (!variants.find((variant) => isEInnsynEntity(variant.type))) {
-    return false; // No eInnsynEntity
-  }
-
-  return true;
+  return !!getExpandableEntity(type);
 }
 
 export function isEInnsynEntityNamespace(
@@ -216,35 +196,6 @@ export function isEInnsynEntityNamespace(
     }
   }
   return false;
-}
-
-/**
- * Check if this is a union type with only eInnsyn entities
- *
- * @param type
- * @returns
- */
-export function isEInnsynEntityUnion(type?: Type): boolean {
-  if (type === undefined) {
-    return false;
-  }
-
-  if (type.kind !== 'Union') {
-    return false;
-  }
-
-  if (type.variants.size < 2) {
-    return false;
-  }
-
-  // Check if there are any types that are not eInnsyn entities
-  for (const variant of type.variants.values()) {
-    if (variant.type.kind !== 'Model' || !isEInnsynEntity(variant.type)) {
-      return false;
-    }
-  }
-
-  return true;
 }
 
 /**

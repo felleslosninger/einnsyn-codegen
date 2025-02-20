@@ -6,13 +6,8 @@ export default class Parameter extends JavaPrimitive {
   private name: string;
   private type: string;
 
-  constructor(
-    context: EmitContext<EmitterOptions>,
-    parent: JavaPrimitive | undefined,
-    name: string,
-    type: string,
-  ) {
-    super(context, parent);
+  constructor(parent: JavaPrimitive | undefined, name: string, type: string) {
+    super(parent);
     this.name = name;
     this.type = type;
   }
