@@ -1,5 +1,13 @@
-import { Model } from '@typespec/compiler';
+import {
+  DecoratorApplication,
+  Model,
+  ModelProperty,
+  ProjectionStatementNode,
+  SourceModel,
+} from '@typespec/compiler';
+import { createRekeyableMap } from '@typespec/compiler/utils';
 import { HttpOperationParameter } from '@typespec/http';
+import { JavaProps } from '../languages/java/types.js';
 
 /**
  * A parameter model represents a model (class) with multiple parameters, i.e. ListParameters, GetParameters etc.
@@ -10,6 +18,8 @@ type ParameterModel = {
 };
 
 /**
+ * Group the given parameters by their source model. If a parameter has no source model,
+ * it will be grouped with other parameters with no source model.
  *
  * @param httpOperation
  */
@@ -78,44 +88,37 @@ function getParameterModels(
   return parameterModels;
 }
 
-type ExtendedParameterModel = {
-  name: string;
-  extend: Model | undefined;
-  params: HttpOperationParameter[];
-};
-
+/**
+ * Given a list of parameters, return the model with the most common parameters together with the remaining parameters.
+ * @param props
+ * @returns
+ */
 export function getExtendedParameterModel(
-  parameters: HttpOperationParameter[],
-  defaultName = 'Parameters',
-): ExtendedParameterModel | undefined {
+  props: JavaProps & {
+    parameters: HttpOperationParameter[];
+  },
+): [
+  extendsModel: Model | undefined,
+  remainingParameters: HttpOperationParameter[],
+] {
+  const { parameters } = props;
   const allModels = getParameterModels(parameters);
 
   // No parameters found
   if (allModels.length === 0) {
-    return undefined;
-  }
-
-  // We don't need to create a new model
-  if (allModels.length === 1 && allModels[0].model) {
-    return {
-      name: allModels[0].model.name,
-      extend: allModels[0].model,
-      params: [],
-    };
+    return [undefined, []];
   }
 
   // If we have an extendable model, extend it
-  if (allModels[0].model) {
+  if (allModels[0]?.model) {
+    const model = allModels[0].model;
+
     const remainingModels = allModels.slice(1);
     const remainingParameters = remainingModels.reduce(
       (acc, cur) => acc.concat(cur.params),
       [] as HttpOperationParameter[],
     );
-    return {
-      name: defaultName,
-      extend: allModels[0].model,
-      params: remainingParameters,
-    };
+    return [model, remainingParameters];
   }
 
   // We don't have an extendable model, create a new one with all parameters
@@ -124,9 +127,38 @@ export function getExtendedParameterModel(
     [] as HttpOperationParameter[],
   );
 
-  return {
-    name: defaultName,
-    extend: undefined,
-    params: allParameters,
+  return [undefined, allParameters];
+}
+
+/**
+ * Create a Model from a name, base model and parameters.
+ */
+export function createParameterModel(props: {
+  name: string;
+  parameters: HttpOperationParameter[];
+  baseModel?: Model;
+  derivedModels?: Model[];
+  sourceModels?: SourceModel[];
+  projections?: ProjectionStatementNode[];
+  decorators?: DecoratorApplication[];
+}): Model {
+  const modelProperties: ModelProperty[] = props.parameters.map(
+    (parameter) => parameter.param,
+  );
+
+  const model: Model = {
+    kind: 'Model',
+    entityKind: 'Type',
+    name: props.name,
+    baseModel: props.baseModel,
+    derivedModels: props.derivedModels ?? [],
+    sourceModels: props.sourceModels ?? [],
+    projections: props.projections ?? [],
+    decorators: props.decorators ?? [],
+    projectionsByName: (name: string) => [],
+    isFinished: true,
+    properties: createRekeyableMap(modelProperties.map((p) => [p.name, p])),
   };
+
+  return model;
 }

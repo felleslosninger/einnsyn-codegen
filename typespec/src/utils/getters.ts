@@ -66,7 +66,10 @@ export function getBodyPropertyModel(model: Model): Model | undefined {
   }
 }
 
-export function getBodyProperties(model: Model): ModelProperty[] {
+export function getBodyProperties(model: Model | undefined): ModelProperty[] {
+  if (model === undefined) {
+    return [];
+  }
   const propertyModel = getBodyPropertyModel(model) ?? model;
   return Array.from(propertyModel.properties.values());
 }
@@ -258,5 +261,21 @@ export function getDefaultValue(
 
     default:
       return undefined;
+  }
+}
+
+/**
+ * If this is a fixed value (e.g. prop: "value"), return it.
+ *
+ * @param modelProperty
+ * @returns
+ */
+export function getFixedValue(modelProperty: ModelProperty) {
+  if (
+    modelProperty.type.kind === 'String' ||
+    modelProperty.type.kind === 'Number' ||
+    modelProperty.type.kind === 'Boolean'
+  ) {
+    return getDefaultValue(modelProperty);
   }
 }

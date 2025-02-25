@@ -20,7 +20,7 @@ export function emitEntityModels(
   eInnsynNamespace: Namespace,
 ) {
   const defaultImports = [
-    'no.einnsyn.apiclient.common.expandablefield.ExpandableField',
+    'no.einnsyn.backend.common.expandablefield.ExpandableField',
     'java.util.List',
     'java.util.ArrayList',
   ];
@@ -44,66 +44,32 @@ export function emitEntityModels(
       ...defaultProps,
       context,
       model: model,
-      className: model.name,
-      addGetters: true,
+      className: model.name + 'DTO',
       parent: modelFile,
       addConstructors: false,
       addSubModels: true,
+      addGetters: false,
+      addSetters: false,
+      addBuilder: false,
+      entitySuffix: 'DTO',
+      validate: true,
+      addLombokGetters: true,
+      addLombokSetters: true,
+      addInlineEnums: true,
     });
     modelFile.addClass(modelClass);
 
     if (!model.baseModel) {
-      modelClass.addImplements('no.einnsyn.apiclient.common.hasid.HasId');
+      modelClass.addImplements('no.einnsyn.backend.common.hasid.HasId');
     }
 
     // Emit file
     emitFile(context.program, {
       path: resolvePath(
         context.emitterOutputDir,
-        `${modelPathName}/${model.name}.java`,
+        `${modelPathName}/${model.name}DTO.java`,
       ),
       content: modelFile.toString(),
     });
   });
-
-  // Emit eInnsyn entity request models
-  models
-    .filter((model) => isEInnsynEntity(model))
-    .forEach((model) => {
-      // Create java file
-      const modelPackageName = getJavaModelPackageName(
-        defaultProps.packageName,
-        model,
-      );
-      const modelPathName = getJavaModelPathName(
-        defaultProps.packageName,
-        model,
-      );
-      const modelFile = new JavaFile(modelPackageName);
-      modelFile.addImport(...defaultImports);
-
-      // Create request model class
-      const modelClass = buildGeneralModel({
-        ...defaultProps,
-        context,
-        model: model,
-        className: `${model.name}Request`,
-        addBuilder: true,
-        addSubModels: true,
-        parent: modelFile,
-        entitySuffix: 'Request',
-        skipReadOnlyProperties: true,
-        setDefaultValues: false,
-      });
-      modelFile.addClass(modelClass);
-
-      // Emit file
-      emitFile(context.program, {
-        path: resolvePath(
-          context.emitterOutputDir,
-          `${modelPathName}/${model.name}Request.java`,
-        ),
-        content: modelFile.toString(),
-      });
-    });
 }

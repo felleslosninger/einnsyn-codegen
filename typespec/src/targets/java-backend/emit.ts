@@ -1,153 +1,34 @@
-import {
-  EmitContext,
-  emitFile,
-  isTemplateDeclaration,
-  Namespace,
-  resolvePath,
-} from '@typespec/compiler';
-import {
-  getJavaEntityPackageName,
-  getJavaEntityPathName,
-  getJavaModelPackageName,
-  getJavaModelPathName,
-  getJavaType,
-} from '../../languages/java/helpers/javaHelpers.js';
-import { JavaFile } from '../../languages/java/primitives/javafile.js';
-import {
-  getBodyPropertyType,
-  getOperationsByNamespace,
-  recursivelyGetModels,
-} from '../../utils/getters.js';
-import { pascalCase } from '../../utils/stringutils.js';
-import {
-  isEInnsynEntity,
-  isEInnsynEntityUnion,
-} from '../../utils/typecheckers.js';
-import { buildController } from './buildController.js';
-import { buildIdPrefixMap } from './buildIdPrefixMap.js';
-import { buildModel } from './buildModel.js';
-import { buildUnionModel } from './buildUnionModel.js';
-import { buildUnionModelTypeAdapter } from './buildUnionModelTypeAdapter.js';
+import { EmitContext, Namespace } from '@typespec/compiler';
+import { JavaBaseProps } from '../../languages/java/types.js';
+import { emitControllers } from './emitControllers.js';
+import { emitEntityModels } from './emitEntityModels.js';
+import { emitIdPrefixMap } from './emitIdPrefixMap.js';
+import { emitUnknownModels } from './emitUnknownModels.js';
 import { PACKAGE_NAME } from './variables.js';
-import { EmitterOptions } from '../../types.js';
+import { emitExceptionModels } from './emitExceptionModels.js';
 
-/**
- * Emit DTO models, and controllers for the given namespace
- *
- * @param context
- * @param eInnsynNamespace
- */
 export default async function emit(
-  context: EmitContext<EmitterOptions>,
+  context: EmitContext,
   eInnsynNamespace: Namespace,
 ) {
-  context.options.packageName = PACKAGE_NAME;
+  const defaultProps: JavaBaseProps = {
+    context,
+    packageName: PACKAGE_NAME,
+    entitySuffix: 'DTO',
+  };
 
-  // Emit models
-  const models = recursivelyGetModels(eInnsynNamespace);
-  for (const model of models) {
-    // Don't emit models that refer to another emitted model
-    const bodyPropertyType = getBodyPropertyType(model);
-    if (
-      (bodyPropertyType?.kind === 'Model' && bodyPropertyType.name) ||
-      (bodyPropertyType?.kind === 'TemplateParameter' &&
-        isEInnsynEntity(bodyPropertyType.constraint?.type))
-    ) {
-      continue;
-    }
+  // Emit eInnsyn entity models
+  emitEntityModels(context, { ...defaultProps }, eInnsynNamespace);
 
-    // TypeSpec currently doesn't support emitting generic models
-    if (isTemplateDeclaration(model)) {
-      continue;
-    }
+  // Emit non-eInnsyn models (query parameters etc.)
+  emitUnknownModels(context, { ...defaultProps }, eInnsynNamespace);
 
-    // Put entities in their own package, common models in common package
-    const modelPackageName = getJavaModelPackageName(PACKAGE_NAME, model);
-    const modelPathName = getJavaModelPathName(PACKAGE_NAME, model);
-    const modelFile = new JavaFile(context, modelPackageName);
-    const className = getJavaType(model);
-    modelFile.addClass(buildModel(context, modelFile, model, className));
-
-    await emitFile(context.program, {
-      path: resolvePath(
-        context.emitterOutputDir,
-        `${modelPathName}/${className}.java`,
-      ),
-      content: modelFile.toString(),
-    });
-
-    // Emit union properties
-    for (const [, prop] of model.properties) {
-      if (isEInnsynEntityUnion(prop.type) && prop.type.kind === 'Union') {
-        const unionClassName = pascalCase(model.name, prop.name);
-        const unionModel = prop.type;
-        const unionModelFile = new JavaFile(context, modelPackageName);
-        unionModelFile.addClass(
-          buildUnionModel(context, unionModelFile, unionModel, unionClassName),
-        );
-
-        await emitFile(context.program, {
-          path: resolvePath(
-            context.emitterOutputDir,
-            `${modelPathName}/${unionClassName}.java`,
-          ),
-          content: unionModelFile.toString(),
-        });
-
-        // Create type adapter
-        const adapterFile = new JavaFile(context, modelPackageName);
-        adapterFile.addClass(
-          buildUnionModelTypeAdapter(
-            context,
-            adapterFile,
-            unionModel,
-            unionClassName,
-          ),
-        );
-
-        await emitFile(context.program, {
-          path: resolvePath(
-            context.emitterOutputDir,
-            `${modelPathName}/${unionClassName}TypeAdapter.java`,
-          ),
-          content: adapterFile.toString(),
-        });
-      }
-    }
-  }
+  // Emit exception models
+  emitExceptionModels(context, defaultProps, eInnsynNamespace);
 
   // Emit controllers
-  const operationsByNamespace = getOperationsByNamespace(
-    context.program,
-    eInnsynNamespace,
-  );
-  for (const [namespace, operations] of operationsByNamespace) {
-    const packageName = getJavaEntityPackageName(PACKAGE_NAME, namespace);
-    const pathName = getJavaEntityPathName(PACKAGE_NAME, namespace);
+  emitControllers(context, { ...defaultProps }, eInnsynNamespace);
 
-    const controllerFile = new JavaFile(context, packageName);
-    controllerFile.addClass(
-      buildController(context, controllerFile, namespace.name, operations),
-    );
-
-    await emitFile(context.program, {
-      path: resolvePath(
-        context.emitterOutputDir,
-        pathName + '/' + namespace.name + 'Controller.java',
-      ),
-      content: controllerFile.toString(),
-    });
-  }
-
-  // Emit ID prefix map
-  const packageName = 'no.einnsyn.backend.utils.idgenerator';
-  const idPrefixFile = new JavaFile(context, packageName);
-  idPrefixFile.addClass(buildIdPrefixMap(context, idPrefixFile, models));
-  await emitFile(context.program, {
-    path: resolvePath(
-      context.emitterOutputDir,
-      'no/einnsyn/backend/utils/idgenerator/IdPrefix.java',
-    ),
-    content: idPrefixFile.toString(),
-  });
+  // Emit IdPrefixMap
+  emitIdPrefixMap(context, { ...defaultProps }, eInnsynNamespace);
 }

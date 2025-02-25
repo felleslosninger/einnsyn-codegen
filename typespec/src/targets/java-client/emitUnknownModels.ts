@@ -6,19 +6,19 @@ import {
   Namespace,
   resolvePath,
 } from '@typespec/compiler';
-import { buildGeneralModel } from '../../languages/java/helpers/builders.js';
+import { buildGeneralModel } from '../../languages/java/helpers/modelBuilder.js';
 import {
   getJavaModelPackageName,
   getJavaModelPathName,
 } from '../../languages/java/helpers/javaHelpers.js';
 import { JavaFile } from '../../languages/java/primitives/javafile.js';
-import { Props } from '../../types.js';
+import { JavaBaseProps } from '../../languages/java/types.js';
 import { recursivelyGetModels } from '../../utils/getters.js';
 import { isEInnsynEntity } from '../../utils/typecheckers.js';
 
 export function emitUnknownModels(
   context: EmitContext,
-  defaultProps: Props,
+  defaultProps: JavaBaseProps,
   eInnsynNamespace: Namespace,
 ) {
   const defaultImports = [
@@ -52,10 +52,9 @@ export function emitUnknownModels(
       model: model,
       className: model.name,
       addGetters: true,
-      addSetters: true,
       addBuilder: true,
       parent: modelFile,
-      addConstructors: false,
+      addConstructors: true,
       addSubModels: true,
     });
     modelFile.addClass(modelClass);

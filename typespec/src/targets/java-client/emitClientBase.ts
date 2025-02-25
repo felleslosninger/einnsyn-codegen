@@ -10,13 +10,13 @@ import Field from '../../languages/java/primitives/field.js';
 import { JavaFile } from '../../languages/java/primitives/javafile.js';
 import Method from '../../languages/java/primitives/method.js';
 import Parameter from '../../languages/java/primitives/parameter.js';
-import { Props } from '../../types.js';
+import { JavaBaseProps } from '../../languages/java/types.js';
 import { getOperationsByNamespace } from '../../utils/getters.js';
-import { pascalCase } from '../../utils/stringutils.js';
+import { pascalCase } from '../../utils/stringUtils.js';
 
 export function emitClientBase(
   context: EmitContext,
-  defaultProps: Props,
+  defaultProps: JavaBaseProps,
   eInnsynNamespace: Namespace,
 ) {
   const packageName = defaultProps.packageName;
@@ -49,7 +49,6 @@ export function emitClientBase(
       defaultProps.packageName,
       namespace,
     );
-    console.log('Namespace path: ' + namespacePath);
     const className = `${pascalCase(namespaceName)}Operations`;
     const getterMethod = new Method(
       clientBaseClass,

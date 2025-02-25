@@ -6,7 +6,7 @@ import {
   getModelPath,
   getNamespacePath,
 } from '../../../utils/getters.js';
-import { pascalCase } from '../../../utils/stringutils.js';
+
 import {
   isBoolean,
   isDouble,
@@ -16,14 +16,16 @@ import {
   isList,
   isString,
 } from '../../../utils/typecheckers.js';
-import { BuildModelProps, BuildProps } from './builders.js';
+import { JavaProps, JavaPropsWithModel } from '../types.js';
 import { getImports } from './getImports.js';
+import { pascalCase } from '../../../utils/stringUtils.js';
 
-export type JavaTypeProps = BuildProps & {
+export type JavaTypeProps = JavaProps & {
   type?: Type;
   propertyName?: string;
   parentName?: string;
   entitySuffix?: string;
+  model?: Model; // Not needed
 };
 
 export function getJavaType(props: JavaTypeProps): [string, string[]] {
@@ -59,7 +61,7 @@ export function getJavaType(props: JavaTypeProps): [string, string[]] {
       return ['List<' + listJavaType + '>', imports];
     }
     // This is a generic alias. Not yet supported by TypeSpec
-    return ['List<unknown>', []];
+    return ['List<?>', []];
   }
 
   // Expandable fields
@@ -178,7 +180,7 @@ export function getJavaModelPathArray(
   return pathArray;
 }
 
-export function getModelClassName(props: BuildModelProps) {
+export function getModelClassName(props: JavaPropsWithModel) {
   const { model, entitySuffix = '' } = props;
   return isEInnsynEntity(model) ? model.name + entitySuffix : model.name;
 }

@@ -1,4 +1,5 @@
-import { EmitContext } from '@typespec/compiler';
+import { EmitContext, Model, Type } from '@typespec/compiler';
+import { HttpOperationParameter } from '@typespec/http';
 
 export type Visibility = '' | 'private' | 'protected' | 'public';
 
@@ -9,4 +10,7 @@ export interface EmitterOptions {
 export type Props = {
   context: EmitContext;
   packageName: string;
+
+  model?: Model;
+  httpOperationParameters?: HttpOperationParameter[];
 };

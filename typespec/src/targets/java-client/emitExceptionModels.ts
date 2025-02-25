@@ -7,7 +7,7 @@ import {
   resolvePath,
 } from '@typespec/compiler';
 import { isReadonlyProperty } from '@typespec/openapi';
-import { buildGeneralModel } from '../../languages/java/helpers/builders.js';
+import { buildGeneralModel } from '../../languages/java/helpers/modelBuilder.js';
 import {
   getJavaModelPackageName,
   getJavaModelPathName,
@@ -16,16 +16,16 @@ import {
 import { JavaFile } from '../../languages/java/primitives/javafile.js';
 import Method from '../../languages/java/primitives/method.js';
 import Parameter from '../../languages/java/primitives/parameter.js';
-import { Props } from '../../types.js';
+import { JavaBaseProps } from '../../languages/java/types.js';
 import {
   getBodyProperties,
   recursivelyGetModels,
 } from '../../utils/getters.js';
-import { pascalCase } from '../../utils/stringutils.js';
+import { pascalCase } from '../../utils/stringUtils.js';
 
 export function emitExceptionModels(
   context: EmitContext,
-  defaultProps: Props,
+  defaultProps: JavaBaseProps,
   eInnsynNamespace: Namespace,
 ) {
   const defaultImports = [

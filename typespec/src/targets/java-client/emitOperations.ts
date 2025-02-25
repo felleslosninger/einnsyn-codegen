@@ -4,26 +4,34 @@ import {
   Namespace,
   resolvePath,
 } from '@typespec/compiler';
-import { buildGeneralModel } from '../../languages/java/helpers/builders.js';
+import { buildGeneralModel } from '../../languages/java/helpers/modelBuilder.js';
 import {
   getJavaEntityPackageName,
   getJavaEntityPathName,
-  getJavaModelPackageName,
   getJavaType,
 } from '../../languages/java/helpers/javaHelpers.js';
 import Class from '../../languages/java/primitives/class.js';
 import { JavaFile } from '../../languages/java/primitives/javafile.js';
 import Method from '../../languages/java/primitives/method.js';
 import Parameter from '../../languages/java/primitives/parameter.js';
-import { Props } from '../../types.js';
-import { getExtendedParameterModel } from '../../utils/controllerParameters.js';
+import { JavaBaseProps } from '../../languages/java/types.js';
 import { getOperationsByNamespace } from '../../utils/getters.js';
-import { pascalCase } from '../../utils/stringutils.js';
+import {
+  createParameterModel,
+  getExtendedParameterModel,
+} from '../../utils/operationsUtils.js';
+import { pascalCase } from '../../utils/stringUtils.js';
 import { isEInnsynEntityNamespace } from '../../utils/typecheckers.js';
+
+const defaultImports = [
+  'no.einnsyn.apiclient.common.expandablefield.ExpandableField',
+  'java.util.List',
+  'java.util.ArrayList',
+];
 
 export function emitOperations(
   context: EmitContext,
-  defaultProps: Props,
+  defaultProps: JavaBaseProps,
   eInnsynNamespace: Namespace,
 ) {
   const operationsByNamespace = getOperationsByNamespace(
@@ -36,30 +44,32 @@ export function emitOperations(
       namespace,
     );
     const pathName = getJavaEntityPathName(defaultProps.packageName, namespace);
-    const controllerFile = new JavaFile(packageName);
+    const operationsFile = new JavaFile(packageName);
+    operationsFile.addImport(...defaultImports);
+    const addedSubclasses: { [name: string]: boolean } = {};
 
-    const controllerClass = new Class(
-      controllerFile,
+    const operationsClass = new Class(
+      operationsFile,
       namespace.name + 'Operations',
     );
     if (isEInnsynEntityNamespace(namespace)) {
-      controllerClass.setExtends(
+      operationsClass.setExtends(
         `ApiEntityOperations<${namespace.name}, ${namespace.name}Request>`,
       );
-      controllerClass.addImport(
+      operationsClass.addImport(
         'no.einnsyn.apiclient.common.apioperations.ApiEntityOperations',
       );
     } else {
-      controllerClass.setExtends('ApiOperations');
-      controllerClass.addImport(
+      operationsClass.setExtends('ApiOperations');
+      operationsClass.addImport(
         'no.einnsyn.apiclient.common.apioperations.ApiOperations',
       );
     }
-    controllerFile.addClass(controllerClass);
+    operationsFile.addClass(operationsClass);
 
     // Add constructor
     const constructor = new Method(
-      controllerClass,
+      operationsClass,
       namespace.name + 'Operations',
     );
     constructor.addParameter(
@@ -67,7 +77,7 @@ export function emitOperations(
     );
     constructor.addImport('no.einnsyn.apiclient.net.ApiRequester');
     constructor.addBody('super(requester);');
-    controllerClass.addMethod(constructor);
+    operationsClass.addMethod(constructor);
 
     // Add operations
     httpOperationList.forEach((httpOperation) => {
@@ -86,9 +96,6 @@ export function emitOperations(
         ...defaultProps,
         type: responseType,
       });
-      if (responseJavaType === 'PaginatedList') {
-        //console.log(httpOperation.responses[0]?.type?.);
-      }
 
       const addedSignatures: { [signature: string]: boolean } = {};
 
@@ -96,9 +103,9 @@ export function emitOperations(
       addRouteMethod(false, false, false);
       addRouteMethod(false, false, true);
       addRouteMethod(false, true, false);
-      addRouteMethod(false, true, true);
+      //addRouteMethod(false, true, true); // Causes duplicate method signature
       addRouteMethod(true, false, false);
-      addRouteMethod(true, false, true);
+      //addRouteMethod(true, false, true); // Causes duplicate method signature
       addRouteMethod(true, true, false);
       addRouteMethod(true, true, true);
 
@@ -111,11 +118,11 @@ export function emitOperations(
         let renderedOptions = false;
         let renderedFunctions = false;
         const routeMethod = new Method(
-          controllerClass,
+          operationsClass,
           responseJavaType,
           operationName,
         );
-        controllerClass.addImport(...responseJavaTypeImports);
+        operationsClass.addImport(...responseJavaTypeImports);
 
         // Add path parameters
         pathParameters.forEach((pathParameter) => {
@@ -131,29 +138,73 @@ export function emitOperations(
         });
 
         // Add query parameters
-        const queryParameterModel = getExtendedParameterModel(
-          queryParameters,
-          pascalCase(namespace.name + 'Parameters'),
-        );
         let queryParameterVariable = 'null';
-        if (queryParameterModel && withQueryParameters) {
-          renderedQueryParameters = true;
-          routeMethod.addParameter(
-            new Parameter(
-              routeMethod,
-              'queryParameters',
-              queryParameterModel.name,
-            ),
-          );
-          queryParameterVariable = 'queryParameters';
-          if (queryParameterModel.extend) {
-            const importPath = getJavaModelPackageName(
-              defaultProps.packageName,
-              queryParameterModel.extend,
-            );
-            routeMethod.addImport(
-              importPath + '.' + queryParameterModel.extend.name,
-            );
+        if (withQueryParameters) {
+          let queryParameterJavaType =
+            pascalCase(operationName) + 'QueryParameters';
+          const [queryExtendModel, queryCustomParams] =
+            getExtendedParameterModel({
+              ...defaultProps,
+              parameters: queryParameters,
+            });
+          const [queryExtendModelJavaType, queryExtendModelImports] =
+            getJavaType({ ...defaultProps, type: queryExtendModel });
+          routeMethod.addImport(...queryExtendModelImports);
+
+          // If there are custom parameters, we need to create a model class
+          if (
+            queryCustomParams.length &&
+            !addedSubclasses[queryParameterJavaType]
+          ) {
+            addedSubclasses[queryParameterJavaType] = true;
+            const customModel = createParameterModel({
+              name: queryParameterJavaType,
+              parameters: queryCustomParams,
+              baseModel: queryExtendModel,
+            });
+            const customModelClass = buildGeneralModel({
+              ...defaultProps,
+              parent: operationsClass,
+              model: customModel,
+              className: queryParameterJavaType,
+              addBuilder: true,
+              addSubModels: true,
+            });
+            customModelClass.setStatic(true);
+            operationsClass.addClass(customModelClass);
+          }
+
+          // No custom parameters, use the extended model directly
+          else if (queryExtendModel) {
+            queryParameterJavaType = queryExtendModelJavaType;
+          }
+
+          if (queryCustomParams.length > 0 || queryExtendModel) {
+            renderedQueryParameters = true;
+            if (withFunctions) {
+              renderedFunctions = true;
+              queryParameterVariable = `queryParametersBuilderFunction.apply(new ${queryParameterJavaType}.Builder()).build()`;
+              routeMethod.addImport('java.util.function.Function');
+              routeMethod.addParameter(
+                new Parameter(
+                  routeMethod,
+                  'queryParametersBuilderFunction',
+                  'Function<' +
+                    queryParameterJavaType +
+                    '.Builder, ' +
+                    queryParameterJavaType +
+                    '.Builder>',
+                ),
+              );
+            } else {
+              routeMethod.addParameter(
+                new Parameter(
+                  routeMethod,
+                  'queryParameters',
+                  queryParameterJavaType,
+                ),
+              );
+            }
           }
         }
 
@@ -181,7 +232,7 @@ export function emitOperations(
                   '.Builder>',
               ),
             );
-            bodyVariable = `bodyBuilderFunction.apply(${requestJavaType}.builder()).build()`;
+            bodyVariable = `bodyBuilderFunction.apply(new ${requestJavaType}.Builder()).build()`;
           } else {
             routeMethod.addParameter(
               new Parameter(routeMethod, 'body', requestJavaType),
@@ -206,7 +257,7 @@ export function emitOperations(
               ),
             );
             optionsVariable =
-              'optionsBuilderFunction.apply(EInnsynOptions.builder()).build()';
+              'optionsBuilderFunction.apply(new EInnsynOptions.Builder()).build()';
           } else {
             routeMethod.addParameter(
               new Parameter(routeMethod, 'options', 'EInnsynOptions'),
@@ -266,7 +317,7 @@ export function emitOperations(
         );
 
         // Add method
-        controllerClass.addMethod(routeMethod);
+        operationsClass.addMethod(routeMethod);
       }
 
       // Add request body models if needed
@@ -280,7 +331,7 @@ export function emitOperations(
           addSubModels: true,
         });
         requestBodyClass.setStatic(true);
-        controllerClass.addClass(requestBodyClass);
+        operationsClass.addClass(requestBodyClass);
       }
 
       // Add response models if needed
@@ -294,7 +345,7 @@ export function emitOperations(
           addSubModels: true,
         });
         responseBodyClass.setStatic(true);
-        controllerClass.addClass(responseBodyClass);
+        operationsClass.addClass(responseBodyClass);
       }
     });
 
@@ -303,7 +354,7 @@ export function emitOperations(
         context.emitterOutputDir,
         pathName + '/' + namespace.name + 'Operations.java',
       ),
-      content: controllerFile.toString(),
+      content: operationsFile.toString(),
     });
   });
 }

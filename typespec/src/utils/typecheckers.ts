@@ -17,7 +17,7 @@ import { getExpandableEntity } from './getters.js';
 
 export type UrlType = Scalar;
 export function isUrlProperty(
-  context: EmitContext<EmitterOptions>,
+  context: EmitContext,
   type: Type,
 ): type is UrlType {
   return (
@@ -30,7 +30,7 @@ export function isUrlProperty(
 
 export type EmailType = Scalar;
 export function isEmailProperty(
-  context: EmitContext<EmitterOptions>,
+  context: EmitContext,
   type: Type,
 ): type is EmailType {
   return (
@@ -43,7 +43,7 @@ export function isEmailProperty(
 
 export type DateType = Scalar;
 export function isDateProperty(
-  context: EmitContext<EmitterOptions>,
+  context: EmitContext,
   type: Type,
 ): type is DateType {
   return (
@@ -56,7 +56,7 @@ export function isDateProperty(
 
 export type DateTimeType = Scalar;
 export function isDateTimeProperty(
-  context: EmitContext<EmitterOptions>,
+  context: EmitContext,
   type: Type,
 ): type is DateTimeType {
   return (
@@ -69,7 +69,7 @@ export function isDateTimeProperty(
 
 export type PasswordType = Scalar;
 export function isPasswordProperty(
-  context: EmitContext<EmitterOptions>,
+  context: EmitContext,
   type: Type,
 ): type is PasswordType {
   return (
@@ -122,10 +122,7 @@ export function isNumberUnion(type?: Type): type is NumberUnionType {
   return true;
 }
 
-export function isDefaultString(
-  context: EmitContext<EmitterOptions>,
-  modelProperty: Type,
-) {
+export function isDefaultString(context: EmitContext, modelProperty: Type) {
   return (
     modelProperty.kind === 'ModelProperty' &&
     modelProperty.type.kind === 'Scalar' &&

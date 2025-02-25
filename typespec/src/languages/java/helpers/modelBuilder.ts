@@ -1,73 +1,50 @@
-import { EmitContext, getDoc, Model, ModelProperty } from '@typespec/compiler';
+import { getDoc, Model, ModelProperty, Union } from '@typespec/compiler';
 import { isReadonlyProperty } from '@typespec/openapi';
-import { Props } from '../../../types.js';
 import {
   getBodyProperties,
   getDefaultValue,
   getExpandableEntity,
+  getFixedValue,
   getInheritedProperties,
   getListType,
 } from '../../../utils/getters.js';
-import { pascalCase } from '../../../utils/stringutils.js';
+import { pascalCase } from '../../../utils/stringUtils.js';
 import {
   isEInnsynEntity,
   isExpandableField,
+  isFinal,
   isList,
+  isNumberUnion,
+  isStringUnion,
 } from '../../../utils/typecheckers.js';
 import Class from '../primitives/class.js';
+import Enum from '../primitives/enum.js';
 import Field from '../primitives/field.js';
-import JavaPrimitive from '../primitives/javaprimitive.js';
 import Method from '../primitives/method.js';
 import Parameter from '../primitives/parameter.js';
+import { JavaProps, JavaPropsWithModel } from '../types.js';
 import { getJavaType } from './javaHelpers.js';
+import { getValidationAnnotations } from './validationAnnotations.js';
+import { getFlattenedModel } from '../../../utils/modelUtils.js';
 
-export type BuildProps = Props & {
-  context: EmitContext;
-  parent?: JavaPrimitive;
-  validated?: boolean;
-  entitySuffix?: string;
-  wrapExpandableFields?: boolean;
-};
-
-export type BuildModelProps = BuildProps & {
-  model: Model;
-  className?: string;
-  addFieldVariables?: boolean;
-  addGetters?: boolean;
-  addSetters?: boolean;
-  addConstructors?: boolean;
-  addBuilder?: boolean;
-  addSubModels?: boolean;
-  isBuilder?: boolean;
-  skipReadOnlyProperties?: boolean;
-  setDefaultValues?: boolean;
-};
-
-export type GetFieldVariablesProps = BuildModelProps & {
-  visibility?: 'public' | 'protected' | 'private';
-};
-
-export type GetConstructorsProps = BuildModelProps & {};
-
-export type GetSetterProps = BuildModelProps & {};
-
-export type GetGetterProps = BuildModelProps & {};
-
-const defaultProps: Partial<BuildModelProps> = {
+const defaultProps: Partial<JavaProps> = {
   addFieldVariables: true,
   addGetters: true,
   addSetters: false,
   addConstructors: false,
   addBuilder: false,
   addSubModels: false,
+  addLombokGetters: false,
+  addLombokSetters: false,
+  addInlineEnums: false,
   isBuilder: false,
-  validated: false,
   wrapExpandableFields: true,
   entitySuffix: '',
   setDefaultValues: true,
+  validate: false,
 };
 
-export function buildGeneralModel(props: BuildModelProps) {
+export function buildGeneralModel(props: JavaPropsWithModel) {
   const className = props.className ?? props.model.name;
   const clazz = new Class(props.parent, className);
 
@@ -126,21 +103,25 @@ export function buildGeneralModel(props: BuildModelProps) {
 
   if (props.addBuilder) {
     // .builder() method
-    if (props.model.derivedModels.length === 0) {
-      const [builderMethod, builderMethodImports] = getBuilderMethod(props);
-      clazz.addMethod(builderMethod);
-      clazz.addImport(...builderMethodImports);
-      // .of() method
-      const [ofMethod, ofMethodImports] = getOfMethod(props);
-      clazz.addMethod(ofMethod);
-      clazz.addImport(...ofMethodImports);
-    }
+    // const [builderMethod, builderMethodImports] = getBuilderMethod(props);
+    // clazz.addMethod(builderMethod);
+    // clazz.addImport(...builderMethodImports);
+
+    // // .of() method
+    // const [ofMethod, ofMethodImports] = getOfMethod(props);
+    // clazz.addMethod(ofMethod);
+    // clazz.addImport(...ofMethodImports);
+
+    // Get a new model with all inherited properties
+    const flattenedModel = getFlattenedModel(props.model);
+
     // Builder class
     const builderClass = buildGeneralModel({
       ...props,
+      model: flattenedModel,
       className: 'Builder',
       addFieldVariables: true,
-      addGetters: false,
+      addGetters: true,
       addSetters: true,
       addBuilder: false,
       addConstructors: false,
@@ -148,27 +129,10 @@ export function buildGeneralModel(props: BuildModelProps) {
       parent: clazz,
       skipReadOnlyProperties: true,
     });
-    // Builder.build() method
-    builderClass.addMethod(getBuildMethod(props));
     builderClass.setStatic(true);
 
-    // Superclasses needs generic types
-    if (props.model.derivedModels.length > 0) {
-      builderClass.addGeneric('B extends Builder<B>');
-    }
-
-    if (props.model.baseModel) {
-      const [extendsClassName, extendsImports] = getJavaType({
-        ...props,
-        type: props.model.baseModel,
-      });
-      if (props.model.derivedModels.length > 0) {
-        builderClass.setExtends(extendsClassName + '.Builder<Builder<B>>');
-      } else {
-        builderClass.setExtends(extendsClassName + '.Builder<Builder>');
-      }
-      builderClass.addImport(...extendsImports);
-    }
+    // Add build() method
+    builderClass.addMethod(getBuildMethod(props));
 
     clazz.addClass(builderClass);
   }
@@ -179,21 +143,43 @@ export function buildGeneralModel(props: BuildModelProps) {
     clazz.addClass(...subModelClasses);
   }
 
+  // Add documentation
+  clazz.setDocumentation(getDoc(props.context.program, props.model));
+
+  // Add lombok getters/setters
+  if (props.addLombokGetters) {
+    clazz.addAnnotation('lombok.Getter');
+  }
+  if (props.addLombokSetters) {
+    clazz.addAnnotation('lombok.Setter');
+  }
+
+  // Add inline enums
+  if (props.addInlineEnums) {
+    const enums = getEnums(props);
+    clazz.addEnum(...enums);
+  }
+
   return clazz;
 }
 
-function getFieldVariables(props: GetFieldVariablesProps): [Field[], string[]] {
+function getFieldVariables(props: JavaPropsWithModel): [Field[], string[]] {
   const { context, model, parent, skipReadOnlyProperties } = props;
   const properties = getBodyProperties(model);
+  const inheritedProperties = getInheritedProperties(model);
   const entityName = model.name;
   const fields: Field[] = [];
   const imports: string[] = [];
+  const addedProperty = new Set<string>(inheritedProperties.map((p) => p.name));
 
   properties
+    // Skip read-only
     .filter(
       (prop) =>
         !skipReadOnlyProperties || !isReadonlyProperty(context.program, prop),
     )
+    // Skip already added (overridden?) properties
+    .filter((prop) => !addedProperty.has(prop.name))
     .forEach((property) => {
       const name = property.name;
       const [javaType, javaTypeImports] = getJavaType({
@@ -209,15 +195,30 @@ function getFieldVariables(props: GetFieldVariablesProps): [Field[], string[]] {
         field.setValue(getDefaultValue(property));
       }
 
+      if (props.validate) {
+        const [validationAnnotations, validationImports] =
+          getValidationAnnotations({ ...props, modelProperty: property });
+        validationAnnotations.forEach(([annotation, args]) =>
+          field.addAnnotation(annotation, args),
+        );
+        imports.push(...validationImports);
+      }
+
+      if (isFinal(property)) {
+        field.setFinal(true);
+      }
+
       fields.push(field);
-      javaTypeImports.push(...javaTypeImports);
+      imports.push(...javaTypeImports);
+
+      addedProperty.add(name);
     });
 
   return [fields, imports];
 }
 
 export function getConstructors(
-  props: GetConstructorsProps,
+  props: JavaPropsWithModel,
 ): [Method[], string[]] {
   const { context, model, className, parent } = props;
   const notDefault = (prop: ModelProperty) =>
@@ -229,28 +230,38 @@ export function getConstructors(
   const imports: string[] = [];
 
   const constructor = new Method(parent, className ?? model.name);
-  for (const { name, type } of allProperties) {
-    const [javaType, javaTypeImports] = getJavaType({
-      ...props,
-      type,
-      propertyName: name,
-      parentName: className,
+
+  allProperties
+    // Don't add method parameter for fixed values
+    .filter((prop) => getFixedValue(prop) === undefined)
+    .forEach(({ name, type }) => {
+      const [javaType, javaTypeImports] = getJavaType({
+        ...props,
+        type,
+        propertyName: name,
+        parentName: className,
+      });
+      constructor.addParameter(new Parameter(parent, name, javaType));
+      imports.push(...javaTypeImports);
     });
-    constructor.addParameter(new Parameter(parent, name, javaType));
-    imports.push(...javaTypeImports);
-  }
-  constructor.addBody(
-    `super(${inheritedProperties.map((prop) => prop.name).join(', ')});`,
-  );
-  for (const property of properties) {
-    constructor.addBody(`this.${property.name} = ${property.name};`);
-  }
+
+  const superArgs = inheritedProperties
+    .filter((prop) => getFixedValue(prop) === undefined)
+    .map((prop) => prop.name);
+  constructor.addBody(`super(${superArgs.join(', ')});`);
+
+  properties
+    // Don't set fixed values
+    .filter((prop) => getFixedValue(prop) === undefined)
+    .forEach((prop) => {
+      constructor.addBody(`this.${prop.name} = ${prop.name};`);
+    });
 
   constructors.push(constructor);
   return [constructors, imports];
 }
 
-function getGetters(props: GetGetterProps): [Method[], string[]] {
+function getGetters(props: JavaPropsWithModel): [Method[], string[]] {
   const { context, model, parent, skipReadOnlyProperties } = props;
   const properties = getBodyProperties(model);
   const entityName = model.name;
@@ -282,17 +293,13 @@ function getGetters(props: GetGetterProps): [Method[], string[]] {
   return [getters, imports];
 }
 
-function getSetters(props: GetSetterProps): [Method[], string[]] {
+function getSetters(props: JavaPropsWithModel): [Method[], string[]] {
   const { context, model, parent, skipReadOnlyProperties } = props;
   const properties = getBodyProperties(model);
   const entityName = model.name;
   const setters: Method[] = [];
   const imports: string[] = [];
-  const returnType = props.isBuilder
-    ? props.model.derivedModels.length > 0
-      ? 'B'
-      : 'Builder'
-    : 'void';
+  const returnType = props.isBuilder ? 'Builder' : 'void';
 
   properties
     .filter(
@@ -408,15 +415,14 @@ function getSetters(props: GetSetterProps): [Method[], string[]] {
   return [setters, imports];
 }
 
-function getBuilderMethod(props: BuildProps): [Method, string[]] {
+function getBuilderMethod(props: JavaProps): [Method, string[]] {
   const builderMethod = new Method(props.parent, 'Builder', 'builder');
   builderMethod.setStatic(true);
   builderMethod.addBody('return new Builder();');
-
   return [builderMethod, []];
 }
 
-function getOfMethod(props: BuildModelProps): [Method, string[]] {
+function getOfMethod(props: JavaPropsWithModel): [Method, string[]] {
   const ofMethod = new Method(
     props.parent,
     props.className ?? props.model.name,
@@ -435,7 +441,7 @@ function getOfMethod(props: BuildModelProps): [Method, string[]] {
   return [ofMethod, ['java.util.function.Function']];
 }
 
-function getBuildMethod(props: BuildModelProps) {
+function getBuildMethod(props: JavaPropsWithModel) {
   const { model } = props;
   const properties = getBodyProperties(model);
   const inheritedProperties = getInheritedProperties(model);
@@ -454,7 +460,41 @@ function getBuildMethod(props: BuildModelProps) {
   return buildMethod;
 }
 
-function getSubModelClasses(props: BuildModelProps) {
+export function getEnums(props: JavaPropsWithModel) {
+  const { model, parent } = props;
+  const properties = getBodyProperties(model);
+
+  const enums = properties
+    .filter((p) => p.kind === 'ModelProperty')
+    .filter(
+      (p) =>
+        isStringUnion(p.type) ||
+        isNumberUnion(p.type) ||
+        isStringUnion(getListType(p.type)) ||
+        isNumberUnion(getListType(p.type)),
+    )
+    .map((p) => {
+      const type = isList(p.type) ? getListType(p.type) : p.type;
+      if (!type) {
+        return;
+      }
+      const union = type as Union;
+      const enumVar = new Enum(parent, pascalCase(p.name + 'Enum'));
+      for (const [key, variant] of union.variants) {
+        if (variant.type.kind === 'String') {
+          enumVar.addValue(variant.type.value);
+        }
+        if (variant.type.kind === 'Number') {
+          enumVar.addValue(variant.type.value.toString());
+        }
+      }
+      return enumVar;
+    })
+    .filter((e) => !!e);
+  return enums;
+}
+
+export function getSubModelClasses(props: JavaPropsWithModel) {
   const { model, skipReadOnlyProperties } = props;
   const properties = getBodyProperties(model);
   const classes: Class[] = [];

@@ -1,10 +1,11 @@
 import { getDependentModels } from '../../../utils/getters.js';
-import { BuildModelProps } from './builders.js';
+import { JavaProps } from '../types.js';
 import { getJavaModelPackageName, getModelClassName } from './javaHelpers.js';
 
-type GetImportsProps = BuildModelProps & {};
-
-export function getImports(props: GetImportsProps) {
+export function getImports(props: JavaProps) {
+  if (!props.model) {
+    return [];
+  }
   const models = getDependentModels(props.model);
   return models
     .filter((model) => !!model.name)

@@ -1,5 +1,6 @@
 import { EmitContext, ignoreDiagnostics } from '@typespec/compiler';
 import { getAllHttpServices } from '@typespec/http';
+import javaBackendEmitter from './targets/java-backend/emit.js';
 import javaClientEmitter from './targets/java-client/emit.js';
 
 export async function $onEmit(context: EmitContext) {
@@ -17,6 +18,6 @@ export async function $onEmit(context: EmitContext) {
     return;
   }
 
-  //await javaBackendEmitter(context, eInnsynNamespace);
+  await javaBackendEmitter(context, eInnsynNamespace);
   await javaClientEmitter(context, eInnsynNamespace);
 }
