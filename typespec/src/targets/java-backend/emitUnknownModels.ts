@@ -1,76 +1,76 @@
 import {
-  EmitContext,
-  emitFile,
-  isErrorModel,
-  isTemplateDeclaration,
-  Namespace,
-  resolvePath,
-} from '@typespec/compiler';
-import { buildGeneralModel } from '../../languages/java/helpers/modelBuilder.js';
+	type EmitContext,
+	emitFile,
+	isErrorModel,
+	isTemplateDeclaration,
+	type Namespace,
+	resolvePath,
+} from "@typespec/compiler";
+import { buildGeneralModel } from "../../languages/java/helpers/modelBuilder.js";
 import {
-  getJavaModelPackageName,
-  getJavaModelPathName,
-} from '../../languages/java/helpers/javaHelpers.js';
-import { JavaFile } from '../../languages/java/primitives/javafile.js';
-import { JavaBaseProps } from '../../languages/java/types.js';
-import { recursivelyGetModels } from '../../utils/getters.js';
-import { isEInnsynEntity } from '../../utils/typecheckers.js';
+	getJavaModelPackageName,
+	getJavaModelPathName,
+} from "../../languages/java/helpers/javaHelpers.js";
+import { JavaFile } from "../../languages/java/primitives/javafile.js";
+import type { JavaBaseProps } from "../../languages/java/types.js";
+import { recursivelyGetModels } from "../../utils/getters.js";
+import { isEInnsynEntity } from "../../utils/typecheckers.js";
 
 export function emitUnknownModels(
-  context: EmitContext,
-  defaultProps: JavaBaseProps,
-  eInnsynNamespace: Namespace,
+	context: EmitContext,
+	defaultProps: JavaBaseProps,
+	eInnsynNamespace: Namespace,
 ) {
-  const defaultImports = [
-    'no.einnsyn.backend.common.expandablefield.ExpandableField',
-    'java.util.List',
-    'java.util.ArrayList',
-  ];
+	const defaultImports = [
+		"no.einnsyn.backend.common.expandablefield.ExpandableField",
+		"java.util.List",
+		"java.util.ArrayList",
+	];
 
-  const models = recursivelyGetModels(eInnsynNamespace)
-    // No entity models:
-    .filter((model) => !isEInnsynEntity(model))
-    // No generic models:
-    .filter((model) => !isTemplateDeclaration(model))
-    // No error models
-    .filter((model) => !isErrorModel(context.program, model));
+	const models = recursivelyGetModels(eInnsynNamespace)
+		// No entity models:
+		.filter((model) => !isEInnsynEntity(model))
+		// No generic models:
+		.filter((model) => !isTemplateDeclaration(model))
+		// No error models
+		.filter((model) => !isErrorModel(context.program, model));
 
-  models.forEach((model) => {
-    // Create java file
-    const modelPackageName = getJavaModelPackageName(
-      defaultProps.packageName,
-      model,
-    );
-    const modelPathName = getJavaModelPathName(defaultProps.packageName, model);
-    const modelFile = new JavaFile(modelPackageName);
-    modelFile.addImport(...defaultImports);
+	for (const model of models) {
+		// Create java file
+		const modelPackageName = getJavaModelPackageName(
+			defaultProps.packageName,
+			model,
+		);
+		const modelPathName = getJavaModelPathName(defaultProps.packageName, model);
+		const modelFile = new JavaFile(modelPackageName);
+		modelFile.addImport(...defaultImports);
 
-    // Create model class
-    const modelClass = buildGeneralModel({
-      ...defaultProps,
-      context,
-      model: model,
-      className: model.name,
-      parent: modelFile,
-      addGetters: false,
-      addSetters: false,
-      addBuilder: false,
-      addConstructors: false,
-      addSubModels: true,
-      validate: true,
-      addLombokGetters: true,
-      addLombokSetters: true,
-      addInlineEnums: true,
-    });
-    modelFile.addClass(modelClass);
+		// Create model class
+		const modelClass = buildGeneralModel({
+			...defaultProps,
+			context,
+			model: model,
+			className: model.name,
+			parent: modelFile,
+			addGetters: false,
+			addSetters: false,
+			addBuilder: false,
+			addConstructors: false,
+			addSubModels: true,
+			validate: true,
+			addLombokGetters: true,
+			addLombokSetters: true,
+			addInlineEnums: true,
+		});
+		modelFile.addClass(modelClass);
 
-    // Emit file
-    emitFile(context.program, {
-      path: resolvePath(
-        context.emitterOutputDir,
-        `${modelPathName}/${model.name}.java`,
-      ),
-      content: modelFile.toString(),
-    });
-  });
+		// Emit file
+		emitFile(context.program, {
+			path: resolvePath(
+				context.emitterOutputDir,
+				`${modelPathName}/${model.name}.java`,
+			),
+			content: modelFile.toString(),
+		});
+	}
 }

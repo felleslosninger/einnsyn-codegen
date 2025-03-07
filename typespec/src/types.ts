@@ -9,7 +9,6 @@ export interface EmitterOptions {
 
 export type Props = {
   context: EmitContext;
-  packageName: string;
 
   model?: Model;
   httpOperationParameters?: HttpOperationParameter[];
