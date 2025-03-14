@@ -1,2 +1,2 @@
-# ein-api-codegen
-Automatic code generator for the eInnsyn OpenAPI spec
+# einnsyn-codegen
+Code generator for the eInnsyn API specification.
