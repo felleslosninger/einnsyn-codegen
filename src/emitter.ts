@@ -1,8 +1,8 @@
 import { type EmitContext, ignoreDiagnostics } from "@typespec/compiler";
 import { getAllHttpServices } from "@typespec/http";
 import javaBackendEmitter from "./targets/java-backend/emit.js";
-import javaClientEmitter from "./targets/sdk-java/emit.js";
-import typescriptClientEmitter from "./targets/sdk-ts/emit.js";
+import javaSDKEmitter from "./targets/sdk-java/emit.js";
+import tsSDKEmitter from "./targets/sdk-ts/emit.js";
 
 export async function $onEmit(context: EmitContext) {
 	if (context.program.compilerOptions.noEmit) {
@@ -20,6 +20,6 @@ export async function $onEmit(context: EmitContext) {
 	}
 
 	await javaBackendEmitter(context, eInnsynNamespace);
-	await javaClientEmitter(context, eInnsynNamespace);
-	await typescriptClientEmitter(context, eInnsynNamespace);
+	await javaSDKEmitter(context, eInnsynNamespace);
+	await tsSDKEmitter(context, eInnsynNamespace);
 }
