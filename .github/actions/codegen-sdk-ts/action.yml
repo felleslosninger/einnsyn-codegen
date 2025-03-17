@@ -38,13 +38,13 @@ runs:
     - name: Install node
       uses: actions/setup-node@v2
       with:
-        node-version: '23'
+        node-version: '22'
 
     - name: Run biome
       shell: bash
       run: |
         cd einnsyn-sdk-typescript
-        mvn spotless:apply
+        npx @biomejs/biome format --write ./src
 
     - name: Create Pull Request
       uses: peter-evans/create-pull-request@v7
