@@ -25,9 +25,9 @@ jobs:
           repositories: |
             felleslosninger/einnsyn-codegen
             felleslosninger/einnsyn-api-spec
-            felleslosninger/einnsyn-sdk-ts
+            felleslosninger/einnsyn-sdk-typescript
             felleslosninger/einnsyn-sdk-java
-            fellselosninger/einnsyn-backend
+            felleslosninger/einnsyn-backend
 
   execute_codegen:
     name: Execute codegen
