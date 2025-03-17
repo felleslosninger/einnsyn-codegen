@@ -22,6 +22,7 @@ jobs:
           app-id: ${{ secrets.EIN_CODEGEN_APP_ID }}
           private-key: ${{ secrets.EIN_CODEGEN_APP_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
+          skip-token-revoke: true
           repositories: |
             einnsyn-codegen
             einnsyn-api-spec
