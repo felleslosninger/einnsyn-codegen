@@ -32,8 +32,6 @@ jobs:
 
       - name: Checkout codegen repo
         uses: actions/checkout@v4
-        with:
-          path: "einnsyn-codegen"
   
       - name: Checkout API spec
         uses: actions/checkout@v4
@@ -49,9 +47,7 @@ jobs:
 
       - name: Generate new files
         run: |
-          npm install @typespec/compiler
-          npm install @typespec/openapi3
-          npm install ./einnsyn-codegen
+          npm install
           npx tsp compile ./einnsyn-api-spec/typespec/einnsyn.tsp --emit einnsyn-codegen
 
       - run: |
