@@ -23,11 +23,11 @@ jobs:
           private-key: ${{ secrets.EIN_CODEGEN_APP_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
           repositories: |
-            felleslosninger/einnsyn-codegen
-            felleslosninger/einnsyn-api-spec
-            felleslosninger/einnsyn-sdk-typescript
-            felleslosninger/einnsyn-sdk-java
-            felleslosninger/einnsyn-backend
+            einnsyn-codegen
+            einnsyn-api-spec
+            einnsyn-sdk-typescript
+            einnsyn-sdk-java
+            einnsyn-backend
 
   execute_codegen:
     name: Execute codegen
