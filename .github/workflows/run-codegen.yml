@@ -28,6 +28,7 @@ jobs:
             einnsyn-sdk-typescript
             einnsyn-sdk-java
             einnsyn-backend
+      - run: echo "(DEBUG) Token is ${{ steps.app-token.outputs.token }}"
 
   execute_codegen:
     name: Execute codegen
@@ -35,6 +36,8 @@ jobs:
     needs: [get_token]
 
     steps:
+      - run: echo "(DEBUG) Token is ${{ needs.get_token.outputs.token }}"
+
       - name: Checkout codegen repo
         uses: actions/checkout@v4
         with:
