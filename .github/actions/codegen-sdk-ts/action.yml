@@ -1,4 +1,5 @@
-name: 'Java SDK Codegen'
+name: 'TypeScript SDK Codegen'
+description: 'Codegen for eInnsyn TypeScript SDK'
 
 inputs:
   token:
@@ -9,40 +10,42 @@ inputs:
     required: false
     default: 'Codegen'
 
-runs:
+runs:  
   using: "composite"
   steps:
-    - name: Checkout einnsyn-sdk-java
+    - name: Checkout einnsyn-sdk-ts
       uses: actions/checkout@v4
       with:
-        repository: felleslosninger/einnsyn-sdk-java
+        repository: felleslosninger/einnsyn-sdk-ts
         token: ${{ inputs.token }}
-        path: "einnsyn-sdk-java"
+        path: "einnsyn-sdk-ts"
 
     - name: Remove old codegen files (with // codegen in first line)
+      shell: bash
       run: |
-        cd einnsyn-sdk-java
+        cd einnsyn-sdk-ts
         find . -type f -exec sh -c 'head -n 1 "$0" | grep -q "// Auto-generated"' {} \; -print | xargs -r rm
 
-    - name: Copy new files
+    - name: Copy new files to backend
+      shell: bash
       run: |
-        cp -r tsp-output/einnsyn-codegen/no/einnsyn/sdk/* einnsyn-sdk-java/src/main/java/no/einnsyn/sdk/
+        cp -r tsp-output/einnsyn-codegen/sdk-ts/* einnsyn-sdk-ts/src/
 
-    - name: Install Java
-      uses: actions/setup-java@v4
+    - name: Install node
+      uses: actions/setup-node@v2
       with:
-        java-version: 21
-        distribution: "adopt"
+        node-version: '23'
 
-    - name: Run spotless
+    - name: Run biome
+      shell: bash
       run: |
-        cd einnsyn-sdk-java
+        cd einnsyn-sdk-ts
         mvn spotless:apply
 
     - name: Create Pull Request
       uses: peter-evans/create-pull-request@v7
       with:
-        path: "einnsyn-sdk-java"
+        path: "einnsyn-sdk-ts"
         title: "EIN-Codegen"
         body: "Automated changes by Codegen."
         commit-message: ${{ inputs.commit_message || 'Codegen' }}

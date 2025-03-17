@@ -1,4 +1,5 @@
-name: 'TypeScript SDK Codegen'
+name: 'Backend Codegen'
+description: 'Codegen for eInnsyn backend'
 
 inputs:
   token:
@@ -9,42 +10,46 @@ inputs:
     required: false
     default: 'Codegen'
 
-jobs:  
+runs:
   using: "composite"
   steps:
-    - name: Checkout einnsyn-sdk-ts
+    - name: Checkout einnsyn-backend
       uses: actions/checkout@v4
       with:
-        repository: felleslosninger/einnsyn-sdk-ts
+        repository: felleslosninger/einnsyn-backend
         token: ${{ inputs.token }}
-        path: "einnsyn-sdk-ts"
-
-    - name: Remove old codegen files (with // codegen in first line)
+        path: "einnsyn-backend"
+    
+    - name: Remove old codegen files (with // Auto-generated in first line)
+      shell: bash
       run: |
-        cd einnsyn-sdk-ts
+        cd einnsyn-backend
         find . -type f -exec sh -c 'head -n 1 "$0" | grep -q "// Auto-generated"' {} \; -print | xargs -r rm
-
+    
     - name: Copy new files to backend
+      shell: bash
       run: |
-        cp -r tsp-output/einnsyn-codegen/sdk-ts/* einnsyn-sdk-ts/src/
-
-    - name: Install node
-      uses: actions/setup-node@v2
+        cp -r tsp-output/einnsyn-codegen/no/einnsyn/backend/* einnsyn-backend/src/main/java/no/einnsyn/backend/
+    
+    - name: Install Java
+      uses: actions/setup-java@v4
       with:
-        node-version: '23'
-
-    - name: Run biome
+        java-version: 21
+        distribution: "adopt"
+    
+    - name: Run spotless
+      shell: bash
       run: |
-        cd einnsyn-sdk-ts
+        cd einnsyn-backend
         mvn spotless:apply
-
+    
     - name: Create Pull Request
       uses: peter-evans/create-pull-request@v7
       with:
-        path: "einnsyn-sdk-ts"
+        path: "einnsyn-backend"
         title: "EIN-Codegen"
         body: "Automated changes by Codegen."
-        commit-message: ${{ inputs.commit_message || 'Codegen' }}
+        commit-message: ${{ inputs.commit_message }}
         branch: "codegen"
         sign-commits: true
         token: ${{ inputs.token }}
