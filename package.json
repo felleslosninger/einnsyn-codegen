@@ -9,6 +9,7 @@
 		"@typespec/openapi": "^0.66.0",
 		"typescript": "^5.8.2"
 	},
+	"postinstall": "tsc",
 	"scripts": {
 		"build": "tsc",
 		"watch": "tsc -w"
