@@ -59,7 +59,7 @@ jobs:
 
       - name: Run Backend Codegen
         if: github.event.client_payload.type == '' || github.event.client_payload.type == 'backend'
-        uses: .einnsyn-codegen/.github/actions/codegen-backend
+        uses: ./.github/actions/codegen-backend
         with:
           token: ${{ steps.app-token.outputs.token }}
           commit_message: github.event.client_payload.commit_message
