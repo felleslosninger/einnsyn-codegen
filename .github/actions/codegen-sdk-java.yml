@@ -1,0 +1,51 @@
+name: 'Java SDK Codegen'
+
+inputs:
+  token:
+    description: 'GitHub token for repository access'
+    required: true
+  commit_message:
+    description: 'Commit message for the pull request'
+    required: false
+    default: 'Codegen'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout einnsyn-sdk-java
+      uses: actions/checkout@v4
+      with:
+        repository: felleslosninger/einnsyn-sdk-java
+        token: ${{ inputs.token }}
+        path: "einnsyn-sdk-java"
+
+    - name: Remove old codegen files (with // codegen in first line)
+      run: |
+        cd einnsyn-sdk-java
+        find . -type f -exec sh -c 'head -n 1 "$0" | grep -q "// Auto-generated"' {} \; -print | xargs -r rm
+
+    - name: Copy new files
+      run: |
+        cp -r tsp-output/einnsyn-codegen/no/einnsyn/sdk/* einnsyn-sdk-java/src/main/java/no/einnsyn/sdk/
+
+    - name: Install Java
+      uses: actions/setup-java@v4
+      with:
+        java-version: 21
+        distribution: "adopt"
+
+    - name: Run spotless
+      run: |
+        cd einnsyn-sdk-java
+        mvn spotless:apply
+
+    - name: Create Pull Request
+      uses: peter-evans/create-pull-request@v7
+      with:
+        path: "einnsyn-sdk-java"
+        title: "EIN-Codegen"
+        body: "Automated changes by Codegen."
+        commit-message: ${{ inputs.commit_message || 'Codegen' }}
+        branch: "codegen"
+        sign-commits: true
+        token: ${{ inputs.token }}

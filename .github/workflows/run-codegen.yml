@@ -57,18 +57,21 @@ jobs:
 
       - name: Run Backend Codegen
         if: github.event.client_payload.type == '' || github.event.client_payload.type == 'backend'
-        uses: ./.github/workflows/run-codegen-backend.yml
+        uses: ./.github/actions/codegen-backend.yml
         with:
           token: ${{ steps.app-token.outputs.token }}
+          commit_message: github.event.client_payload.commit_message
 
       - name: Run SDK Java Codegen
         if: github.event.client_payload.type == '' || github.event.client_payload.type == 'sdk-java'
-        uses: ./.github/workflows/run-codegen-sdk-java.yml
+        uses: ./.github/actions/codegen-sdk-java.yml
         with:
           token: ${{ steps.app-token.outputs.token }}
+          commit_message: github.event.client_payload.commit_message
 
       - name: Run SDK TS Codegen
         if: github.event.client_payload.type == '' || github.event.client_payload.type == 'sdk-ts'
-        uses: ./.github/workflows/run-codegen-sdk-ts.yml
+        uses: ./.github/actions/codegen-sdk-ts.yml
         with:
           token: ${{ steps.app-token.outputs.token }}
+          commit_message: github.event.client_payload.commit_message
