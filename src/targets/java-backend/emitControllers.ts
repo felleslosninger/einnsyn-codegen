@@ -194,10 +194,6 @@ export function emitControllers(
 			});
 			const hasQuery = queryCustomParams.length > 0 || queryExtendModel;
 
-			if (operationName === "addLagretSoek") {
-				console.log(httpOperation);
-			}
-
 			// If there are custom parameters, we need to create the model class
 			if (queryCustomParams.length) {
 				const customModel = createParameterModel({
