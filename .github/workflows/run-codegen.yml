@@ -14,19 +14,25 @@ jobs:
     name: Fetch app installation token
     runs-on: ubuntu-latest
     outputs:
-      token: ${{ steps.gh-api-token.outputs.token }}
+      token: ${{ steps.app-token.outputs.token }}
     steps:
-      - name: Fetch app installation token
-        id: gh-api-token
-        uses: tibdex/github-app-token@v2.1.0
+      - uses: actions/create-github-app-token@v1
+        id: app-token
         with:
-          app_id: ${{ secrets.EIN_CODEGEN_APP_ID }}
-          private_key: ${{ secrets.EIN_CODEGEN_APP_PRIVATE_KEY }}
+          app-id: ${{ secrets.EIN_CODEGEN_APP_ID }}
+          private-key: ${{ secrets.EIN_CODEGEN_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: |
+            felleslosninger/einnsyn-codegen
+            felleslosninger/einnsyn-api-spec
+            felleslosninger/einnsyn-sdk-ts
+            felleslosninger/einnsyn-sdk-java
+            fellselosninger/einnsyn-backend
 
   execute_codegen:
     name: Execute codegen
     runs-on: ubuntu-latest
-    needs: get_token
+    needs: [get_token]
 
     steps:
       - name: Checkout codegen repo
