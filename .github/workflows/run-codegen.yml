@@ -42,15 +42,17 @@ jobs:
           token: ${{ steps.app-token.outputs.token }}
           path: "einnsyn-api-spec"
 
-      - name: Install bun
-        uses: oven-sh/setup-bun@v2
+      - name: Install node
+        uses: actions/setup-node@v2
+        with:
+          node-version: '22'
 
       - name: Generate new files
         run: |
-          bun install @typespec/compiler
-          bun install @typespec/openapi3
-          bun install ./einnsyn-codegen
-          bunx tsp compile ./einnsyn-api-spec/typespec/einnsyn.tsp --emit einnsyn-codegen
+          npm install @typespec/compiler
+          npm install @typespec/openapi3
+          npm install ./einnsyn-codegen
+          npx tsp compile ./einnsyn-api-spec/typespec/einnsyn.tsp --emit einnsyn-codegen
 
 
       - name: Run Backend Codegen
