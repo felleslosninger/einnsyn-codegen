@@ -9,27 +9,31 @@ inputs:
     description: 'Commit message for the pull request'
     required: false
     default: 'Codegen'
+  pr_body:
+    description: 'Message body for the pull request'
+    required: false
+    default: 'Automated changes by Codegen.'
 
 runs:  
   using: "composite"
   steps:
-    - name: Checkout einnsyn-sdk-ts
+    - name: Checkout einnsyn-sdk-typescript
       uses: actions/checkout@v4
       with:
-        repository: felleslosninger/einnsyn-sdk-ts
+        repository: felleslosninger/einnsyn-sdk-typescript
         token: ${{ inputs.token }}
-        path: "einnsyn-sdk-ts"
+        path: "einnsyn-sdk-typescript"
 
     - name: Remove old codegen files (with // codegen in first line)
       shell: bash
       run: |
-        cd einnsyn-sdk-ts
+        cd einnsyn-sdk-typescript
         find . -type f -exec sh -c 'head -n 1 "$0" | grep -q "// Auto-generated"' {} \; -print | xargs -r rm
 
     - name: Copy new files to backend
       shell: bash
       run: |
-        cp -r tsp-output/einnsyn-codegen/sdk-ts/* einnsyn-sdk-ts/src/
+        cp -r tsp-output/einnsyn-codegen/sdk-ts/* einnsyn-sdk-typescript/src/
 
     - name: Install node
       uses: actions/setup-node@v2
@@ -39,16 +43,16 @@ runs:
     - name: Run biome
       shell: bash
       run: |
-        cd einnsyn-sdk-ts
+        cd einnsyn-sdk-typescript
         mvn spotless:apply
 
     - name: Create Pull Request
       uses: peter-evans/create-pull-request@v7
       with:
-        path: "einnsyn-sdk-ts"
+        path: "einnsyn-sdk-typescript"
         title: "EIN-Codegen"
-        body: "Automated changes by Codegen."
-        commit-message: ${{ inputs.commit_message || 'Codegen' }}
+        body: ${{ inputs.pr_body }}
+        commit-message: ${{ inputs.commit_message }}
         branch: "codegen"
         sign-commits: true
         token: ${{ inputs.token }}

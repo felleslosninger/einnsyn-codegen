@@ -9,6 +9,10 @@ inputs:
     description: 'Commit message for the pull request'
     required: false
     default: 'Codegen'
+  pr_body:
+    description: 'Message body for the pull request'
+    required: false
+    default: 'Automated changes by Codegen.'
 
 runs:
   using: "composite"
@@ -48,7 +52,7 @@ runs:
       with:
         path: "einnsyn-backend"
         title: "EIN-Codegen"
-        body: "Automated changes by Codegen."
+        body: ${{ inputs.pr_body }}
         commit-message: ${{ inputs.commit_message }}
         branch: "codegen"
         sign-commits: true

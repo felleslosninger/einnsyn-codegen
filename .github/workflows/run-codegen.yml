@@ -58,18 +58,18 @@ jobs:
         uses: ./.github/actions/codegen-backend
         with:
           token: ${{ steps.app-token.outputs.token }}
-          commit_message: github.event.client_payload.commit_message
+          pr_body: ${{ github.event.client_payload.pr_body }}
 
       - name: Run SDK Java Codegen
         if: github.event.client_payload.type == '' || github.event.client_payload.type == 'sdk-java'
         uses: ./.github/actions/codegen-sdk-java
         with:
           token: ${{ steps.app-token.outputs.token }}
-          commit_message: github.event.client_payload.commit_message
+          pr_body: ${{ github.event.client_payload.pr_body }}
 
       - name: Run SDK TS Codegen
         if: github.event.client_payload.type == '' || github.event.client_payload.type == 'sdk-ts'
         uses: ./.github/actions/codegen-sdk-ts
         with:
           token: ${{ steps.app-token.outputs.token }}
-          commit_message: github.event.client_payload.commit_message
+          pr_body: ${{ github.event.client_payload.pr_body }}
