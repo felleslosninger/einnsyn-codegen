@@ -273,14 +273,15 @@ function createConstructor(
 		`super(${overriddenInheritedProperties
 			.map(({ name, fixedValue }) => {
 				if (typeof fixedValue === "string") {
-					return (fixedValue = `"${fixedValue}"`);
-				} else if (typeof fixedValue === "boolean") {
-					return (fixedValue = fixedValue ? "true" : "false");
-				} else if (typeof fixedValue === "number") {
-					return (fixedValue = fixedValue.toString());
-				} else {
-					return name;
+					return `"${fixedValue}"`;
 				}
+				if (typeof fixedValue === "boolean") {
+					return fixedValue ? "true" : "false";
+				}
+				if (typeof fixedValue === "number") {
+					return fixedValue.toString();
+				}
+				return name;
 			})
 			.join(", ")});`,
 	);

@@ -53,7 +53,12 @@ export function getNamespacePath(namespace: Namespace): string[] {
 
 export function getBodyPropertyType(model: Model): Type | undefined {
 	for (const [key, value] of model.properties) {
-		if (value?.decorators.find((d) => d.definition?.name === "@body")) {
+		if (
+			value?.decorators.find(
+				(d) =>
+					d.definition?.name === "@body" || d.definition?.name === "@bodyRoot",
+			)
+		) {
 			return value.type;
 		}
 	}
@@ -281,4 +286,8 @@ export function getFixedValue(modelProperty: ModelProperty) {
 	) {
 		return getDefaultValue(modelProperty);
 	}
+}
+
+export function getQueryParameters(operation: HttpOperation) {
+	return operation.parameters.parameters.filter((f) => f.type === "query");
 }

@@ -1,4 +1,9 @@
-import { getDoc, Model, ModelProperty, Union } from "@typespec/compiler";
+import {
+	getDoc,
+	type Model,
+	type ModelProperty,
+	type Union,
+} from "@typespec/compiler";
 import { isReadonlyProperty } from "@typespec/openapi";
 import {
 	getBodyProperties,
@@ -23,7 +28,7 @@ import Enum from "../primitives/enum.js";
 import Field from "../primitives/field.js";
 import Method from "../primitives/method.js";
 import Parameter from "../primitives/parameter.js";
-import { JavaProps, JavaPropsWithModel } from "../types.js";
+import type { JavaProps, JavaPropsWithModel } from "../types.js";
 import { getJavaType } from "./javaHelpers.js";
 import { getValidationAnnotations } from "./validationAnnotations.js";
 import { getFlattenedModel } from "../../../utils/modelUtils.js";
@@ -46,15 +51,15 @@ const defaultProps: Partial<JavaProps> = {
 	stringEnums: true,
 };
 
-export function buildGeneralModel(props: JavaPropsWithModel) {
-	const className = props.className ?? props.model.name;
-	const clazz = new Class(props.parent, className);
+export function buildGeneralModel(incomingProps: JavaPropsWithModel) {
+	const className = incomingProps.className ?? incomingProps.model.name;
+	const clazz = new Class(incomingProps.parent, className);
 
 	// Update props with new parent
-	props = {
+	const props = {
 		className,
 		...defaultProps,
-		...props,
+		...incomingProps,
 		parent: clazz,
 	};
 

@@ -1,12 +1,10 @@
 import {
 	type EmitContext,
-	type Model,
 	type Namespace,
 	emitFile,
 	isErrorModel,
 	resolvePath,
 } from "@typespec/compiler";
-import { isReadonlyProperty } from "@typespec/openapi";
 import {
 	getJavaModelPackageName,
 	getJavaModelPathName,
