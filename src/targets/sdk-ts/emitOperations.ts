@@ -99,20 +99,27 @@ export function emitOperations(
 
 			if (requestType) {
 				bodyVariable = "body";
-				const [requestJavaType, requestJavaTypeImports] = getTSTypeName({
+				let [requestTSType, requestTSTypeImports] = getTSTypeName({
 					...defaultProps,
 					propertyName: operationName,
 					type: requestType,
 					entitySuffix: "Request",
 				});
-				operationMethod.addImport(...requestJavaTypeImports);
+				operationMethod.addImport(...requestTSTypeImports);
+
+				if (
+					verb === "patch" &&
+					(isExpandableField(requestType) || isEInnsynEntity(requestType))
+				) {
+					requestTSType = `Partial<${requestTSType}>`;
+				}
 
 				if (isExpandableField(requestType)) {
 					operationMethod.addParameter(
 						new TSFunctionParameter(
 							operationMethod,
 							bodyVariable,
-							`${requestJavaType} | "string"`,
+							`${requestTSType} | "string"`,
 						),
 					);
 				} else {
@@ -120,7 +127,7 @@ export function emitOperations(
 						new TSFunctionParameter(
 							operationMethod,
 							bodyVariable,
-							requestJavaType,
+							requestTSType,
 						),
 					);
 				}
