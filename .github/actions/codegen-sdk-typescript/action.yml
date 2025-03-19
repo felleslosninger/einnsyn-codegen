@@ -33,7 +33,7 @@ runs:
     - name: Copy new files to backend
       shell: bash
       run: |
-        cp -r tsp-output/einnsyn-codegen/sdk-ts/* einnsyn-sdk-typescript/src/
+        cp -r tsp-output/einnsyn-codegen/sdk-typescript/* einnsyn-sdk-typescript/src/
 
     - name: Install node
       uses: actions/setup-node@v2
