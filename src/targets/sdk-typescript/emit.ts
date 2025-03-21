@@ -5,6 +5,7 @@ import { emitUnknownModels } from "./emitUknonwnModels.js";
 import { emitExceptionModels } from "./emitExceptionModels.js";
 import { emitOperations } from "./emitOperations.js";
 import { emitClientBase } from "./emitClientBase.js";
+import { emitTypes } from "./emitTypes.js";
 
 export default async function emit(
 	context: EmitContext,
@@ -28,4 +29,7 @@ export default async function emit(
 
 	// Emit EInnsynClientBase
 	emitClientBase(context, { ...defaultProps }, eInnsynNamespace);
+
+	// Emit types
+	emitTypes(context, { ...defaultProps }, eInnsynNamespace);
 }

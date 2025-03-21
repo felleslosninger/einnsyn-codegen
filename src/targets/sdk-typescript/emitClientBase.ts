@@ -82,29 +82,6 @@ export function emitClientBase(
 		);
 	}
 
-	// Export all entity types
-	const models = recursivelyGetModels(eInnsynNamespace)
-		// Don't emit "wrappers" with a @body parameter:
-		.filter((model) => !getBodyPropertyType(model));
-	for (const model of models) {
-		const modelName = getTSModelClassName({ ...defaultProps, model });
-		const pathName = getTSEntityPathName(model);
-		const importPath = isErrorModel(context.program, model)
-			? "./common/error/EInnsynError"
-			: `./${pathName}/${modelName}`;
-
-		// Export model
-		file.addExportFrom(importPath, [{ name: modelName, isType: true }]);
-
-		if (isEInnsynEntity(model)) {
-			// Export isModel and Request model for entities
-			file.addExportFrom(importPath, [
-				{ name: `${modelName}Request`, isType: true },
-				{ name: `is${modelName}`, isType: false },
-			]);
-		}
-	}
-
 	// Emit file
 	emitFile(context.program, {
 		path: resolvePath(
