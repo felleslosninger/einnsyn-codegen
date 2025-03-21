@@ -30,6 +30,13 @@ export class TSFile extends TSPrimitive {
 	classes: ClassWrapperType[] = [];
 	interfaces: InterfaceWrapperType[] = [];
 	functions: FunctionWrapperType[] = [];
+	exportFrom: {
+		modulePath: string;
+		exports: {
+			name: string;
+			isType: boolean;
+		}[];
+	}[] = [];
 
 	constructor(pathName: string) {
 		super(undefined);
@@ -91,6 +98,56 @@ export class TSFile extends TSPrimitive {
 			.join("\n");
 	}
 
+	addExportFrom(
+		modulePath: string,
+		exports: { name: string; isType: boolean }[],
+	) {
+		const existingModule = this.exportFrom.find(
+			(i) => i.modulePath === modulePath,
+		);
+		if (existingModule) {
+			for (const { name, isType } of exports) {
+				const existingExport = existingModule.exports.find(
+					(i) => i.name === name,
+				);
+				// If we're already exporting the type, and the new export is not a type, remove the type export
+				if (existingExport && !isType) {
+					existingExport.isType = false;
+				} else if (!existingExport) {
+					existingModule.exports.push({ name, isType });
+				}
+			}
+		} else {
+			const module = {
+				modulePath,
+				// Make a copy:
+				exports: exports.map(({ name, isType }) => ({ name, isType })),
+			};
+			this.exportFrom.push(module);
+		}
+		return this;
+	}
+
+	printExportFrom() {
+		return this.exportFrom
+			.sort((a, b) => a.modulePath.localeCompare(b.modulePath))
+			.map(({ modulePath, exports }) => {
+				if (exports.length > 0) {
+					const hasNonTypeExports = exports.some((e) => !e.isType);
+					const exportStatement = hasNonTypeExports
+						? "export "
+						: "export type ";
+					const exportList = exports.map(
+						({ name, isType }) =>
+							`${isType && hasNonTypeExports ? "type " : ""}${name}`,
+					);
+					return `${exportStatement}{${exportList.join(", ")}} from '${modulePath}';`;
+				}
+			})
+			.filter((l) => l !== undefined)
+			.join("\n");
+	}
+
 	addClass({ clazz, isExported = false }: ClassWrapperType) {
 		this.classes.push({ clazz, isExported });
 		return this;
@@ -112,6 +169,9 @@ export class TSFile extends TSPrimitive {
 			"",
 
 			this.printImports(),
+			"",
+
+			this.printExportFrom(),
 			"",
 
 			...this.classes.map(

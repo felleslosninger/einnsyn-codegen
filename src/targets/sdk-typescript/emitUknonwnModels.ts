@@ -65,7 +65,10 @@ export function emitUnknownModels(
 
 		// Emit file
 		emitFile(context.program, {
-			path: resolvePath(context.emitterOutputDir, `sdk-ts/${modelPathName}.ts`),
+			path: resolvePath(
+				context.emitterOutputDir,
+				`sdk-typescript/${modelPathName}.ts`,
+			),
 			content: modelFile.toString(),
 		});
 	}

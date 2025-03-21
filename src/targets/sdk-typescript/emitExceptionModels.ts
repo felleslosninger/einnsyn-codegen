@@ -176,7 +176,10 @@ export function emitExceptionModels(
 
 	// Emit file
 	emitFile(context.program, {
-		path: resolvePath(context.emitterOutputDir, `sdk-ts/${errorPathName}.ts`),
+		path: resolvePath(
+			context.emitterOutputDir,
+			`sdk-typescript/${errorPathName}.ts`,
+		),
 		content: errorFile.toString(),
 	});
 }
