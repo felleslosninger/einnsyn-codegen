@@ -22,6 +22,7 @@ import {
 	isList,
 	isNumberUnion,
 	isStringUnion,
+	isWriteonlyProperty,
 } from "../../../utils/typecheckers.js";
 import Class from "../primitives/class.js";
 import Enum from "../primitives/enum.js";
@@ -174,7 +175,13 @@ export function buildGeneralModel(incomingProps: JavaPropsWithModel) {
 }
 
 function getFieldVariables(props: JavaPropsWithModel): [Field[], string[]] {
-	const { context, model, parent, skipReadOnlyProperties } = props;
+	const {
+		context,
+		model,
+		parent,
+		skipReadOnlyProperties,
+		skipWriteOnlyProperties,
+	} = props;
 	const properties = getBodyProperties(model);
 	const inheritedProperties = getInheritedProperties(model);
 	const entityName = model.name;
@@ -186,6 +193,10 @@ function getFieldVariables(props: JavaPropsWithModel): [Field[], string[]] {
 		// Skip read-only
 		.filter(
 			(p) => !skipReadOnlyProperties || !isReadonlyProperty(context.program, p),
+		)
+		.filter(
+			(p) =>
+				!skipWriteOnlyProperties || !isWriteonlyProperty(context.program, p),
 		)
 		// Skip already added (overridden?) properties
 		.filter((p) => !addedProperty.has(p.name));
@@ -240,234 +251,247 @@ export function getConstructors(
 		!isReadonlyProperty(context.program, prop);
 	const properties = getBodyProperties(model).filter(notDefault);
 	const inheritedProperties = getInheritedProperties(model).filter(notDefault);
-	const allProperties = [...inheritedProperties, ...properties];
 	const constructors: Method[] = [];
 	const imports: string[] = [];
+	const constructorMethod = new Method(parent, className ?? model.name);
 
-	const constructor = new Method(parent, className ?? model.name);
-
-	allProperties
+	const allProperties = [...inheritedProperties, ...properties]
 		// Don't add method parameter for fixed values
-		.filter((prop) => getFixedValue(prop) === undefined)
-		.forEach(({ name, type }) => {
-			const [javaType, javaTypeImports] = getJavaType({
-				...props,
-				type,
-				propertyName: name,
-				parentName: className,
-			});
-			constructor.addParameter(new Parameter(parent, name, javaType));
-			imports.push(...javaTypeImports);
+		.filter((prop) => getFixedValue(prop) === undefined);
+	for (const { name, type } of allProperties) {
+		const [javaType, javaTypeImports] = getJavaType({
+			...props,
+			type,
+			propertyName: name,
+			parentName: className,
 		});
+		constructorMethod.addParameter(new Parameter(parent, name, javaType));
+		imports.push(...javaTypeImports);
+	}
 
 	const superArgs = inheritedProperties
 		.filter((prop) => getFixedValue(prop) === undefined)
 		.map((prop) => prop.name);
-	constructor.addBody(`super(${superArgs.join(", ")});`);
+	constructorMethod.addBody(`super(${superArgs.join(", ")});`);
 
 	properties
 		// Don't set fixed values
 		.filter((prop) => getFixedValue(prop) === undefined)
 		.forEach((prop) => {
-			constructor.addBody(`this.${prop.name} = ${prop.name};`);
+			constructorMethod.addBody(`this.${prop.name} = ${prop.name};`);
 		});
 
-	constructors.push(constructor);
+	constructors.push(constructorMethod);
 	return [constructors, imports];
 }
 
 function getGetters(props: JavaPropsWithModel): [Method[], string[]] {
-	const { context, model, parent, skipReadOnlyProperties } = props;
-	const properties = getBodyProperties(model);
+	const {
+		context,
+		model,
+		parent,
+		skipReadOnlyProperties,
+		skipWriteOnlyProperties,
+	} = props;
 	const entityName = model.name;
 	const getters: Method[] = [];
 	const imports: string[] = [];
-
-	properties
+	const properties = getBodyProperties(model)
 		.filter(
-			(prop) =>
-				!skipReadOnlyProperties || !isReadonlyProperty(context.program, prop),
+			(p) => !skipReadOnlyProperties || !isReadonlyProperty(context.program, p),
 		)
-		.forEach((property) => {
-			const name = property.name;
-			const [javaType, javaTypeImports] = getJavaType({
-				...props,
-				type: property.type,
-				propertyName: property.name,
-				parentName: entityName,
-			});
-
-			const getter = new Method(parent, javaType, "get" + pascalCase(name));
-			getter.addBody(`return ${name};`);
-			getter.setDocumentation(getDoc(props.context.program, property));
-
-			getters.push(getter);
-			imports.push(...javaTypeImports);
+		.filter(
+			(p) =>
+				!skipWriteOnlyProperties || !isWriteonlyProperty(context.program, p),
+		);
+	for (const property of properties) {
+		const name = property.name;
+		const [javaType, javaTypeImports] = getJavaType({
+			...props,
+			type: property.type,
+			propertyName: property.name,
+			parentName: entityName,
 		});
+
+		const getter = new Method(parent, javaType, `get${pascalCase(name)}`);
+		getter.addBody(`return ${name};`);
+		getter.setDocumentation(getDoc(props.context.program, property));
+
+		getters.push(getter);
+		imports.push(...javaTypeImports);
+	}
 
 	return [getters, imports];
 }
 
 function getSetters(props: JavaPropsWithModel): [Method[], string[]] {
-	const { context, model, parent, skipReadOnlyProperties, isBuilder } = props;
-	const properties = getBodyProperties(model);
+	const {
+		context,
+		model,
+		parent,
+		skipReadOnlyProperties,
+		skipWriteOnlyProperties,
+		isBuilder,
+	} = props;
 	const entityName = model.name;
 	const setters: Method[] = [];
 	const imports: string[] = [];
 	const returnType = props.isBuilder ? "Builder" : "void";
-
-	properties
+	const properties = getBodyProperties(model)
 		.filter(
-			(prop) =>
-				!skipReadOnlyProperties || !isReadonlyProperty(context.program, prop),
+			(p) => !skipReadOnlyProperties || !isReadonlyProperty(context.program, p),
 		)
-		.forEach((property) => {
-			const name = property.name;
-			const [javaType, javaTypeImports] = getJavaType({
+		.filter(
+			(p) =>
+				!skipWriteOnlyProperties || !isWriteonlyProperty(context.program, p),
+		);
+	for (const property of properties) {
+		const name = property.name;
+		const [javaType, javaTypeImports] = getJavaType({
+			...props,
+			type: property.type,
+			propertyName: property.name,
+			parentName: entityName,
+			wrapExpandableFields: false,
+		});
+
+		const setterName = isBuilder ? name : `set${pascalCase(name)}`;
+
+		// Add setter method
+		const setter = new Method(parent, returnType, setterName);
+		setter.addParameter(new Parameter(parent, name, javaType));
+		// If the property is an expandable field, we need to wrap it
+		if (
+			isList(property.type) &&
+			isExpandableField(getListType(property.type))
+		) {
+			setter.addImport("java.util.stream.Collectors");
+			setter.addBody(
+				`this.${name} = ${name}.stream().map(ExpandableField::new).collect(Collectors.toList());`,
+			);
+		} else if (isExpandableField(property.type)) {
+			setter.addBody(`this.${name} = new ExpandableField<>(${name});`);
+		} else {
+			setter.addBody(`this.${name} = ${name};`);
+		}
+		if (props.isBuilder) {
+			setter.addBody("return this;");
+		}
+		setter.setDocumentation(getDoc(context.program, property));
+		setters.push(setter);
+		imports.push(...javaTypeImports);
+
+		// Add setProperty(id)
+		if (isExpandableField(property.type)) {
+			const setter = new Method(parent, returnType, setterName);
+			setter.addParameter(new Parameter(parent, "id", "String"));
+			setter.addBody(`this.${name} = new ExpandableField<>(id);`);
+			if (props.isBuilder) {
+				setter.addBody("return this;");
+			}
+			setter.setDocumentation(getDoc(context.program, property));
+			setters.push(setter);
+		}
+
+		// Add addProperty(propertyTypeRequest) method
+		const listType = getListType(property.type);
+		if (listType) {
+			const listType = getListType(property.type);
+			const [targetJavaType, targetJavaTypeImports] = getJavaType({
 				...props,
-				type: property.type,
+				type: listType,
 				propertyName: property.name,
 				parentName: entityName,
 				wrapExpandableFields: false,
 			});
 
-			const setterName = isBuilder ? name : "set" + pascalCase(name);
-
-			// Add setter method
-			const setter = new Method(parent, returnType, setterName);
-			setter.addParameter(new Parameter(parent, name, javaType));
-			// If the property is an expandable field, we need to wrap it
-			if (
-				isList(property.type) &&
-				isExpandableField(getListType(property.type))
-			) {
-				setter.addImport("java.util.stream.Collectors");
-				setter.addBody(
-					`this.${name} = ${name}.stream().map(ExpandableField::new).collect(Collectors.toList());`,
+			const adder = new Method(parent, returnType, `add${pascalCase(name)}`);
+			adder.addParameter(new Parameter(parent, name, targetJavaType));
+			adder.addBody(
+				`if (this.${name} == null) {`,
+				`this.${name} = new ArrayList<>();`,
+				"}",
+			);
+			if (isExpandableField(listType)) {
+				const expandableEntity = getExpandableEntity(listType);
+				const [expandableJavaType, expandableJavaTypeImports] = getJavaType({
+					...props,
+					type: expandableEntity,
+				});
+				adder.addBody(
+					`this.${name}.add(new ExpandableField<${expandableJavaType}>(${name}));`,
 				);
-			} else if (isExpandableField(property.type)) {
-				setter.addBody(`this.${name} = new ExpandableField<>(${name});`);
+				imports.push(...expandableJavaTypeImports);
 			} else {
-				setter.addBody(`this.${name} = ${name};`);
+				adder.addBody(`this.${name}.add(${name});`);
 			}
+
 			if (props.isBuilder) {
-				setter.addBody(`return this;`);
-			}
-			setter.setDocumentation(getDoc(context.program, property));
-			setters.push(setter);
-			imports.push(...javaTypeImports);
-
-			// Add setProperty(id)
-			if (isExpandableField(property.type)) {
-				const setter = new Method(parent, returnType, setterName);
-				setter.addParameter(new Parameter(parent, "id", "String"));
-				setter.addBody(`this.${name} = new ExpandableField<>(id);`);
-				if (props.isBuilder) {
-					setter.addBody(`return this;`);
-				}
-				setter.setDocumentation(getDoc(context.program, property));
-				setters.push(setter);
+				adder.addBody("return this;");
 			}
 
-			// Add addProperty(propertyTypeRequest) method
-			const listType = getListType(property.type);
-			if (listType) {
-				const listType = getListType(property.type);
-				const [targetJavaType, targetJavaTypeImports] = getJavaType({
-					...props,
-					type: listType,
-					propertyName: property.name,
-					parentName: entityName,
-					wrapExpandableFields: false,
-				});
+			adder.setDocumentation(getDoc(context.program, property));
+			setters.push(adder);
+			imports.push(...targetJavaTypeImports);
+		}
 
-				const adder = new Method(parent, returnType, "add" + pascalCase(name));
-				adder.addParameter(new Parameter(parent, name, targetJavaType));
-				adder.addBody(
-					`if (this.${name} == null) {`,
-					`this.${name} = new ArrayList<>();`,
-					`}`,
-				);
-				if (isExpandableField(listType)) {
-					const expandableEntity = getExpandableEntity(listType);
-					const [expandableJavaType, expandableJavaTypeImports] = getJavaType({
-						...props,
-						type: expandableEntity,
-					});
-					adder.addBody(
-						`this.${name}.add(new ExpandableField<${expandableJavaType}>(${name}));`,
-					);
-					imports.push(...expandableJavaTypeImports);
-				} else {
-					adder.addBody(`this.${name}.add(${name});`);
-				}
-
-				if (props.isBuilder) {
-					adder.addBody(`return this;`);
-				}
-
-				adder.setDocumentation(getDoc(context.program, property));
-				setters.push(adder);
-				imports.push(...targetJavaTypeImports);
+		// Add addProperty(builder) method
+		if (listType && isExpandableField(listType)) {
+			const [targetJavaType, targetJavaTypeImports] = getJavaType({
+				...props,
+				type: listType,
+				propertyName: property.name,
+				parentName: entityName,
+				wrapExpandableFields: false,
+			});
+			const adder = new Method(parent, returnType, `add${pascalCase(name)}`);
+			adder.addParameter(
+				new Parameter(
+					parent,
+					"builderFunction",
+					`Function<${targetJavaType}.Builder, ${targetJavaType}.Builder>`,
+				),
+			);
+			adder.addBody(
+				`if (this.${name} == null) {`,
+				`this.${name} = new ArrayList<>();`,
+				"}",
+				`this.${name}.add(new ExpandableField<>(builderFunction.apply(new ${targetJavaType}.Builder()).build()));`,
+			);
+			if (props.isBuilder) {
+				adder.addBody("return this;");
 			}
+			adder.addImport("java.util.function.Function");
+			adder.setDocumentation(getDoc(context.program, property));
+			setters.push(adder);
+			imports.push(...targetJavaTypeImports);
+		}
 
-			// Add addProperty(builder) method
-			if (listType && isExpandableField(listType)) {
-				const [targetJavaType, targetJavaTypeImports] = getJavaType({
-					...props,
-					type: listType,
-					propertyName: property.name,
-					parentName: entityName,
-					wrapExpandableFields: false,
-				});
-				const adder = new Method(parent, returnType, "add" + pascalCase(name));
-				adder.addParameter(
-					new Parameter(
-						parent,
-						"builderFunction",
-						`Function<${targetJavaType}.Builder, ${targetJavaType}.Builder>`,
-					),
-				);
-				adder.addBody(
-					`if (this.${name} == null) {`,
-					`this.${name} = new ArrayList<>();`,
-					`}`,
-					`this.${name}.add(new ExpandableField<>(builderFunction.apply(new ${targetJavaType}.Builder()).build()));`,
-				);
-				if (props.isBuilder) {
-					adder.addBody(`return this;`);
-				}
-				adder.addImport("java.util.function.Function");
-				adder.setDocumentation(getDoc(context.program, property));
-				setters.push(adder);
-				imports.push(...targetJavaTypeImports);
+		// Add addProperty(id) method
+		if (listType && isExpandableField(listType)) {
+			const [targetJavaType, targetJavaTypeImports] = getJavaType({
+				...props,
+				type: listType,
+				propertyName: property.name,
+				parentName: entityName,
+				wrapExpandableFields: false,
+			});
+			const adder = new Method(parent, returnType, `add${pascalCase(name)}`);
+			adder.addParameter(new Parameter(parent, "id", "String"));
+			adder.addBody(
+				`if (this.${name} == null) {`,
+				`this.${name} = new ArrayList<>();`,
+				"}",
+				`this.${name}.add(new ExpandableField<>(id));`,
+			);
+			if (props.isBuilder) {
+				adder.addBody("return this;");
 			}
-
-			// Add addProperty(id) method
-			if (listType && isExpandableField(listType)) {
-				const [targetJavaType, targetJavaTypeImports] = getJavaType({
-					...props,
-					type: listType,
-					propertyName: property.name,
-					parentName: entityName,
-					wrapExpandableFields: false,
-				});
-				const adder = new Method(parent, returnType, "add" + pascalCase(name));
-				adder.addParameter(new Parameter(parent, "id", "String"));
-				adder.addBody(
-					`if (this.${name} == null) {`,
-					`this.${name} = new ArrayList<>();`,
-					`}`,
-					`this.${name}.add(new ExpandableField<>(id));`,
-				);
-				if (props.isBuilder) {
-					adder.addBody(`return this;`);
-				}
-				adder.setDocumentation(getDoc(context.program, property));
-				setters.push(adder);
-				imports.push(...targetJavaTypeImports);
-			}
-		});
+			adder.setDocumentation(getDoc(context.program, property));
+			setters.push(adder);
+			imports.push(...targetJavaTypeImports);
+		}
+	}
 
 	return [setters, imports];
 }
@@ -546,16 +570,18 @@ export function getEnums(props: JavaPropsWithModel) {
 }
 
 export function getSubModelClasses(props: JavaPropsWithModel) {
-	const { model, skipReadOnlyProperties } = props;
-	const properties = getBodyProperties(model);
+	const { context, model, skipReadOnlyProperties, skipWriteOnlyProperties } =
+		props;
 	const classes: Class[] = [];
 
 	// Filter properties by non-eInnsynEntity models
-	properties
+	const properties = getBodyProperties(model)
 		.filter(
-			(property) =>
-				!skipReadOnlyProperties ||
-				!isReadonlyProperty(props.context.program, property),
+			(p) => !skipReadOnlyProperties || !isReadonlyProperty(context.program, p),
+		)
+		.filter(
+			(p) =>
+				!skipWriteOnlyProperties || !isWriteonlyProperty(context.program, p),
 		)
 		.filter((property) => {
 			const model = isList(property.type)
@@ -567,25 +593,26 @@ export function getSubModelClasses(props: JavaPropsWithModel) {
 				!isEInnsynEntity(model) &&
 				!isExpandableField(model)
 			);
-		})
-		.forEach((property) => {
-			const model = (
-				isList(property.type) ? getListType(property.type) : property.type
-			) as Model;
-			const [javaType, javaTypeImports] = getJavaType({
-				...props,
-				type: model,
-				propertyName: property.name,
-			});
-			const subModelClass = buildGeneralModel({
-				...props,
-				model,
-				className: javaType,
-			});
-			subModelClass.setStatic(true);
-			subModelClass.addImport(...javaTypeImports);
-			classes.push(subModelClass);
 		});
+
+	for (const property of properties) {
+		const model = (
+			isList(property.type) ? getListType(property.type) : property.type
+		) as Model;
+		const [javaType, javaTypeImports] = getJavaType({
+			...props,
+			type: model,
+			propertyName: property.name,
+		});
+		const subModelClass = buildGeneralModel({
+			...props,
+			model,
+			className: javaType,
+		});
+		subModelClass.setStatic(true);
+		subModelClass.addImport(...javaTypeImports);
+		classes.push(subModelClass);
+	}
 
 	return classes;
 }

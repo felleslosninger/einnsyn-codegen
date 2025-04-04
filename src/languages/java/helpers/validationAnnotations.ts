@@ -1,12 +1,14 @@
 import {
+	type ModelProperty,
+	type Type,
+	getLifecycleVisibilityEnum,
 	getMaxLength,
 	getMaxValue,
 	getMinLength,
 	getMinValue,
 	getPattern,
+	hasVisibility,
 	isStringType,
-	type ModelProperty,
-	type Type,
 } from "@typespec/compiler";
 import { isReadonlyProperty } from "@typespec/openapi";
 import {
@@ -25,8 +27,8 @@ import {
 	isStringUnion,
 	isUrlProperty,
 } from "../../../utils/typecheckers.js";
-import { getJavaEntityPackageName } from "./javaHelpers.js";
 import type { JavaProps } from "../types.js";
+import { getJavaEntityPackageName } from "./javaHelpers.js";
 
 type Annotation = [string, string?];
 
@@ -154,7 +156,6 @@ export function getValidationAnnotations(
 		}
 		// TODO: Template?
 	}
-
 	const isReadOnly = isReadonlyProperty(context.program, modelProperty);
 	const value = getDefaultValue(modelProperty);
 	if (isReadOnly && value === undefined) {

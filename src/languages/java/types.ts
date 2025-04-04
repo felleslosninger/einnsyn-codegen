@@ -23,6 +23,7 @@ export type JavaProps = JavaBaseProps & {
 	addInlineEnums?: boolean;
 	isBuilder?: boolean;
 	skipReadOnlyProperties?: boolean;
+	skipWriteOnlyProperties?: boolean;
 	setDefaultValues?: boolean;
 	visibility?: "public" | "protected" | "private";
 	stringEnums?: boolean;

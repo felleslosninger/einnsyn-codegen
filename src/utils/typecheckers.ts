@@ -5,12 +5,15 @@ import {
 	type ModelProperty,
 	type Namespace,
 	type NumericLiteral,
+	type Program,
 	type Scalar,
 	type StringLiteral,
 	type Type,
 	type Union,
 	getFormat,
+	getLifecycleVisibilityEnum,
 	getPattern,
+	hasVisibility,
 } from "@typespec/compiler";
 import { getExpandableEntity, getListType } from "./getters.js";
 
@@ -221,4 +224,24 @@ export function isFinal(modelProperty: ModelProperty): boolean {
 		default:
 			return false;
 	}
+}
+
+export function isWriteonlyProperty(
+	program: Program,
+	modelProperty: ModelProperty,
+): boolean {
+	const lifecycleEnum = getLifecycleVisibilityEnum(program);
+	const read = lifecycleEnum.members.get("Read");
+	const create = lifecycleEnum.members.get("Create");
+	const update = lifecycleEnum.members.get("Update");
+
+	if (!read || !create || !update) {
+		throw new Error("Cannot find lifecycle enum members");
+	}
+
+	return (
+		!hasVisibility(program, modelProperty, read) &&
+		(hasVisibility(program, modelProperty, create) ||
+			hasVisibility(program, modelProperty, update))
+	);
 }

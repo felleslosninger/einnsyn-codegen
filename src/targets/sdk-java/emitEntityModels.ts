@@ -34,9 +34,6 @@ export function emitEntityModels(
 	//.filter((model) => model.derivedModels.length === 0);
 
 	for (const model of models) {
-		// // Subclassing complicates things unnecessarily, so we flatten the model
-		// model = getFlattenedModel(model);
-
 		// Create java file
 		const modelPackageName = getJavaModelPackageName(
 			defaultProps.packageName,
@@ -58,6 +55,7 @@ export function emitEntityModels(
 			addSubModels: true,
 			stringEnums: false,
 			setDefaultValues: false,
+			skipWriteOnlyProperties: true,
 		});
 		modelFile.addClass(modelClass);
 

@@ -18,7 +18,10 @@ import { TSFunctionParameter } from "../../languages/typescript/primitives/tsFun
 import TSInterface from "../../languages/typescript/primitives/tsInterface.js";
 import type { TSProps } from "../../languages/typescript/types.js";
 import { recursivelyGetModels } from "../../utils/getters.js";
-import { isEInnsynEntity } from "../../utils/typecheckers.js";
+import {
+	isEInnsynEntity,
+	isWriteonlyProperty,
+} from "../../utils/typecheckers.js";
 
 export function emitEntityModels(
 	context: EmitContext,
@@ -45,6 +48,7 @@ export function emitEntityModels(
 			parent: int,
 			model,
 			readonly: true,
+			propertyFilter: (p) => !isWriteonlyProperty(context.program, p),
 		});
 
 		if (model.baseModel) {

@@ -43,7 +43,8 @@ export function emitTypes(
 			: `./${pathName}/${modelName}`;
 
 		// Export model
-		file.addExportFrom(importPath, [{ name: modelName, isType: true }]);
+		const isError = isErrorModel(context.program, model);
+		file.addExportFrom(importPath, [{ name: modelName, isType: !isError }]);
 
 		if (isEInnsynEntity(model)) {
 			// Export isModel and Request model for entities
