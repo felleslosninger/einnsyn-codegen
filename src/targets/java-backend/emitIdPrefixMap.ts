@@ -36,7 +36,7 @@ export function emitIdPrefixMap(
 		isEInnsynEntity(model),
 	);
 	for (const model of models) {
-		const modelName = model.name?.toLowerCase();
+		const modelName = model.name;
 		const extensions = getExtensions(context.program, model);
 		const idPrefix = extensions.get("x-idPrefix");
 		if (modelName && idPrefix) {
