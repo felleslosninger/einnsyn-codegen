@@ -1,3 +1,4 @@
+// biome-ignore lint/style/useNodejsImportProtocol:
 import path from "path";
 import type { TSImportType } from "../types.js";
 import type TSClass from "./tsClass.js";

@@ -41,6 +41,7 @@ export default abstract class JavaPrimitive implements Primitive {
 		if (!path.startsWith("@")) {
 			this.addImport(path);
 		} else {
+			// biome-ignore lint/style/noParameterAssign:
 			path = path.slice(1);
 		}
 		const annotation = path.split(".").slice(-1)[0];

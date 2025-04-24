@@ -256,17 +256,20 @@ function createConstructor(
 		}
 	}
 
-	// Add parameters
-	[...overriddenInheritedProperties, ...properties]
+	// Add constructor parameters
+	const constructorParameters = [
+		...overriddenInheritedProperties,
+		...properties,
+	]
 		// Don't add parameters with a fixed value
 		.filter((p) => p.fixedValue === undefined)
 		// Don't add overrides, they are already added
-		.reduce(onlyOnce, [])
-		.forEach(({ name, javaType }) =>
-			constructorMethod.addParameter(
-				new Parameter(constructorMethod, name, javaType),
-			),
+		.reduce(onlyOnce, []);
+	for (const { name, javaType } of constructorParameters) {
+		constructorMethod.addParameter(
+			new Parameter(constructorMethod, name, javaType),
 		);
+	}
 
 	// Add super() call
 	constructorMethod.addBody(
@@ -287,12 +290,12 @@ function createConstructor(
 	);
 
 	// Set properties
-	properties
+	const nonInheritedProperties = properties
 		// Don't set properties that are inherited from parents
-		.filter((p) => !inheritedProperties.find((ip) => ip.name === p.name))
-		.forEach(({ name, fixedValue }) => {
-			constructorMethod.addBody(`this.${name} = ${name};`);
-		});
+		.filter((p) => !inheritedProperties.find((ip) => ip.name === p.name));
+	for (const { name, fixedValue } of nonInheritedProperties) {
+		constructorMethod.addBody(`this.${name} = ${name};`);
+	}
 
 	return constructorMethod;
 }
