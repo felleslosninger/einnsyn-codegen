@@ -2,7 +2,6 @@ import type {
 	DecoratorApplication,
 	Model,
 	ModelProperty,
-	ProjectionStatementNode,
 	SourceModel,
 } from "@typespec/compiler";
 import { createRekeyableMap } from "@typespec/compiler/utils";
@@ -137,7 +136,6 @@ export function createParameterModel(props: {
 	baseModel?: Model;
 	derivedModels?: Model[];
 	sourceModels?: SourceModel[];
-	projections?: ProjectionStatementNode[];
 	decorators?: DecoratorApplication[];
 }): Model {
 	const modelProperties: ModelProperty[] = props.parameters.map(
@@ -151,9 +149,7 @@ export function createParameterModel(props: {
 		baseModel: props.baseModel,
 		derivedModels: props.derivedModels ?? [],
 		sourceModels: props.sourceModels ?? [],
-		projections: props.projections ?? [],
 		decorators: props.decorators ?? [],
-		projectionsByName: (name: string) => [],
 		isFinished: true,
 		properties: createRekeyableMap(modelProperties.map((p) => [p.name, p])),
 	};

@@ -4,18 +4,28 @@
 	"type": "module",
 	"main": "dist/index.js",
 	"dependencies": {
-		"@typespec/compiler": "^0.66.0",
-		"@typespec/http": "^0.66.0",
-		"@typespec/openapi": "^0.66.0",
-		"@typespec/openapi3": "^0.66.0",
+		"@typespec/compiler": "1.2.1",
+		"@typespec/http": "1.2.1",
+		"@typespec/openapi": "1.2.1",
+		"@typespec/openapi3": "1.2.1",
 		"typescript": "^5.8.2"
 	},
 	"scripts": {
 		"build": "tsc",
 		"watch": "tsc -w",
-		"prepare": "npm run build"
+		"prepare": "npm run build",
+		"lint": "tsc --noEmit",
+		"format": "prettier --write src/**/*.ts",
+		"format:check": "prettier --check src/**/*.ts",
+		"test": "jest",
+		"test:watch": "jest --watch",
+		"test:coverage": "jest --coverage"
 	},
 	"devDependencies": {
-		"@types/node": "^22.13.10"
+		"@types/node": "24.1.0",
+		"prettier": "^3.0.0",
+		"jest": "30.0.5",
+		"@types/jest": "30.0.0",
+		"ts-jest": "^29.0.0"
 	}
 }

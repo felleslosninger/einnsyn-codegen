@@ -1,8 +1,8 @@
 import JavaPrimitive from "./javaprimitive.js";
 
 export default class Parameter extends JavaPrimitive {
-	private name: string;
-	private type: string;
+	name: string;
+	type: string;
 
 	constructor(parent: JavaPrimitive | undefined, name: string, type: string) {
 		super(parent);
