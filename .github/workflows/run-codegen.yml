@@ -48,8 +48,7 @@ jobs:
       - name: Generate new files
         run: |
           npm install
-          npm link
-          npx tsp compile ./einnsyn-api-spec/typespec/einnsyn.tsp --emit einnsyn-codegen
+          npx tsp compile ./einnsyn-api-spec/typespec/einnsyn.tsp --emit ./
 
       - run: |
           echo "Current directory: $PWD"
