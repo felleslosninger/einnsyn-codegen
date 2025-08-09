@@ -155,6 +155,7 @@ export function emitControllers(
 					propertyName: parameterModel.name,
 					parentName: entityName,
 				});
+
 				const parameter = new Parameter(method, parameterModel.name, javaType);
 				parameter.addAnnotation("jakarta.validation.Valid");
 				parameter.addAnnotation(
@@ -169,6 +170,16 @@ export function emitControllers(
 						generic.kind === "Model" &&
 						generic;
 					if (entityModel) {
+						const [entityModelType, entityModelTypeImports] = getJavaType({
+							...defaultProps,
+							type: entityModel,
+							propertyName: parameterModel.name,
+							parentName: entityName,
+						});
+						// Wrap IDs in ExpandableFields, so that ExpandableField can resolve custom identifiers (email, orgno. etc.) to eInnsyn IDs
+						parameter.type = `ExpandableField<${entityModelType}>`;
+						parameter.addImport(...entityModelTypeImports);
+
 						const serviceName = `${pascalCase(entityModel.name)}Service`;
 						const servicePackageName = `${getJavaEntityPackageName(PACKAGE_NAME, entityModel)}.${serviceName}`;
 						parameter.addImport(servicePackageName);
@@ -330,7 +341,21 @@ export function emitControllers(
 			}
 
 			// Add method body
-			const serviceParameters = pathParameters.map((p) => p.name);
+			const serviceParameters = pathParameters.map((p) => {
+				// Call .getId() if this is an id field
+				const type = p.param.type;
+				if (isEInnsynId(type)) {
+					const generic = type.templateMapper?.args[0];
+					const entityModel =
+						generic?.entityKind === "Type" &&
+						generic.kind === "Model" &&
+						generic;
+					if (entityModel) {
+						return `${p.name}.getId()`;
+					}
+				}
+				return p.name;
+			});
 			if (hasQuery) {
 				serviceParameters.push("query");
 			}
