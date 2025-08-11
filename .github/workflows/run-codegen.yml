@@ -43,12 +43,12 @@ jobs:
       - name: Install node
         uses: actions/setup-node@v2
         with:
-          node-version: '22'
+          node-version: '24'
 
       - name: Generate new files
         run: |
           npm install
-          npx tsp compile ./einnsyn-api-spec/typespec/einnsyn.tsp --emit ./
+          npx tsp compile ./einnsyn-api-spec/typespec/einnsyn.tsp --emit einnsyn-codegen
 
       - run: |
           echo "Current directory: $PWD"
