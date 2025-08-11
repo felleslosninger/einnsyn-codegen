@@ -48,10 +48,9 @@ jobs:
       - name: Generate new files
         run: |
           npm install
+          npm link
+          npm link einnsyn-codegen
           npx tsp compile ./einnsyn-api-spec/typespec/einnsyn.tsp --emit einnsyn-codegen
-
-      - run: |
-          echo "Current directory: $PWD"
 
       - name: Run Backend Codegen
         if: github.event.client_payload.type == '' || github.event.client_payload.type == 'backend'
