@@ -17,9 +17,9 @@ export function emitIdPrefixMap(
 	defaultProps: JavaBaseProps,
 	eInnsynNamespace: Namespace,
 ) {
-	const packageName = "no.einnsyn.backend.utils.idgenerator";
+	const packageName = "no.einnsyn.backend.utils.id";
 	const basePath = defaultProps.packageName.split(".").join("/");
-	const pathName = `${basePath}/utils/idgenerator`;
+	const pathName = `${basePath}/utils/id`;
 	const file = new JavaFile(packageName);
 	const modelClass = new Class(file, "IdPrefix");
 	modelClass.addImport("java.util.Map");
