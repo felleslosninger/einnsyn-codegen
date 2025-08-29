@@ -53,7 +53,7 @@ export function getJavaType(props: JavaTypeProps): [string, string[]] {
 		return [pascalCase(propertyName || "unknown", "Enum"), []];
 	}
 
-	if (isString(type)) {
+	if (isString(props.context, type)) {
 		return ["String", []];
 	}
 

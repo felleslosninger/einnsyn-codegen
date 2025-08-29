@@ -1,14 +1,12 @@
 import {
-	type ModelProperty,
-	type Type,
-	getLifecycleVisibilityEnum,
 	getMaxLength,
 	getMaxValue,
 	getMinLength,
 	getMinValue,
 	getPattern,
-	hasVisibility,
 	isStringType,
+	type ModelProperty,
+	type Type,
 } from "@typespec/compiler";
 import { isReadonlyProperty } from "@typespec/openapi";
 import {
@@ -17,6 +15,7 @@ import {
 } from "../../../utils/getters.js";
 import { pascalCase } from "../../../utils/stringUtils.js";
 import {
+	isDateOrDateTimeProperty,
 	isDateProperty,
 	isDateTimeProperty,
 	isDefaultString,
@@ -51,6 +50,18 @@ export function getValidationAnnotations(
 
 	if (isEmailProperty(context, modelProperty ?? type)) {
 		annotations.push(["jakarta.validation.constraints.Email"]);
+	}
+
+	if (modelProperty.name === "publisertDatoBefore") {
+		console.log(modelProperty.type);
+	}
+
+	if (isDateOrDateTimeProperty(context, modelProperty ?? type)) {
+		annotations.push([
+			"no.einnsyn.backend.validation.isodatetime.IsoDateTime",
+			"format = IsoDateTime.Format.ISO_DATE_OR_DATE_TIME",
+		]);
+		imports.push("no.einnsyn.backend.validation.isodatetime.IsoDateTime");
 	}
 
 	if (isDateProperty(context, modelProperty ?? type)) {

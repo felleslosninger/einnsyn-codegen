@@ -1,6 +1,10 @@
 import {
 	type BooleanLiteral,
 	type EmitContext,
+	getFormat,
+	getLifecycleVisibilityEnum,
+	getPattern,
+	hasVisibility,
 	type Model,
 	type ModelProperty,
 	type Namespace,
@@ -10,10 +14,6 @@ import {
 	type StringLiteral,
 	type Type,
 	type Union,
-	getFormat,
-	getLifecycleVisibilityEnum,
-	getPattern,
-	hasVisibility,
 } from "@typespec/compiler";
 import { getExpandableEntity, getListType } from "./getters.js";
 
@@ -67,6 +67,32 @@ export function isDateTimeProperty(
 				(type.type.kind === "Scalar" && type.type.name === "utcDateTime"))) ||
 		(type.kind === "Scalar" && type.name === "utcDateTime")
 	);
+}
+
+export type DateOrDateTime = Scalar;
+export function isDateOrDateTimeProperty(
+	context: EmitContext,
+	type: Type,
+): type is DateOrDateTime {
+	const targetType = type.kind === "ModelProperty" ? type.type : type;
+
+	if (targetType.kind !== "Union") {
+		return false;
+	}
+	try {
+		const [[, unionVariant1], [, unionVariant2]] = targetType.variants;
+		if (
+			(isDateProperty(context, unionVariant1.type) &&
+				isDateTimeProperty(context, unionVariant2.type)) ||
+			(isDateProperty(context, unionVariant2.type) &&
+				isDateTimeProperty(context, unionVariant1.type))
+		) {
+			return true;
+		}
+		return false;
+	} catch {
+		return false;
+	}
 }
 
 export type PasswordType = Scalar;
@@ -147,16 +173,17 @@ export function isDefaultString(context: EmitContext, modelProperty: Type) {
 }
 
 export type StringType = StringLiteral | Scalar | StringUnionType;
-export function isString(type: Type) {
+export function isString(context: EmitContext, type: Type) {
 	return (
 		(type.kind === "Scalar" &&
 			(type.name === "string" ||
-				type.name === "plainDate" ||
-				type.name === "utcDateTime" ||
 				type.name === "url" ||
 				type.name === "eInnsynId")) ||
 		type.kind === "String" ||
-		isStringUnion(type)
+		isStringUnion(type) ||
+		isDateOrDateTimeProperty(context, type) ||
+		isDateTimeProperty(context, type) ||
+		isDateProperty(context, type)
 	);
 }
 

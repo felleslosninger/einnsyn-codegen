@@ -84,7 +84,7 @@ export function getTSTypeName(
 		});
 	}
 
-	if (isString(type)) {
+	if (isString(props.context, type)) {
 		return ["string", []];
 	}
 
