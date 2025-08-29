@@ -201,22 +201,6 @@ export function emitOperations(
 				});
 			}
 
-			// Add response model if the model doesn't have a name
-			const responseModel = responseType;
-			if (responseModel?.kind === "Model" && !responseModel.name) {
-				const responseName = `${pascalCase(operationName)}Response`;
-				const responseInterface = new TSInterface(resourceFile, responseName);
-				responseInterface.typeDefinition = getTypeDefinition({
-					...defaultProps,
-					parent: responseInterface,
-					model: responseModel as Model,
-				});
-				resourceFile.addInterface({
-					int: responseInterface,
-					isExported: true,
-				});
-			}
-
 			// Add response body interface if the model doesn't have a name
 			let responseName: string;
 			let responseValidator: string | undefined;

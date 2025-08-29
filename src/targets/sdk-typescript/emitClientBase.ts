@@ -1,27 +1,18 @@
 import {
 	type EmitContext,
-	type Namespace,
 	emitFile,
-	isErrorModel,
+	type Namespace,
 	resolvePath,
 } from "@typespec/compiler";
-import {
-	getTSEntityPathName,
-	getTSModelClassName,
-} from "../../languages/typescript/helpers/tsHelpers.js";
+import { getTSEntityPathName } from "../../languages/typescript/helpers/tsHelpers.js";
 import TSClass from "../../languages/typescript/primitives/tsClass.js";
 import { TSFile } from "../../languages/typescript/primitives/tsFile.js";
 import TSFunction from "../../languages/typescript/primitives/tsFunction.js";
 import { TSFunctionParameter } from "../../languages/typescript/primitives/tsFunctionParameter.js";
 import { TSTypeProperty } from "../../languages/typescript/primitives/tsTypeProperty.js";
 import type { TSProps } from "../../languages/typescript/types.js";
-import {
-	getBodyPropertyType,
-	getOperationsByNamespace,
-	recursivelyGetModels,
-} from "../../utils/getters.js";
+import { getOperationsByNamespace } from "../../utils/getters.js";
 import { pascalCase } from "../../utils/stringUtils.js";
-import { isEInnsynEntity } from "../../utils/typecheckers.js";
 
 export function emitClientBase(
 	context: EmitContext,
