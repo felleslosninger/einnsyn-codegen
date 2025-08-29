@@ -4,12 +4,12 @@ import {
 	type Namespace,
 	resolvePath,
 } from "@typespec/compiler";
-import { buildGeneralModel } from "../../languages/java/helpers/modelBuilder.js";
 import {
 	getJavaEntityPackageName,
 	getJavaEntityPathName,
 	getJavaType,
 } from "../../languages/java/helpers/javaHelpers.js";
+import { buildGeneralModel } from "../../languages/java/helpers/modelBuilder.js";
 import Class from "../../languages/java/primitives/class.js";
 import { JavaFile } from "../../languages/java/primitives/javafile.js";
 import Method from "../../languages/java/primitives/method.js";

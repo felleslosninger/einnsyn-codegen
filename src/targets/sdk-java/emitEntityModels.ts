@@ -1,7 +1,7 @@
 import {
 	type EmitContext,
-	type Namespace,
 	emitFile,
+	type Namespace,
 	resolvePath,
 } from "@typespec/compiler";
 import {
