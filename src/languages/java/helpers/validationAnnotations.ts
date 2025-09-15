@@ -1,13 +1,15 @@
 import {
-	getMaxLength,
-	getMaxValue,
-	getMinLength,
-	getMinValue,
-	getPattern,
-	isStringType,
-	type ModelProperty,
-	type Type,
-} from "@typespec/compiler";
+  EnumMember,
+  getLifecycleVisibilityEnum,
+  getMaxLength,
+  getMaxValue,
+  getMinLength,
+  getMinValue,
+  getPattern, getVisibilityForClass,
+  isStringType,
+  type ModelProperty, Program,
+  type Type
+} from '@typespec/compiler';
 import { isReadonlyProperty } from "@typespec/openapi";
 import {
 	getDefaultValue,
@@ -168,6 +170,8 @@ export function getValidationAnnotations(
 		// TODO: Template?
 	}
 	const isReadOnly = isReadonlyProperty(context.program, modelProperty);
+  const isReadAndUpdate = isReadAndUpdateProperty(context.program, modelProperty);
+  const isRequired = !modelProperty.optional;
 	const value = getDefaultValue(modelProperty);
 	if (isReadOnly && value === undefined) {
 		imports.push(
@@ -178,10 +182,15 @@ export function getValidationAnnotations(
 			"jakarta.validation.constraints.Null",
 			"groups = {Insert.class, Update.class}",
 		]);
-	}
-
-	const isRequired = modelProperty.optional === false;
-	if (isRequired && !isReadOnly) {
+	} else if (isReadAndUpdate && !isRequired && value === undefined) {
+		imports.push(
+			"no.einnsyn.backend.validation.validationgroups.Insert",
+		);
+    annotations.push([
+      "jakarta.validation.constraints.Null",
+      "groups = {Insert.class}",
+    ]);
+	} else if (isRequired && !isReadOnly) {
 		imports.push("no.einnsyn.backend.validation.validationgroups.Insert");
 		if (isStringType(context.program, modelProperty.type)) {
 			annotations.push([
@@ -197,4 +206,17 @@ export function getValidationAnnotations(
 	}
 
 	return [annotations, imports];
+}
+
+/**
+ * Checks if the property is allowed for both read and update operations.
+ * @param program
+ * @param property
+ */
+function isReadAndUpdateProperty(program: Program, property: ModelProperty) {
+  const Lifecycle = getLifecycleVisibilityEnum(program);
+  const visibility = getVisibilityForClass(program, property, getLifecycleVisibilityEnum(program));
+  return visibility.size === 2
+    && visibility.has(<EnumMember>Lifecycle.members.get("Read"))
+    && visibility.has(<EnumMember>Lifecycle.members.get("Update"));
 }
