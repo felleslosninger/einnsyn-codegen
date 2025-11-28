@@ -1,15 +1,17 @@
 import {
-  EnumMember,
-  getLifecycleVisibilityEnum,
-  getMaxLength,
-  getMaxValue,
-  getMinLength,
-  getMinValue,
-  getPattern, getVisibilityForClass,
-  isStringType,
-  type ModelProperty, Program,
-  type Type
-} from '@typespec/compiler';
+	type EnumMember,
+	getLifecycleVisibilityEnum,
+	getMaxLength,
+	getMaxValue,
+	getMinLength,
+	getMinValue,
+	getPattern,
+	getVisibilityForClass,
+	isStringType,
+	type ModelProperty,
+	type Program,
+	type Type,
+} from "@typespec/compiler";
 import { isReadonlyProperty } from "@typespec/openapi";
 import {
 	getDefaultValue,
@@ -90,7 +92,7 @@ export function getValidationAnnotations(
 	if (pattern) {
 		annotations.push([
 			"jakarta.validation.constraints.Pattern",
-			`regexp = "${pattern}"`,
+			`regexp = "${pattern.replace(/\\/g, "\\\\")}"`,
 		]);
 	}
 
@@ -170,8 +172,11 @@ export function getValidationAnnotations(
 		// TODO: Template?
 	}
 	const isReadOnly = isReadonlyProperty(context.program, modelProperty);
-  const isReadAndUpdate = isReadAndUpdateProperty(context.program, modelProperty);
-  const isRequired = !modelProperty.optional;
+	const isReadAndUpdate = isReadAndUpdateProperty(
+		context.program,
+		modelProperty,
+	);
+	const isRequired = !modelProperty.optional;
 	const value = getDefaultValue(modelProperty);
 	if (isReadOnly && value === undefined) {
 		imports.push(
@@ -183,13 +188,11 @@ export function getValidationAnnotations(
 			"groups = {Insert.class, Update.class}",
 		]);
 	} else if (isReadAndUpdate && !isRequired && value === undefined) {
-		imports.push(
-			"no.einnsyn.backend.validation.validationgroups.Insert",
-		);
-    annotations.push([
-      "jakarta.validation.constraints.Null",
-      "groups = {Insert.class}",
-    ]);
+		imports.push("no.einnsyn.backend.validation.validationgroups.Insert");
+		annotations.push([
+			"jakarta.validation.constraints.Null",
+			"groups = {Insert.class}",
+		]);
 	} else if (isRequired && !isReadOnly) {
 		imports.push("no.einnsyn.backend.validation.validationgroups.Insert");
 		if (isStringType(context.program, modelProperty.type)) {
@@ -214,9 +217,15 @@ export function getValidationAnnotations(
  * @param property
  */
 function isReadAndUpdateProperty(program: Program, property: ModelProperty) {
-  const Lifecycle = getLifecycleVisibilityEnum(program);
-  const visibility = getVisibilityForClass(program, property, getLifecycleVisibilityEnum(program));
-  return visibility.size === 2
-    && visibility.has(<EnumMember>Lifecycle.members.get("Read"))
-    && visibility.has(<EnumMember>Lifecycle.members.get("Update"));
+	const Lifecycle = getLifecycleVisibilityEnum(program);
+	const visibility = getVisibilityForClass(
+		program,
+		property,
+		getLifecycleVisibilityEnum(program),
+	);
+	return (
+		visibility.size === 2 &&
+		visibility.has(<EnumMember>Lifecycle.members.get("Read")) &&
+		visibility.has(<EnumMember>Lifecycle.members.get("Update"))
+	);
 }
