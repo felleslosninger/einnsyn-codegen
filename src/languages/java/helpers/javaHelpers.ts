@@ -53,6 +53,11 @@ export function getJavaType(props: JavaTypeProps): [string, string[]] {
 		return [pascalCase(propertyName || "unknown", "Enum"), []];
 	}
 
+	// Absolute or relative time strings
+	if (type.kind === "Scalar" && type.name === "timeString") {
+		return ["String", []];
+	}
+
 	if (isString(props.context, type)) {
 		return ["String", []];
 	}
@@ -97,7 +102,7 @@ export function getJavaType(props: JavaTypeProps): [string, string[]] {
 
 		// Find generics
 		const generics: string[] = [];
-		type.templateMapper?.args.map((arg) => {
+		type.templateMapper?.args.forEach((arg) => {
 			if (arg.entityKind === "Type") {
 				// TODO: This might cause an infinite loop for some data sets
 				const [templateType, templateTypeImports] = getJavaType({
