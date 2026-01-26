@@ -56,8 +56,12 @@ export function getValidationAnnotations(
 		annotations.push(["jakarta.validation.constraints.Email"]);
 	}
 
-	if (modelProperty.name === "publisertDatoBefore") {
-		console.log(modelProperty.type);
+	if (type.kind === "Scalar" && type.name === "timeString") {
+		annotations.push([
+			"no.einnsyn.backend.validation.isodatetime.IsoDateTime",
+			"allowRelative = true, format = IsoDateTime.Format.ISO_DATE_OR_DATE_TIME",
+		]);
+		imports.push("no.einnsyn.backend.validation.isodatetime.IsoDateTime");
 	}
 
 	if (isDateOrDateTimeProperty(context, modelProperty ?? type)) {
