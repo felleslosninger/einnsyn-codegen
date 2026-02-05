@@ -196,6 +196,7 @@ export function emitExceptionModels(
 			"ErrorResponse",
 			"toClientResponse",
 		);
+		toClientResponse.addAnnotation("@Override");
 		const clientResponseConstructorProps = getBodyProperties(flattenedModel)
 			.filter((prop) => getFixedValue(prop) === undefined)
 			.map((p) => `this.${getGetter(p.name)}`)
