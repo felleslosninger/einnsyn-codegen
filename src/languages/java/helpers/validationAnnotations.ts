@@ -49,7 +49,7 @@ export function getValidationAnnotations(
 	} = props;
 
 	if (isUrlProperty(context, modelProperty ?? type)) {
-		annotations.push(["org.hibernate.validator.constraints.URL"]);
+		annotations.push(["no.einnsyn.backend.validation.validurl.ValidUrl"]);
 	}
 
 	if (isEmailProperty(context, modelProperty ?? type)) {
