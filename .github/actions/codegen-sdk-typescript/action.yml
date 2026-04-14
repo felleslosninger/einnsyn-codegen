@@ -18,7 +18,7 @@ runs:
   using: "composite"
   steps:
     - name: Checkout einnsyn-sdk-typescript
-      uses: actions/checkout@v4
+      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       with:
         repository: felleslosninger/einnsyn-sdk-typescript
         token: ${{ inputs.token }}
@@ -36,18 +36,24 @@ runs:
         cp -r tsp-output/einnsyn-codegen/sdk-typescript/* einnsyn-sdk-typescript/src/
 
     - name: Install node
-      uses: actions/setup-node@v2
+      uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
       with:
         node-version: '22'
 
-    - name: Run biome
+    - name: Install dependencies
       shell: bash
       run: |
         cd einnsyn-sdk-typescript
-        npx @biomejs/biome format --write ./src
+        npm ci --ignore-scripts
+
+    - name: Run lint fix
+      shell: bash
+      run: |
+        cd einnsyn-sdk-typescript
+        npm run lint:fix
 
     - name: Create Pull Request
-      uses: peter-evans/create-pull-request@v7
+      uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
       with:
         path: "einnsyn-sdk-typescript"
         title: "EIN-Codegen"
