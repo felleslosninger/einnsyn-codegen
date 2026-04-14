@@ -36,15 +36,21 @@ runs:
         cp -r tsp-output/einnsyn-codegen/sdk-typescript/* einnsyn-sdk-typescript/src/
 
     - name: Install node
-      uses: actions/setup-node@v2
+      uses: actions/setup-node@v4
       with:
         node-version: '22'
 
-    - name: Run biome
+    - name: Install dependencies
       shell: bash
       run: |
         cd einnsyn-sdk-typescript
-        npx @biomejs/biome format --write ./src
+        npm ci --ignore-scripts
+
+    - name: Run lint fix
+      shell: bash
+      run: |
+        cd einnsyn-sdk-typescript
+        npm run lint:fix
 
     - name: Create Pull Request
       uses: peter-evans/create-pull-request@v7
