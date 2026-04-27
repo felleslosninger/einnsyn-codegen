@@ -28,6 +28,7 @@ jobs:
             einnsyn-api-spec
             einnsyn-sdk-typescript
             einnsyn-sdk-java
+            einnsyn-sdk-dotnet
             einnsyn-backend
 
       - name: Checkout codegen repo
@@ -69,6 +70,13 @@ jobs:
       - name: Run SDK TS Codegen
         if: github.event.client_payload.type == '' || github.event.client_payload.type == 'sdk-typescript'
         uses: ./.github/actions/codegen-sdk-typescript
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          pr_body: ${{ github.event.client_payload.pr_body }}
+
+      - name: Run SDK Dotnet Codegen
+        if: github.event.client_payload.type == '' || github.event.client_payload.type == 'sdk-dotnet'
+        uses: ./.github/actions/codegen-sdk-dotnet
         with:
           token: ${{ steps.app-token.outputs.token }}
           pr_body: ${{ github.event.client_payload.pr_body }}

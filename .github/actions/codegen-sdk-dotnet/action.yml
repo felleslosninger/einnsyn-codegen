@@ -1,0 +1,61 @@
+name: 'Dotnet SDK Codegen'
+description: 'Codegen for eInnsyn Dotnet SDK'
+
+inputs:
+  token:
+    description: 'GitHub token for repository access'
+    required: true
+  commit_message:
+    description: 'Commit message for the pull request'
+    required: false
+    default: 'Codegen'
+  pr_body:
+    description: 'Message body for the pull request'
+    required: false
+    default: 'Automated changes by Codegen.'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout einnsyn-sdk-dotnet
+      uses: actions/checkout@v4
+      with:
+        repository: felleslosninger/einnsyn-sdk-dotnet
+        token: ${{ inputs.token }}
+        path: "einnsyn-sdk-dotnet"
+
+    - name: Remove old codegen files (with // Auto-generated in first line)
+      shell: bash
+      run: |
+        cd einnsyn-sdk-dotnet
+        find src/EInnsyn.Sdk -type f -name "*.cs" -exec sh -c 'head -n 1 "$0" | grep -q "^// Auto-generated from our API specification"' {} \; -print | xargs -r rm
+
+    - name: Copy new files
+      shell: bash
+      run: |
+        cp -R tsp-output/einnsyn-codegen/sdk-dotnet/src/EInnsyn.Sdk/. einnsyn-sdk-dotnet/src/EInnsyn.Sdk/
+
+    - name: Install .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: "10.0.x"
+
+    - name: Format dotnet projects
+      shell: bash
+      run: |
+        cd einnsyn-sdk-dotnet
+        dotnet format src/EInnsyn.Sdk/EInnsyn.Sdk.csproj
+        if [[ -f tests/EInnsyn.Sdk.Tests/EInnsyn.Sdk.Tests.csproj ]]; then
+          dotnet format tests/EInnsyn.Sdk.Tests/EInnsyn.Sdk.Tests.csproj
+        fi
+
+    - name: Create Pull Request
+      uses: peter-evans/create-pull-request@v7
+      with:
+        path: "einnsyn-sdk-dotnet"
+        title: "EIN-Codegen"
+        body: ${{ inputs.pr_body }}
+        commit-message: ${{ inputs.commit_message }}
+        branch: "codegen"
+        sign-commits: true
+        token: ${{ inputs.token }}

@@ -1,6 +1,7 @@
 import { type EmitContext, ignoreDiagnostics } from "@typespec/compiler";
 import { getAllHttpServices } from "@typespec/http";
 import javaBackendEmitter from "./targets/java-backend/emit.js";
+import dotnetSDKEmitter from "./targets/sdk-dotnet/emit.js";
 import javaSDKEmitter from "./targets/sdk-java/emit.js";
 import tsSDKEmitter from "./targets/sdk-typescript/emit.js";
 
@@ -18,7 +19,7 @@ export async function $onEmit(context: EmitContext) {
 	const targetNamespace = options.targetNamespace ?? "EInnsyn";
 
 	const httpServices = ignoreDiagnostics(getAllHttpServices(program));
-	const [httpService] = httpServices.filter(
+	const httpService = httpServices.find(
 		(s) => s.namespace.name === targetNamespace,
 	);
 
@@ -39,6 +40,7 @@ export async function $onEmit(context: EmitContext) {
 		await javaBackendEmitter(context, targetNamespaceObj);
 		await javaSDKEmitter(context, targetNamespaceObj);
 		await tsSDKEmitter(context, targetNamespaceObj);
+		await dotnetSDKEmitter(context, targetNamespaceObj);
 	} catch (error) {
 		console.error(
 			`Failed to emit code: ${error instanceof Error ? error.message : String(error)}`,
