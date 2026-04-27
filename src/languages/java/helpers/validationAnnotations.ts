@@ -1,8 +1,10 @@
 import {
 	type EnumMember,
 	getLifecycleVisibilityEnum,
+	getMaxItems,
 	getMaxLength,
 	getMaxValue,
+	getMinItems,
 	getMinLength,
 	getMinValue,
 	getPattern,
@@ -164,6 +166,25 @@ export function getValidationAnnotations(
 	}
 
 	if (isList(type) && type.kind === "Model") {
+		const maxItems = getMaxItems(context.program, modelProperty);
+		const minItems = getMinItems(context.program, modelProperty);
+		if (maxItems !== undefined && minItems !== undefined) {
+			annotations.push([
+				"jakarta.validation.constraints.Size",
+				`min = ${minItems}, max = ${maxItems}`,
+			]);
+		} else if (maxItems !== undefined) {
+			annotations.push([
+				"jakarta.validation.constraints.Size",
+				`max = ${maxItems}`,
+			]);
+		} else if (minItems !== undefined) {
+			annotations.push([
+				"jakarta.validation.constraints.Size",
+				`min = ${minItems}`,
+			]);
+		}
+
 		if (type.indexer !== undefined) {
 			imports.push("java.util.List");
 			const [nestedAnnotations, nestedImports] = getValidationAnnotations({
