@@ -19,7 +19,7 @@ jobs:
         uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
         id: app-token
         with:
-          app-id: ${{ secrets.EIN_CODEGEN_APP_ID }}
+          client-id: ${{ secrets.EIN_CODEGEN_CLIENT_ID }}
           private-key: ${{ secrets.EIN_CODEGEN_APP_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
           skip-token-revoke: true
@@ -52,23 +52,93 @@ jobs:
           npm link einnsyn-codegen
           npx tsp compile ./einnsyn-api-spec/typespec/einnsyn.tsp --emit einnsyn-codegen
 
+      - name: Build generated PR metadata
+        id: pr-metadata
+        shell: bash
+        env:
+          COMMIT_BREAKING: ${{ github.event.client_payload.commit_breaking }}
+          COMMIT_TYPE: ${{ github.event.client_payload.commit_type }}
+          DISPATCH_TYPE: ${{ github.event.client_payload.type }}
+          SOURCE_PR_NUMBER: ${{ github.event.client_payload.source_pr_number }}
+          SOURCE_PR_TITLE: ${{ github.event.client_payload.source_pr_title }}
+          SOURCE_PR_URL: ${{ github.event.client_payload.source_pr_url }}
+          SOURCE_REPOSITORY: ${{ github.event.client_payload.source_repository }}
+        run: |
+          commit_type="chore"
+          breaking_suffix=""
+          description="sync generated code"
+          pr_body="Automated changes by Codegen."
+          pr_title=""
+
+          case "$COMMIT_TYPE" in
+            feat|fix|chore|docs)
+              commit_type="$COMMIT_TYPE"
+              ;;
+          esac
+
+          if [[ "$COMMIT_BREAKING" == "true" ]]; then
+            breaking_suffix="!"
+
+            case "$commit_type" in
+              chore|docs)
+                commit_type="fix"
+                ;;
+            esac
+          fi
+
+          if [[ -n "$SOURCE_REPOSITORY" ]]; then
+            repo_name="${SOURCE_REPOSITORY##*/}"
+            description="sync ${repo_name}"
+            pr_body="Triggered from ${SOURCE_REPOSITORY}"
+
+            if [[ -n "$SOURCE_PR_NUMBER" ]]; then
+              description="${description} #${SOURCE_PR_NUMBER}"
+
+              if [[ -n "$SOURCE_PR_URL" ]]; then
+                pr_body="${pr_body} [#${SOURCE_PR_NUMBER}](${SOURCE_PR_URL})"
+              else
+                pr_body="${pr_body} #${SOURCE_PR_NUMBER}"
+              fi
+            fi
+
+            if [[ -n "$SOURCE_PR_TITLE" ]]; then
+              pr_body="${pr_body} ${SOURCE_PR_TITLE}"
+            fi
+          elif [[ -n "$DISPATCH_TYPE" ]]; then
+            description="sync ${DISPATCH_TYPE}"
+          fi
+
+          pr_title="${commit_type}(codegen)${breaking_suffix}: ${description}"
+          pr_title="${pr_title//$'\n'/ }"
+          pr_title="${pr_title//$'\r'/}"
+
+          echo "pr_title=$pr_title" >> "$GITHUB_OUTPUT"
+          {
+            echo 'pr_body<<EOF'
+            echo "$pr_body"
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
       - name: Run Backend Codegen
         if: github.event.client_payload.type == '' || github.event.client_payload.type == 'backend'
         uses: ./.github/actions/codegen-backend
         with:
           token: ${{ steps.app-token.outputs.token }}
-          pr_body: ${{ github.event.client_payload.pr_body }}
+          pr_title: ${{ steps.pr-metadata.outputs.pr_title }}
+          pr_body: ${{ steps.pr-metadata.outputs.pr_body }}
 
       - name: Run SDK Java Codegen
         if: github.event.client_payload.type == '' || github.event.client_payload.type == 'sdk-java'
         uses: ./.github/actions/codegen-sdk-java
         with:
           token: ${{ steps.app-token.outputs.token }}
-          pr_body: ${{ github.event.client_payload.pr_body }}
+          pr_title: ${{ steps.pr-metadata.outputs.pr_title }}
+          pr_body: ${{ steps.pr-metadata.outputs.pr_body }}
 
       - name: Run SDK TS Codegen
         if: github.event.client_payload.type == '' || github.event.client_payload.type == 'sdk-typescript'
         uses: ./.github/actions/codegen-sdk-typescript
         with:
           token: ${{ steps.app-token.outputs.token }}
-          pr_body: ${{ github.event.client_payload.pr_body }}
+          pr_title: ${{ steps.pr-metadata.outputs.pr_title }}
+          pr_body: ${{ steps.pr-metadata.outputs.pr_body }}

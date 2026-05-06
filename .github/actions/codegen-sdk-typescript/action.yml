@@ -5,14 +5,14 @@ inputs:
   token:
     description: 'GitHub token for repository access'
     required: true
-  commit_message:
-    description: 'Commit message for the pull request'
-    required: false
-    default: 'Codegen'
   pr_body:
     description: 'Message body for the pull request'
     required: false
     default: 'Automated changes by Codegen.'
+  pr_title:
+    description: 'Title for the pull request'
+    required: false
+    default: 'codegen'
 
 runs:  
   using: "composite"
@@ -56,9 +56,9 @@ runs:
       uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
       with:
         path: "einnsyn-sdk-typescript"
-        title: "EIN-Codegen"
+        title: ${{ inputs.pr_title }}
         body: ${{ inputs.pr_body }}
-        commit-message: ${{ inputs.commit_message }}
+        commit-message: ${{ inputs.pr_title }}
         branch: "codegen"
         sign-commits: true
         token: ${{ inputs.token }}

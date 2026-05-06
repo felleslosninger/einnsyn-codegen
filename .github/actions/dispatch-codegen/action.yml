@@ -1,0 +1,146 @@
+name: 'Dispatch Codegen'
+description: 'Dispatch the codegen workflow with metadata derived from the source pull request.'
+
+inputs:
+  client-id:
+    description: 'GitHub App client ID used to create the dispatch token.'
+    required: true
+  private-key:
+    description: 'GitHub App private key used to create the dispatch token.'
+    required: true
+  dispatch-type:
+    description: 'Target type consumed by the codegen workflow. One of: backend, sdk-java, sdk-typescript. Empty string runs all targets.'
+    required: true
+  default-commit-type:
+    description: 'Fallback conventional commit type when the source PR title has no releasable prefix.'
+    required: false
+    default: 'chore'
+
+outputs:
+  commit-breaking:
+    description: 'Whether the source PR title indicated a breaking change.'
+    value: ${{ steps.source-metadata.outputs.commit_breaking }}
+  commit-type:
+    description: 'Derived conventional commit type used for the generated PR.'
+    value: ${{ steps.source-metadata.outputs.commit_type }}
+  source-pr-number:
+    description: 'Associated source pull request number, if one was found.'
+    value: ${{ steps.source-metadata.outputs.source_pr_number }}
+  source-pr-title:
+    description: 'Associated source pull request title, if one was found.'
+    value: ${{ steps.source-metadata.outputs.source_pr_title }}
+  source-pr-url:
+    description: 'Associated source pull request URL, if one was found.'
+    value: ${{ steps.source-metadata.outputs.source_pr_url }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Get dispatch token
+      uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
+      id: app-token
+      with:
+        client-id: ${{ inputs.client-id }}
+        private-key: ${{ inputs.private-key }}
+        owner: ${{ split(github.action_repository, '/')[0] }}
+        skip-token-revoke: true
+        repositories: ${{ split(github.action_repository, '/')[1] }}
+
+    - name: Collect source PR metadata
+      id: source-metadata
+      shell: bash
+      env:
+        DEFAULT_COMMIT_TYPE: ${{ inputs.default-commit-type }}
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        commit_type="${DEFAULT_COMMIT_TYPE,,}"
+        commit_breaking="false"
+        source_pr_number=""
+        source_pr_title=""
+        source_pr_url=""
+
+        is_allowed_type() {
+          case "$1" in
+            feat|fix|chore|docs)
+              return 0
+              ;;
+            *)
+              return 1
+              ;;
+          esac
+        }
+
+        if ! is_allowed_type "$commit_type"; then
+          echo "::warning::default-commit-type '${DEFAULT_COMMIT_TYPE}' is not one of feat|fix|chore|docs; using 'chore'"
+          commit_type="chore"
+        fi
+
+        # List PRs associated with the triggering commit. We use this to derive the
+        # source PR's title (for commit-type parsing) and number/URL (for the codegen
+        # PR body).
+        gh_err="$(mktemp)"
+        if ! pulls_json="$(gh api -H "X-GitHub-Api-Version: 2022-11-28" "/repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/pulls" 2>"$gh_err")"; then
+          echo "::warning::Failed to fetch associated PRs: $(cat "$gh_err")"
+          pulls_json='[]'
+        fi
+        rm -f "$gh_err"
+
+        if [[ "$pulls_json" != '[]' ]]; then
+          # Pick the merged source PR associated with this commit; ignore any open PRs
+          # (e.g. long-lived feature branches) that may also contain this SHA.
+          pull_json="$(printf '%s' "$pulls_json" | jq -c 'map(select(.state == "closed")) | .[0] // empty')"
+
+          if [[ -n "$pull_json" ]]; then
+            source_pr_number="$(printf '%s' "$pull_json" | jq -r '.number // empty')"
+            source_pr_title="$(printf '%s' "$pull_json" | jq -r '.title // empty')"
+            source_pr_url="$(printf '%s' "$pull_json" | jq -r '.html_url // empty')"
+
+            source_pr_title="${source_pr_title//$'\n'/ }"
+            source_pr_title="${source_pr_title//$'\r'/}"
+
+            # Parse Conventional Commits title: <type>(<scope>)?!?: <description>
+            # Captures: 1=type, 2=scope (with parens), 3=breaking marker, 4=description
+            if [[ "$source_pr_title" =~ ^([[:alpha:]]+)(\([^)]+\))?(!)?:[[:space:]]+(.+)$ ]]; then
+              parsed_type="${BASH_REMATCH[1],,}"
+
+              if is_allowed_type "$parsed_type"; then
+                commit_type="$parsed_type"
+
+                if [[ -n "${BASH_REMATCH[3]}" ]]; then
+                  commit_breaking="true"
+
+                  case "$commit_type" in
+                    chore|docs)
+                      commit_type="fix"
+                      ;;
+                  esac
+                fi
+              fi
+            fi
+          fi
+        fi
+
+        {
+          echo "commit_breaking=${commit_breaking}"
+          echo "commit_type=${commit_type}"
+          echo "source_pr_number=${source_pr_number}"
+          echo "source_pr_url=${source_pr_url}"
+          echo "source_pr_title=${source_pr_title}"
+        } >> "$GITHUB_OUTPUT"
+
+    - name: Dispatch workflow
+      uses: peter-evans/repository-dispatch@28959ce8df70de7be546dd1250a005dd32156697 # v4.0.1
+      with:
+        token: ${{ steps.app-token.outputs.token }}
+        repository: ${{ github.action_repository }}
+        event-type: codegen
+        client-payload: |
+          {
+            "commit_breaking": ${{ toJson(steps.source-metadata.outputs.commit_breaking) }},
+            "commit_type": ${{ toJson(steps.source-metadata.outputs.commit_type) }},
+            "source_repository": ${{ toJson(github.repository) }},
+            "source_pr_number": ${{ toJson(steps.source-metadata.outputs.source_pr_number) }},
+            "source_pr_title": ${{ toJson(steps.source-metadata.outputs.source_pr_title) }},
+            "source_pr_url": ${{ toJson(steps.source-metadata.outputs.source_pr_url) }},
+            "type": ${{ toJson(inputs.dispatch-type) }}
+          }
