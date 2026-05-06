@@ -25,6 +25,7 @@ export type GetTSTypeNameProps = TSProps & {
 	propertyName?: string;
 	entitySuffix?: string;
 	tsTypeImport?: boolean;
+	_visiting?: ReadonlySet<Type>;
 };
 
 export function getTSTypeName(
@@ -124,13 +125,18 @@ export function getTSTypeName(
 		});
 
 		// Find generics
+		const visiting = new Set(props._visiting).add(type);
 		const generics: string[] = [];
 		type.templateMapper?.args.map((arg) => {
 			if (arg.entityKind === "Type") {
-				// TODO: This might cause an infinite loop for some data sets
+				if (visiting.has(arg)) {
+					generics.push("unknown");
+					return;
+				}
 				const [templateType, templateTypeImports] = getTSTypeName({
 					...props,
 					type: arg,
+					_visiting: visiting,
 				});
 				generics.push(templateType);
 				imports.push(...templateTypeImports);

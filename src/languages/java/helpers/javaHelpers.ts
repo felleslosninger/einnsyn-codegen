@@ -27,6 +27,7 @@ export type JavaTypeProps = JavaProps & {
 	parentName?: string;
 	entitySuffix?: string;
 	model?: Model; // Not needed
+	_visiting?: ReadonlySet<Type>;
 };
 
 export function getJavaType(props: JavaTypeProps): [string, string[]] {
@@ -101,13 +102,18 @@ export function getJavaType(props: JavaTypeProps): [string, string[]] {
 		const imports = getImports({ ...props, model: type });
 
 		// Find generics
+		const visiting = new Set(props._visiting).add(type);
 		const generics: string[] = [];
 		type.templateMapper?.args.forEach((arg) => {
 			if (arg.entityKind === "Type") {
-				// TODO: This might cause an infinite loop for some data sets
+				if (visiting.has(arg)) {
+					generics.push("unknown");
+					return;
+				}
 				const [templateType, templateTypeImports] = getJavaType({
 					...props,
 					type: arg,
+					_visiting: visiting,
 				});
 				generics.push(templateType);
 				imports.push(...templateTypeImports);
