@@ -6,7 +6,6 @@ import type {
 } from "@typespec/compiler";
 import { createRekeyableMap } from "@typespec/compiler/utils";
 import type { HttpOperationParameter } from "@typespec/http";
-import type { JavaProps } from "../languages/java/types.js";
 
 /**
  * A parameter model represents a model (class) with multiple parameters, i.e. ListParameters, GetParameters etc.
@@ -45,6 +44,7 @@ function getParameterModels(
 				}
 				baseModel = baseModel.baseModel;
 			}
+			return false;
 		});
 		if (foundModel) {
 			foundModel.params.push(queryParameter);
@@ -60,6 +60,7 @@ function getParameterModels(
 				}
 				baseModel = baseModel.baseModel;
 			}
+			return false;
 		});
 		if (foundSubclass) {
 			foundSubclass.params.push(queryParameter);
@@ -81,7 +82,7 @@ function getParameterModels(
 		if (!a.model && b.model) {
 			return 1;
 		}
-		return a.params.length - b.params.length;
+		return b.params.length - a.params.length;
 	});
 
 	return parameterModels;
