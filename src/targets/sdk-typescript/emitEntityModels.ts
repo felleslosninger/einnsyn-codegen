@@ -127,7 +127,7 @@ export function emitEntityModels(
 			);
 			isPaginatedListFunction.returnType = `obj is PaginatedList<${className}>`;
 			isPaginatedListFunction.addBody(
-				`return obj !== undefined && (obj as PaginatedList<${className}>)?.items.every((i) => is${className}(i));`,
+				`return obj !== undefined && Array.isArray((obj as PaginatedList<${className}>)?.items) && (obj as PaginatedList<${className}>).items.every((i) => is${className}(i));`,
 			);
 			modelFile.addFunction(isPaginatedListFunction, true);
 			modelFile.addImport({
