@@ -142,10 +142,8 @@ export function getValidationAnnotations(
 	if (entity) {
 		const packageNameBase = getJavaEntityPackageName(packageName, entity);
 		const serviceName = `${pascalCase(entity.name)}Service`;
-		const entityPackageName = `${packageNameBase}.${pascalCase(entity.name)}`;
 		const servicePackageName = `${packageNameBase}.${serviceName}`;
 		imports.push(
-			entityPackageName,
 			servicePackageName,
 			"no.einnsyn.backend.validation.validationgroups.Insert",
 			"no.einnsyn.backend.validation.validationgroups.Update",
