@@ -129,7 +129,7 @@ esac
 validate_target_root
 mkdir -p "$TARGET_SRC_DIR"
 
-grep -rlZ "// Auto-generated from our API specification" "$TARGET_SRC_DIR" | xargs -0 -r -P 4 rm --
+find "$TARGET_SRC_DIR" -type f -exec grep -q "// Auto-generated from our API specification" {} \; -exec rm -- {} +
 
 npm --prefix "$SCRIPT_DIR" run build
 npx tsp compile "$SPEC" --emit "$SCRIPT_DIR" --output-dir "$TMP_OUTPUT"
