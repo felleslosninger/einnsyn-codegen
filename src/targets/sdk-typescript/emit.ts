@@ -18,10 +18,10 @@ export default async function emit(
 	// Emit eInnsyn entity models
 	emitEntityModels(context, { ...defaultProps }, eInnsynNamespace);
 
-	// // Emit non-eInnsyn models (query parameters etc.)
+	// Emit non-eInnsyn models (query parameters etc.)
 	emitUnknownModels(context, { ...defaultProps }, eInnsynNamespace);
 
-	// // Emit exception models
+	// Emit exception models
 	emitExceptionModels(context, { ...defaultProps }, eInnsynNamespace);
 
 	// Emit operations

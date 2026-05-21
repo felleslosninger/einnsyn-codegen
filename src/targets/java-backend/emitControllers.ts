@@ -26,6 +26,10 @@ import {
 	getQueryParameters,
 } from "../../utils/getters.js";
 import {
+	getHttpResponseStatusCode,
+	hasHttpResponseBody,
+} from "../../utils/httpResponseUtils.js";
+import {
 	createParameterModel,
 	getExtendedParameterModel,
 } from "../../utils/operationsUtils.js";
@@ -101,16 +105,20 @@ export function emitControllers(
 			const { name: operationName } = httpOperation.operation;
 			const methodName = camelCase(operationName);
 			const response = httpOperation.responses[0];
+			const hasResponseBody = hasHttpResponseBody(response);
+			const responseStatusCode = getHttpResponseStatusCode(response);
 			const isInsert = verb === "post";
 			const isUpdate = verb === "patch";
 
 			// Create method
-			const [returnType, returnTypeImports] = getJavaType({
-				...defaultProps,
-				type: response?.type,
-				propertyName: `${methodName}Response`,
-				parentName: entityName,
-			});
+			const [returnType, returnTypeImports] = hasResponseBody
+				? getJavaType({
+						...defaultProps,
+						type: response?.type,
+						propertyName: `${methodName}Response`,
+						parentName: entityName,
+					})
+				: ["Void", []];
 			const method = new Method(
 				controllerClass,
 				`ResponseEntity<${returnType}>`,
@@ -121,7 +129,7 @@ export function emitControllers(
 			method.addThrows(
 				"no.einnsyn.backend.common.exceptions.models.EInnsynException",
 			);
-			if (response?.type.kind === "Model") {
+			if (hasResponseBody && response?.type.kind === "Model") {
 				const bodyPropertyModel = getBodyPropertyModel(response.type);
 				const importModel = bodyPropertyModel?.name
 					? bodyPropertyModel
@@ -235,7 +243,7 @@ export function emitControllers(
 				const parameter = new Parameter(
 					method,
 					"query",
-					queryExtendModelJavaType,
+					queryParameterJavaType,
 				);
 				parameter.addAnnotation("jakarta.validation.Valid");
 				parameter.addImport(...queryExtendModelImports);
@@ -329,7 +337,11 @@ export function emitControllers(
 			}
 
 			// Add response body if it's not an existing entity
-			if (response?.type.kind === "Model" && response.type.name === "") {
+			if (
+				hasResponseBody &&
+				response?.type.kind === "Model" &&
+				response.type.name === ""
+			) {
 				const responseBodyClass = buildGeneralModel({
 					...defaultProps,
 					parent: controllerClass,
@@ -361,6 +373,24 @@ export function emitControllers(
 			}
 			if (requestBody) {
 				serviceParameters.push("body");
+			}
+
+			if (!hasResponseBody) {
+				method.addBody(
+					`service.${methodName}(${serviceParameters.join(", ")});`,
+				);
+				if (responseStatusCode !== undefined) {
+					method.addBody(
+						`return ResponseEntity.status(${responseStatusCode}).build();`,
+					);
+				} else if (verb === "delete") {
+					method.addBody("return ResponseEntity.noContent().build();");
+				} else if (verb === "post") {
+					method.addBody("return ResponseEntity.status(201).build();");
+				} else {
+					method.addBody("return ResponseEntity.ok().build();");
+				}
+				continue;
 			}
 
 			method.addBody(

@@ -16,6 +16,7 @@ import Method from "../../languages/java/primitives/method.js";
 import Parameter from "../../languages/java/primitives/parameter.js";
 import type { JavaBaseProps } from "../../languages/java/types.js";
 import { getOperationsByNamespace } from "../../utils/getters.js";
+import { hasHttpResponseBody } from "../../utils/httpResponseUtils.js";
 import {
 	createParameterModel,
 	getExtendedParameterModel,
@@ -87,7 +88,9 @@ export function emitOperations(
 			const operationName = httpOperation.operation.name;
 			const verb = httpOperation.verb;
 			const requestType = httpOperation.parameters.body?.type;
-			const responseType = httpOperation.responses[0]?.type;
+			const response = httpOperation.responses[0];
+			const responseType = response?.type;
+			const hasResponseBody = hasHttpResponseBody(response);
 			const pathParameters = httpOperation.parameters.parameters.filter(
 				(p) => p.type === "path",
 			);
@@ -95,10 +98,12 @@ export function emitOperations(
 				(f) => f.type === "query",
 			);
 			const pathTemplate = httpOperation.path;
-			const [responseJavaType, responseJavaTypeImports] = getJavaType({
-				...defaultProps,
-				type: responseType,
-			});
+			const [responseJavaType, responseJavaTypeImports] = hasResponseBody
+				? getJavaType({
+						...defaultProps,
+						type: responseType,
+					})
+				: ["Void", []];
 
 			const addedSignatures: { [signature: string]: boolean } = {};
 

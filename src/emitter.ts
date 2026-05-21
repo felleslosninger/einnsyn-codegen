@@ -1,5 +1,6 @@
 import { type EmitContext, ignoreDiagnostics } from "@typespec/compiler";
 import { getAllHttpServices } from "@typespec/http";
+import { reportDiagnostic } from "./lib.js";
 import javaBackendEmitter from "./targets/java-backend/emit.js";
 import javaSDKEmitter from "./targets/sdk-java/emit.js";
 import tsSDKEmitter from "./targets/sdk-typescript/emit.js";
@@ -23,16 +24,26 @@ export async function $onEmit(context: EmitContext) {
 	);
 
 	if (!httpService) {
-		console.error(
-			`No HTTP service found for namespace '${targetNamespace}'. Available namespaces: ${httpServices.map((s) => s.namespace.name).join(", ") || "none"}`,
-		);
-		return;
+		reportDiagnostic(program, {
+			code: "missing-http-service",
+			format: {
+				targetNamespace,
+				availableNamespaces:
+					httpServices.map((s) => s.namespace.name).join(", ") || "none",
+			},
+			target: context.program.getGlobalNamespaceType(),
+		});
+		throw new Error(`No HTTP service found for namespace '${targetNamespace}'`);
 	}
 
 	const targetNamespaceObj = httpService.namespace;
 	if (!targetNamespaceObj) {
-		console.error(`Invalid namespace object for '${targetNamespace}'`);
-		return;
+		reportDiagnostic(program, {
+			code: "invalid-target-namespace",
+			format: { targetNamespace },
+			target: context.program.getGlobalNamespaceType(),
+		});
+		throw new Error(`Invalid namespace object for '${targetNamespace}'`);
 	}
 
 	try {

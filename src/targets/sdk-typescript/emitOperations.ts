@@ -28,6 +28,7 @@ import {
 	getBodyPropertyModel,
 	getOperationsByNamespace,
 } from "../../utils/getters.js";
+import { hasHttpResponseBody } from "../../utils/httpResponseUtils.js";
 import {
 	createParameterModel,
 	getExtendedParameterModel,
@@ -74,7 +75,9 @@ export function emitOperations(
 				(f) => f.type === "query",
 			);
 			const requestType = operation.parameters.body?.type;
-			const responseType = operation.responses[0]?.type;
+			const response = operation.responses[0];
+			const responseType = response?.type;
+			const hasResponseBody = hasHttpResponseBody(response);
 			const verb = operation.verb;
 			const pathTemplate = operation.path;
 			let queryVariable = undefined;
@@ -202,10 +205,14 @@ export function emitOperations(
 			}
 
 			// Add response body interface if the model doesn't have a name
-			let responseName: string;
+			let responseName = "void";
 			let responseValidator: string | undefined;
 			let responseImports: TSImportType[] = [];
-			if (responseType.kind === "Model" && !responseType.name) {
+			if (
+				hasResponseBody &&
+				responseType?.kind === "Model" &&
+				!responseType.name
+			) {
 				responseName = `${pascalCase(operationName)}Response`;
 				responseImports = [];
 				const responseInterface = new TSInterface(
@@ -221,7 +228,7 @@ export function emitOperations(
 					int: responseInterface,
 					isExported: true,
 				});
-			} else {
+			} else if (hasResponseBody && responseType) {
 				[responseName, responseValidator, responseImports] =
 					getTypeWithValidator({
 						...defaultProps,
@@ -244,6 +251,11 @@ export function emitOperations(
 				bodyVariable ? `body: ${bodyVariable},` : undefined,
 				"})",
 			);
+			if (!hasResponseBody) {
+				operationMethod.addBody("return;");
+				resourceClass.addMethod(operationMethod);
+				continue;
+			}
 			// Inline models doesn't have a name, so return and cast
 			if (!responseValidator) {
 				operationMethod.addBody(`return response as ${responseName};`);
@@ -277,7 +289,9 @@ export function emitOperations(
 }
 
 function templatePathToTemplateString(path: string) {
-	return path.replace(/{([^}]+)}/g, "${$1}");
+	return path.replace(/{([^}]+)}/g, (_match, parameterName: string) => {
+		return `\${${parameterName}}`;
+	});
 }
 
 function getTypeWithValidator(
