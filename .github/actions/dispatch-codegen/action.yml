@@ -119,7 +119,8 @@ runs:
 
             # Parse Conventional Commits title: <type>(<scope>)?!?: <description>
             # Captures: 1=type, 2=scope (with parens), 3=breaking marker, 4=description
-            if [[ "$source_pr_title" =~ ^([[:alpha:]]+)(\([^)]+\))?(!)?:[[:space:]]+(.+)$ ]]; then
+            conventional_commit_regex='^([[:alpha:]]+)(\([^)]+\))?(!)?:[[:space:]]+(.+)$'
+            if [[ "$source_pr_title" =~ $conventional_commit_regex ]]; then
               parsed_type="${BASH_REMATCH[1],,}"
 
               if is_allowed_type "$parsed_type"; then
