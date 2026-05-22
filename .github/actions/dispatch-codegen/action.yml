@@ -36,15 +36,34 @@ outputs:
 runs:
   using: 'composite'
   steps:
+    - name: Resolve action repository
+      id: action-repository
+      shell: bash
+      env:
+        ACTION_REPOSITORY: ${{ github.action_repository }}
+      run: |
+        owner="${ACTION_REPOSITORY%%/*}"
+        repository="${ACTION_REPOSITORY#*/}"
+
+        if [[ -z "$owner" || -z "$repository" || "$owner" == "$repository" ]]; then
+          echo "::error::Unable to resolve action repository from '${ACTION_REPOSITORY}'"
+          exit 1
+        fi
+
+        {
+          echo "owner=${owner}"
+          echo "repository=${repository}"
+        } >> "$GITHUB_OUTPUT"
+
     - name: Get dispatch token
       uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
       id: app-token
       with:
         client-id: ${{ inputs.client-id }}
         private-key: ${{ inputs.private-key }}
-        owner: ${{ split(github.action_repository, '/')[0] }}
+        owner: ${{ steps.action-repository.outputs.owner }}
         skip-token-revoke: true
-        repositories: ${{ split(github.action_repository, '/')[1] }}
+        repositories: ${{ steps.action-repository.outputs.repository }}
 
     - name: Collect source PR metadata
       id: source-metadata
