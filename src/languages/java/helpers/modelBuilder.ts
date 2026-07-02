@@ -218,7 +218,7 @@ function getFieldVariables(props: JavaPropsWithModel): [Field[], string[]] {
 			imports.push(...validationImports);
 
 			// Render element-level annotations inside the generic, producing
-			// `List<@Valid X>` rather than the deprecated `@Valid List<X>`.
+			// `List<@Valid X>` rather than the legacy `@Valid List<X>`.
 			if (elementAnnotations.length > 0) {
 				const rendered = elementAnnotations
 					.map(([path, args]) => {

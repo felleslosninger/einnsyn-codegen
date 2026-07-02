@@ -200,10 +200,8 @@ export function getValidationAnnotations(
 					type: type.indexer.value,
 					isListElement: true,
 				});
-			// Only `@Valid` is rendered inside the generic (`List<@Valid X>` rather
-			// than the deprecated `@Valid List<X>`). Every other annotation (e.g.
-			// `@ExpandableObject`) is not allowed on the type argument, so it stays
-			// on the field alongside the list itself.
+			// `@Valid` is rendered inside the generic (`List<@Valid X>` rather
+			// than the legacy `@Valid List<X>`).
 			for (const annotation of nestedAnnotations) {
 				if (annotation[0] === "jakarta.validation.Valid") {
 					elementAnnotations.push(annotation);
