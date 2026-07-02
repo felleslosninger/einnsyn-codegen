@@ -222,10 +222,8 @@ function getFieldVariables(props: JavaPropsWithModel): [Field[], string[]] {
 			if (elementAnnotations.length > 0) {
 				const rendered = elementAnnotations
 					.map(([path, args]) => {
-							imports.push(path);
-						const simpleName =  path
-							.split(".")
-							.at(-1);
+						imports.push(path);
+						const simpleName = path.split(".").pop() ?? path;
 						const argsSuffix = args ? `(${args})` : "";
 						return `@${simpleName}${argsSuffix}`;
 					})
