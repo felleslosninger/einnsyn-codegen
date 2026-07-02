@@ -203,12 +203,37 @@ function getFieldVariables(props: JavaPropsWithModel): [Field[], string[]] {
 
 	for (const property of filteredProperties) {
 		const name = property.name;
-		const [javaType, javaTypeImports] = getJavaType({
+		let [javaType, javaTypeImports] = getJavaType({
 			...props,
 			type: property.type,
 			propertyName: property.name,
 			parentName: entityName,
 		});
+
+		let validationAnnotations: [string, string?][] = [];
+		if (props.validate) {
+			const [annotations, validationImports, elementAnnotations] =
+				getValidationAnnotations({ ...props, modelProperty: property });
+			validationAnnotations = annotations;
+			imports.push(...validationImports);
+
+			// Render element-level annotations inside the generic, producing
+			// `List<@Valid X>` rather than the deprecated `@Valid List<X>`.
+			if (elementAnnotations.length > 0) {
+				const rendered = elementAnnotations
+					.map(([path, args]) => {
+							imports.push(path);
+						const simpleName =  path
+							.split(".")
+							.at(-1);
+						const argsSuffix = args ? `(${args})` : "";
+						return `@${simpleName}${argsSuffix}`;
+					})
+					.join(" ");
+				javaType = javaType.replace(/^List</, `List<${rendered} `);
+			}
+		}
+
 		const field = new Field(parent, name, javaType);
 		field.setVisibility("protected");
 		field.setDocumentation(getDoc(context.program, property));
@@ -221,13 +246,8 @@ function getFieldVariables(props: JavaPropsWithModel): [Field[], string[]] {
 			field.setValue(getDefaultValue(property));
 		}
 
-		if (props.validate) {
-			const [validationAnnotations, validationImports] =
-				getValidationAnnotations({ ...props, modelProperty: property });
-			for (const [annotation, args] of validationAnnotations) {
-				field.addAnnotation(annotation, args);
-			}
-			imports.push(...validationImports);
+		for (const [annotation, args] of validationAnnotations) {
+			field.addAnnotation(annotation, args);
 		}
 
 		if (isFinal(property)) {

@@ -38,16 +38,23 @@ import { getJavaEntityPackageName } from "./javaHelpers.js";
 type Annotation = [string, string?];
 
 export function getValidationAnnotations(
-	props: JavaProps & { modelProperty: ModelProperty; type?: Type },
-): [Annotation[], string[]] {
+	props: JavaProps & {
+		modelProperty: ModelProperty;
+		type?: Type;
+		isListElement?: boolean;
+	},
+): [Annotation[], string[], Annotation[]] {
 	const annotations: Annotation[] = [];
 	const imports: string[] = [];
+	// Annotations that target the element type of a list, e.g. `List<@Valid X>`.
+	const elementAnnotations: Annotation[] = [];
 
 	const {
 		context,
 		packageName,
 		modelProperty,
 		type = modelProperty.type,
+		isListElement = false,
 	} = props;
 
 	if (isUrlProperty(context, modelProperty ?? type)) {
@@ -187,21 +194,35 @@ export function getValidationAnnotations(
 
 		if (type.indexer !== undefined) {
 			imports.push("java.util.List");
-			const [nestedAnnotations, nestedImports] = getValidationAnnotations({
-				...props,
-				type: type.indexer.value,
-			});
-			annotations.push(...nestedAnnotations);
+			const [nestedAnnotations, nestedImports, nestedElementAnnotations] =
+				getValidationAnnotations({
+					...props,
+					type: type.indexer.value,
+					isListElement: true,
+				});
+			// Only `@Valid` is rendered inside the generic (`List<@Valid X>` rather
+			// than the deprecated `@Valid List<X>`). Every other annotation (e.g.
+			// `@ExpandableObject`) is not allowed on the type argument, so it stays
+			// on the field alongside the list itself.
+			for (const annotation of nestedAnnotations) {
+				if (annotation[0] === "jakarta.validation.Valid") {
+					elementAnnotations.push(annotation);
+				} else {
+					annotations.push(annotation);
+				}
+			}
+			elementAnnotations.push(...nestedElementAnnotations);
 			imports.push(...nestedImports);
 		}
 		// TODO: Template?
 	}
-	const isReadOnly = isReadonlyProperty(context.program, modelProperty);
-	const isReadAndUpdate = isReadAndUpdateProperty(
-		context.program,
-		modelProperty,
-	);
-	const isRequired = !modelProperty.optional;
+	// Presence constraints (Null/NotNull/NotBlank) belong to the property
+	// itself, so they are skipped when computing annotations for a list element.
+	const isReadOnly =
+		!isListElement && isReadonlyProperty(context.program, modelProperty);
+	const isReadAndUpdate =
+		!isListElement && isReadAndUpdateProperty(context.program, modelProperty);
+	const isRequired = !isListElement && !modelProperty.optional;
 	const value = getDefaultValue(modelProperty);
 	if (isReadOnly && value === undefined) {
 		imports.push(
@@ -233,7 +254,7 @@ export function getValidationAnnotations(
 		}
 	}
 
-	return [annotations, imports];
+	return [annotations, imports, elementAnnotations];
 }
 
 /**
