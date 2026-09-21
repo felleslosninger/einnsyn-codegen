@@ -6,6 +6,10 @@ import {
 	isTemplateDeclaration,
 	resolvePath,
 } from "@typespec/compiler";
+import {
+	getDeprecatedTag,
+	getDocumentation,
+} from "../../languages/typescript/helpers/getJSDoc.js";
 import { getTSTypeName } from "../../languages/typescript/helpers/getTSTypeName.js";
 import { getTypeDefinition } from "../../languages/typescript/helpers/getTypeDefinition.js";
 import {
@@ -47,6 +51,8 @@ export function emitUnknownModels(
 
 		// Add entity interface
 		const int = new TSInterface(modelFile, className);
+		int.setDocumentation(getDocumentation(context.program, model));
+		int.addDocTag(getDeprecatedTag(context.program, model));
 		int.typeDefinition = getTypeDefinition({
 			...defaultProps,
 			parent: int,

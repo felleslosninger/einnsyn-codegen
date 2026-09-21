@@ -4,8 +4,16 @@ import {
 	type Namespace,
 	type Type,
 	emitFile,
+	getReturnsDoc,
 	resolvePath,
 } from "@typespec/compiler";
+import {
+	getDeprecatedTag,
+	getDocumentation,
+	getParamTag,
+	getReturnsTag,
+	getThrowsTag,
+} from "../../languages/typescript/helpers/getJSDoc.js";
 import {
 	type GetTSTypeNameProps,
 	getTSTypeName,
@@ -54,6 +62,10 @@ export function emitOperations(
 		const modelPathName = `${getTSEntityPathName(namespace)}/${className}`;
 		const resourceFile = new TSFile(modelPathName);
 		const resourceClass = new TSClass(resourceFile, className);
+		resourceClass.setDocumentation(
+			getDocumentation(context.program, namespace) ??
+				`Operations on the \`${namespace.name}\` resource.`,
+		);
 		resourceClass.addImport({
 			modulePath: "common/entity/Resource",
 			importList: ["Resource"],
@@ -67,6 +79,9 @@ export function emitOperations(
 		for (const operation of httpOperationList) {
 			const operationName = operation.operation.name;
 			const operationMethod = new TSFunction(resourceFile, operationName);
+			operationMethod.setDocumentation(
+				getDocumentation(context.program, operation.operation),
+			);
 			operationMethod.isAsync = true;
 			const pathParameters = operation.parameters.parameters.filter(
 				(p) => p.type === "path",
@@ -90,6 +105,13 @@ export function emitOperations(
 					...defaultProps,
 					type: parameterType,
 				});
+				operationMethod.addDocTag(
+					getParamTag(
+						pathParameter.name,
+						getDocumentation(context.program, pathParameter.param) ??
+							describePathParameter(pathTemplate, pathParameter.name),
+					),
+				);
 				operationMethod.addParameter(
 					new TSFunctionParameter(
 						operationMethod,
@@ -102,6 +124,13 @@ export function emitOperations(
 
 			if (requestType) {
 				bodyVariable = "body";
+				operationMethod.addDocTag(
+					getParamTag(
+						bodyVariable,
+						getDocumentation(context.program, operation.parameters.body?.property) ??
+							"The request body.",
+					),
+				);
 				let [requestTSType, requestTSTypeImports] = getTSTypeName({
 					...defaultProps,
 					propertyName: operationName,
@@ -161,6 +190,9 @@ export function emitOperations(
 					resourceFile,
 					queryParameterTSType,
 				);
+				customModelInterface.setDocumentation(
+					`Query parameters for {@link ${className}.${operationName}}.`,
+				);
 				customModelInterface.typeDefinition = getTypeDefinition({
 					...defaultProps,
 					parent: customModelInterface,
@@ -178,6 +210,9 @@ export function emitOperations(
 
 			if (queryParameters.length) {
 				queryVariable = "query";
+				operationMethod.addDocTag(
+					getParamTag(queryVariable, "Optional query parameters."),
+				);
 				// Add query parameters to the operation method
 				const queryParameter = new TSFunctionParameter(
 					operationMethod,
@@ -193,6 +228,9 @@ export function emitOperations(
 			if (bodyModel?.kind === "Model" && !bodyModel.name) {
 				const requestName = `${pascalCase(operationName)}Request`;
 				const requestInterface = new TSInterface(resourceFile, requestName);
+				requestInterface.setDocumentation(
+					`Request body for {@link ${className}.${operationName}}.`,
+				);
 				requestInterface.typeDefinition = getTypeDefinition({
 					...defaultProps,
 					parent: requestInterface,
@@ -219,6 +257,10 @@ export function emitOperations(
 					resourceFile,
 					`${pascalCase(operationName)}Response`,
 				);
+				responseInterface.setDocumentation(
+					getReturnsDoc(context.program, operation.operation) ??
+						`Response body from {@link ${className}.${operationName}}.`,
+				);
 				responseInterface.typeDefinition = getTypeDefinition({
 					...defaultProps,
 					parent: responseInterface,
@@ -236,6 +278,12 @@ export function emitOperations(
 						type: responseType,
 					});
 			}
+
+			operationMethod.addDocTag(
+				getReturnsTag(context.program, operation.operation),
+				getThrowsTag(context.program, operation.operation),
+				getDeprecatedTag(context.program, operation.operation),
+			);
 
 			operationMethod.addImport(...responseImports);
 			operationMethod.returnType = `Promise<${responseName}>`;
@@ -286,6 +334,20 @@ export function emitOperations(
 			content: resourceFile.toString(),
 		});
 	}
+}
+
+/**
+ * Fall back to describing a path parameter by the resource it identifies, e.g.
+ * "/moetedokument/{id}/dokumentbeskrivelse" -> "The ID of the moetedokument."
+ */
+function describePathParameter(pathTemplate: string, parameterName: string) {
+	const segments = pathTemplate.split("/");
+	const index = segments.indexOf(`{${parameterName}}`);
+	const resource = index > 0 ? segments[index - 1] : undefined;
+	if (!resource || resource.includes("{")) {
+		return undefined;
+	}
+	return `The ID of the ${resource}.`;
 }
 
 function templatePathToTemplateString(path: string) {

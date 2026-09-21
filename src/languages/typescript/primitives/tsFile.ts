@@ -150,16 +150,20 @@ export class TSFile extends TSPrimitive {
 	}
 
 	addClass({ clazz, isExported = false }: ClassWrapperType) {
+		clazz.isExported = isExported;
 		this.classes.push({ clazz, isExported });
 		return this;
 	}
 
 	addInterface({ int, isExported = true }: InterfaceWrapperType) {
+		int.isExported = isExported;
 		this.interfaces.push({ int, isExported });
 		return this;
 	}
 
 	addFunction(func: TSFunction, isExported = true) {
+		func.isDeclaration = true;
+		func.isExported = isExported;
 		this.functions.push({ func, isExported });
 		return this;
 	}
@@ -175,21 +179,12 @@ export class TSFile extends TSPrimitive {
 			this.printExportFrom(),
 			"",
 
-			...this.classes.map(
-				({ clazz, isExported }) =>
-					`${isExported ? "export " : ""}${clazz.toString()}\n`,
-			),
+			...this.classes.map(({ clazz }) => `${clazz.toString()}\n`),
 			"",
 
-			...this.interfaces.map(
-				({ int, isExported }) =>
-					`${isExported ? "export " : ""}${int.toString()}\n`,
-			),
+			...this.interfaces.map(({ int }) => `${int.toString()}\n`),
 
-			...this.functions.map(
-				({ func, isExported }) =>
-					`${isExported ? "export " : ""}function ${func.toString()}\n`,
-			),
+			...this.functions.map(({ func }) => `${func.toString()}\n`),
 		]
 			.filter((l) => l !== undefined)
 			.join("\n");

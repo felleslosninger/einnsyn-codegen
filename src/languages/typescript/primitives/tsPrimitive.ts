@@ -6,6 +6,7 @@ export default abstract class TSPrimitive implements Primitive {
 	annotations: { [key: string]: string } = {};
 	imports: TSImportType[] = [];
 	documentation: string | undefined;
+	docTags: string[] = [];
 	children: TSPrimitive[] = [];
 
 	constructor(parent: TSPrimitive | undefined) {
@@ -20,20 +21,44 @@ export default abstract class TSPrimitive implements Primitive {
 	}
 
 	setDocumentation(documentation?: string) {
-		this.documentation = documentation;
+		this.documentation = documentation?.trim() || undefined;
+		return this;
+	}
+
+	/**
+	 * Add JSDoc tag lines ("@param foo ...", "@returns ...") to the doc block. Tags
+	 * are printed after the description, separated by a blank line.
+	 */
+	addDocTag(...tags: (string | undefined)[]) {
+		for (const tag of tags) {
+			if (tag) {
+				this.docTags.push(tag);
+			}
+		}
+		return this;
 	}
 
 	printDocumentation(append?: string) {
-		const strings = [];
+		const blocks: string[] = [];
 		if (this.documentation) {
-			strings.push(this.documentation);
+			blocks.push(this.documentation);
+		}
+		if (this.docTags.length > 0) {
+			blocks.push(this.docTags.join("\n"));
 		}
 		if (append) {
-			strings.push(append.split("\n"));
+			blocks.push(append);
 		}
-		if (strings.length === 0) {
+		if (blocks.length === 0) {
 			return undefined;
 		}
-		return `/**\n * ${strings.join("\n * ")}\n */`;
+		const lines = blocks
+			.join("\n\n")
+			// Documentation from the spec must never close the comment block
+			.replace(/\*\//g, "*\\/")
+			.split("\n");
+		return ["/**", ...lines.map((line) => ` * ${line}`.trimEnd()), " */"].join(
+			"\n",
+		);
 	}
 }

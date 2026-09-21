@@ -7,6 +7,9 @@ export default class TSFunction extends TSPrimitive {
 	private body: string[] = [];
 	isConstructor = false;
 	isAsync = false;
+	/** Top-level function declaration (as opposed to a class method) */
+	isDeclaration = false;
+	isExported = false;
 	returnType?: string;
 
 	constructor(parent: TSPrimitive | undefined, name?: string) {
@@ -35,7 +38,9 @@ export default class TSFunction extends TSPrimitive {
 		return [
 			this.printDocumentation(),
 			[
+				this.isDeclaration && this.isExported ? "export " : "",
 				this.isAsync ? "async " : "",
+				this.isDeclaration ? "function " : "",
 				this.isConstructor ? "constructor " : `${this.name || ""} `,
 			].join(""),
 			"(",

@@ -13,6 +13,11 @@ export class TSTypeProperty extends TSPrimitive {
 	}
 
 	toString(): string {
-		return `${this.readonly ? "readonly " : ""}${this.name}${this.optional ? "?" : ""}: ${this.value.toString()};`;
+		return [
+			this.printDocumentation(),
+			`${this.readonly ? "readonly " : ""}${this.name}${this.optional ? "?" : ""}: ${this.value.toString()};`,
+		]
+			.filter((s) => s !== undefined)
+			.join("\n");
 	}
 }

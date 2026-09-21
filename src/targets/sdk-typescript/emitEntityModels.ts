@@ -6,6 +6,12 @@ import {
 	resolvePath,
 } from "@typespec/compiler";
 import { isReadonlyProperty } from "@typespec/openapi";
+import {
+	getDeprecatedTag,
+	getDocumentation,
+	getParamTag,
+	joinDocumentation,
+} from "../../languages/typescript/helpers/getJSDoc.js";
 import { getTSTypeName } from "../../languages/typescript/helpers/getTSTypeName.js";
 import { getTypeDefinition } from "../../languages/typescript/helpers/getTypeDefinition.js";
 import {
@@ -41,8 +47,12 @@ export function emitEntityModels(
 		const modelPathName = `${getTSEntityPathName(model)}/${className}`;
 		const modelFile = new TSFile(modelPathName);
 
+		const modelDocumentation = getDocumentation(context.program, model);
+
 		// Add entity interface
 		const int = new TSInterface(modelFile, className);
+		int.setDocumentation(modelDocumentation);
+		int.addDocTag(getDeprecatedTag(context.program, model));
 		int.typeDefinition = getTypeDefinition({
 			...defaultProps,
 			parent: int,
@@ -63,6 +73,13 @@ export function emitEntityModels(
 
 		// Add entity request interface
 		const requestInterface = new TSInterface(modelFile, `${className}Request`);
+		requestInterface.setDocumentation(
+			joinDocumentation(
+				modelDocumentation,
+				`The writable variant of {@link ${className}}, used as the request body when creating or updating a ${className}.`,
+			),
+		);
+		requestInterface.addDocTag(getDeprecatedTag(context.program, model));
 		requestInterface.typeDefinition = getTypeDefinition({
 			...defaultProps,
 			parent: requestInterface,
@@ -96,6 +113,13 @@ export function emitEntityModels(
 			const subclasses = recurse(model);
 			// Create function
 			const isEntityFunction = new TSFunction(modelFile, `is${className}`);
+			isEntityFunction.setDocumentation(
+				`Type guard that narrows an unknown value to {@link ${className}}, by checking its \`entity\` discriminator.`,
+			);
+			isEntityFunction.addDocTag(
+				getParamTag("obj", "The value to check."),
+				`@returns \`true\` if \`obj\` is a ${className}.`,
+			);
 			isEntityFunction.addParameter(
 				new TSFunctionParameter(isEntityFunction, "obj", "unknown"),
 			);
@@ -121,6 +145,13 @@ export function emitEntityModels(
 			const isPaginatedListFunction = new TSFunction(
 				modelFile,
 				`isPaginated${className}List`,
+			);
+			isPaginatedListFunction.setDocumentation(
+				`Type guard that narrows an unknown value to a paginated list of {@link ${className}}.`,
+			);
+			isPaginatedListFunction.addDocTag(
+				getParamTag("obj", "The value to check."),
+				`@returns \`true\` if \`obj\` is a \`PaginatedList\` where every item is a ${className}.`,
 			);
 			isPaginatedListFunction.addParameter(
 				new TSFunctionParameter(isPaginatedListFunction, "obj", "unknown"),
