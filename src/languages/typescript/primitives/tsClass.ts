@@ -5,6 +5,7 @@ import type { TSTypeProperty } from "./tsTypeProperty.js";
 
 export default class TSClass extends TSPrimitive {
 	name: string;
+	isExported = false;
 	private implements: string[] = [];
 	private extends: string[] = [];
 	private generics: string[] = [];
@@ -54,7 +55,9 @@ export default class TSClass extends TSPrimitive {
 
 	toString() {
 		return [
-			`class ${this.name} `,
+			this.printDocumentation(),
+
+			`${this.isExported ? "export " : ""}class ${this.name} `,
 
 			this.extends.length > 0
 				? `extends ${this.extends.join(", ")}`

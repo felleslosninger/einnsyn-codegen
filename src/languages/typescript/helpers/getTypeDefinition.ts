@@ -4,6 +4,7 @@ import { TSType } from "../primitives/tsType.js";
 import { TSTypeProperty } from "../primitives/tsTypeProperty.js";
 import type { TSProps, TSPropsWithModel } from "../types.js";
 import { getTSTypeName } from "./getTSTypeName.js";
+import { getDeprecatedTag, getDocumentation } from "./getJSDoc.js";
 import { isReadonlyProperty } from "@typespec/openapi";
 
 export function getTypeDefinition(
@@ -25,6 +26,10 @@ export function getTypeDefinition(
 			type: property,
 		});
 		const typeProperty = new TSTypeProperty(parent, property.name, tsType);
+		typeProperty.setDocumentation(
+			getDocumentation(props.context.program, property),
+		);
+		typeProperty.addDocTag(getDeprecatedTag(props.context.program, property));
 		typeProperty.optional = property.optional;
 		typeProperty.readonly =
 			props.readonly || isReadonlyProperty(props.context.program, property);

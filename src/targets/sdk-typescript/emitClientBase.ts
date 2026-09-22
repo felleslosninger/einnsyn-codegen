@@ -4,6 +4,7 @@ import {
 	type Namespace,
 	resolvePath,
 } from "@typespec/compiler";
+import { getDocumentation } from "../../languages/typescript/helpers/getJSDoc.js";
 import { getTSEntityPathName } from "../../languages/typescript/helpers/tsHelpers.js";
 import TSClass from "../../languages/typescript/primitives/tsClass.js";
 import { TSFile } from "../../languages/typescript/primitives/tsFile.js";
@@ -27,6 +28,9 @@ export function emitClientBase(
 	const pathName = ".";
 	const file = new TSFile(pathName);
 	const clientBaseClass = new TSClass(file, "EInnsynClientBase");
+	clientBaseClass.setDocumentation(
+		"Base client exposing one resource accessor per API namespace.",
+	);
 	file.addClass({
 		clazz: clientBaseClass,
 		isExported: true,
@@ -38,6 +42,10 @@ export function emitClientBase(
 		"EInnsynClientBase",
 	);
 	clientBaseClass.addMethod(constructorMethod);
+	constructorMethod.setDocumentation("Create a new eInnsyn client.");
+	constructorMethod.addDocTag(
+		"@param requester The transport used to perform the HTTP requests.",
+	);
 	constructorMethod.isConstructor = true;
 
 	// Add eInnsynOptions constructor parameter
@@ -58,6 +66,10 @@ export function emitClientBase(
 			clientBaseClass,
 			`${namespaceName.toLowerCase()}`,
 			className,
+		);
+		typeProperty.setDocumentation(
+			getDocumentation(context.program, namespace) ??
+				`Operations on the \`${namespaceName}\` resource.`,
 		);
 		const path = getTSEntityPathName(namespace);
 		typeProperty.addImport({

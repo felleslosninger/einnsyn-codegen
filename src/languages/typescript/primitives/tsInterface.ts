@@ -3,6 +3,7 @@ import type { TSType } from "./tsType.js";
 
 export default class TSInterface extends TSPrimitive {
 	name: string;
+	isExported = false;
 	private extends: string[] = [];
 	typeDefinition?: TSType;
 
@@ -21,11 +22,14 @@ export default class TSInterface extends TSPrimitive {
 	}
 
 	toString() {
-		return (
+		const declaration =
 			// biome-ignore lint/style/useTemplate: Looks better without template strings
-			`interface ${this.name} ` +
+			`${this.isExported ? "export " : ""}interface ${this.name} ` +
 			(this.extends.length > 0 ? `extends ${this.extends.join(", ")}` : "") +
-			(this.typeDefinition ? this.typeDefinition.toString() : "")
-		);
+			(this.typeDefinition ? this.typeDefinition.toString() : "");
+
+		return [this.printDocumentation(), declaration]
+			.filter((s) => s !== undefined)
+			.join("\n");
 	}
 }
